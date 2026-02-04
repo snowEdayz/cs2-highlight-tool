@@ -1,0 +1,51 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+yarn-error.log*
+
+# Node / Frontend
+node_modules/
+jspm_packages/
+dist/
+frontend/dist/
+.cache/
+.npm
+.yarn-integrity
+.eslintcache
+*.tgz
+
+# TypeScript
+*.tsbuildinfo
+typings/
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+/build/
+
+# App runtime data
+/config.json
+/outputs/
+/cfg/
+
+# dotenv
+.env
+.env.*

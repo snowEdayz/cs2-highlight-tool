@@ -1,0 +1,61 @@
+body {
+  margin: 0;
+  background: #0f1115;
+  color: #e6e6e6;
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.actions {
+  margin-top: 12px;
+}
+
+.rounds {
+  display: grid;
+  gap: 12px;
+}
+
+.round-card {
+  background: #16181d;
+}
+
+.kill-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #cfd6dd;
+}
+
+.log {
+  max-height: 260px;
+  overflow-y: auto;
+  background: #0f1216;
+  border: 1px solid #2a2f36;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 12px;
+}
+
+.log-line {
+  padding: 2px 0;
+}
+
+.log-line.success {
+  color: #5fd38d;
+}
+
+.log-line.error {
+  color: #ff6b6b;
+}
+
+.log-line.warning {
+  color: #f7c948;
+}

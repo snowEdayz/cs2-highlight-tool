@@ -66,7 +66,7 @@ CS2 Highlight Tool 让你：
 #   - Wails CLI
 
 
-git clone https://github.com/你的仓库地址.git
+git clone https://github.com/hkslover/cs2-highlight-tool
 cd CS2-Highlight-Tool
 wails dev 
 

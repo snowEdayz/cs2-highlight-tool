@@ -65,7 +65,7 @@ If you prefer starting from source code:
 #   - Wails CLI
 
 
-git clone https://github.com/your-repo-address.git
+git clone https://github.com/hkslover/cs2-highlight-tool
 cd CS2-Highlight-Tool
 wails dev 
 

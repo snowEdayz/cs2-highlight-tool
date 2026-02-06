@@ -54,7 +54,7 @@ CS2 Highlight Tool 让你：
 ## 🛠️ 安装与运行
 
 ### 方法一：懒人专属（推荐🌟）
-直接前往 [Release 页面](https://github.com/你的仓库地址/releases) 下载 `.exe` 文件，双击即用！🚀
+直接前往 [Release 页面](https://github.com/hkslover/cs2-highlight-tool/releases) 下载 `.exe` 文件，双击即用！🚀
 
 ### 方法二：极客模式
 如果你喜欢从源码开始：

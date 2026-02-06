@@ -14,6 +14,10 @@ export function CheckHLAEEnvironment() {
   return window['go']['main']['App']['CheckHLAEEnvironment']();
 }
 
+export function DownloadPerfectWorldDemo(arg1) {
+  return window['go']['main']['App']['DownloadPerfectWorldDemo'](arg1);
+}
+
 export function GetConfig() {
   return window['go']['main']['App']['GetConfig']();
 }

@@ -53,7 +53,7 @@ Updates as I feel like it.
 ## 🛠️ Installation & Usage
 
 ### Method One: For Lazy People (Recommended 🌟)
-Go directly to the [Release page](https://github.com/your-repo-address/releases) to download the `.exe` file, double-click and run! 🚀
+Go directly to the [Release page](https://github.com/hkslover/cs2-highlight-tool/releases) to download the `.exe` file, double-click and run! 🚀
 
 ### Method Two: For Geeks
 If you prefer starting from source code:

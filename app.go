@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -415,6 +417,125 @@ func (a *App) ParseDemo(demoPath string) (*DemoInfo, error) {
 	}
 
 	return result, nil
+}
+
+func (a *App) DownloadPerfectWorldDemo(matchID string) (string, error) {
+	matchID = strings.TrimSpace(matchID)
+	if matchID == "" {
+		return "", fmt.Errorf("比赛 ID 不能为空")
+	}
+	for _, r := range matchID {
+		if r < '0' || r > '9' {
+			return "", fmt.Errorf("比赛 ID 只能包含数字")
+		}
+	}
+	if a.exeDir == "" {
+		return "", fmt.Errorf("程序目录未初始化")
+	}
+
+	demoDir := filepath.Join(a.exeDir, "demos")
+	if err := os.MkdirAll(demoDir, 0755); err != nil {
+		return "", fmt.Errorf("创建 demos 目录失败: %w", err)
+	}
+
+	baseName := fmt.Sprintf("%s_0.dem", matchID)
+	demoPath := filepath.Join(demoDir, baseName)
+	if _, err := os.Stat(demoPath); err == nil {
+		printInfo("已存在 Demo 文件，跳过下载")
+		return demoPath, nil
+	}
+
+	zipPath := demoPath + ".zip"
+	_ = os.Remove(zipPath)
+
+	downloadURL := fmt.Sprintf("https://pwaweblogin.wmpvp.com/csgo/demo/%s", baseName)
+	printTitle("\n下载完美世界 Demo")
+	printInfo(fmt.Sprintf("下载地址: %s", downloadURL))
+	printInfo(fmt.Sprintf("保存路径: %s", zipPath))
+
+	if err := downloadFile(downloadURL, zipPath); err != nil {
+		return "", err
+	}
+
+	if !isZipFile(zipPath) {
+		if err := os.Rename(zipPath, demoPath); err != nil {
+			return "", fmt.Errorf("保存 demo 失败: %w", err)
+		}
+		printSuccess("Demo 下载完成")
+		return demoPath, nil
+	}
+
+	if err := unzipFile(zipPath, demoDir); err != nil {
+		return "", err
+	}
+	if err := os.Remove(zipPath); err == nil {
+		printInfo("已删除下载的 zip 文件")
+	}
+
+	if _, err := os.Stat(demoPath); err == nil {
+		printSuccess("Demo 下载完成")
+		return demoPath, nil
+	}
+
+	found, err := findDemoFile(demoDir, baseName)
+	if err != nil {
+		return "", err
+	}
+	printSuccess("Demo 下载完成")
+	return found, nil
+}
+
+func isZipFile(path string) bool {
+	f, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+
+	var header [4]byte
+	if _, err := io.ReadFull(f, header[:]); err != nil {
+		return false
+	}
+	return header[0] == 'P' && header[1] == 'K' && header[2] == 0x03 && header[3] == 0x04
+}
+
+func findDemoFile(rootDir, baseName string) (string, error) {
+	var bestPath string
+	var bestTime time.Time
+	foundExact := false
+	errFoundExact := errors.New("found_exact")
+
+	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(strings.ToLower(info.Name()), ".dem") {
+			return nil
+		}
+		if info.Name() == baseName {
+			bestPath = path
+			foundExact = true
+			return errFoundExact
+		}
+		if bestPath == "" || info.ModTime().After(bestTime) {
+			bestPath = path
+			bestTime = info.ModTime()
+		}
+		return nil
+	})
+	if err != nil && !errors.Is(err, errFoundExact) {
+		return "", fmt.Errorf("查找 demo 文件失败: %w", err)
+	}
+	if foundExact {
+		return bestPath, nil
+	}
+	if bestPath == "" {
+		return "", fmt.Errorf("未找到解压后的 demo 文件")
+	}
+	return bestPath, nil
 }
 
 func (a *App) ensurePreviewServer() (string, error) {

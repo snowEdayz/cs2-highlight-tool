@@ -8,6 +8,8 @@ export function CheckEnvironment():Promise<void>;
 
 export function CheckHLAEEnvironment():Promise<void>;
 
+export function DownloadPerfectWorldDemo(arg1:string):Promise<string>;
+
 export function GetConfig():Promise<main.Config>;
 
 export function GetVideoPreviewURL(arg1:string):Promise<string>;

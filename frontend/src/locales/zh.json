@@ -1,0 +1,109 @@
+{
+  "app": {
+    "title": "CS2 击杀集锦制作工具"
+  },
+  "aria": {
+    "email": "邮箱",
+    "github": "GitHub"
+  },
+  "language": {
+    "zh": "中文",
+    "en": "English"
+  },
+  "common": {
+    "select": "选择",
+    "logs": "日志",
+    "unknown_error": "未知错误",
+    "wails_api_not_loaded": "Wails API 未加载: {method}"
+  },
+  "setup": {
+    "title": "环境准备",
+    "description": "正在检测并下载 FFmpeg和HLAE，请稍候。",
+    "cs2_label": "CS2.exe",
+    "cs2_placeholder": "请选择 CS2.exe 路径",
+    "hlae_label": "HLAE.exe",
+    "hlae_placeholder": "HLAE.exe 路径",
+    "ffmpeg_label": "FFmpeg 目录",
+    "ffmpeg_placeholder": "FFmpeg 目录",
+    "confirm": "完成设置"
+  },
+  "config": {
+    "title": "配置",
+    "output_dir": "输出目录",
+    "output_placeholder": "outputs 目录",
+    "record_fps": "录制 FPS",
+    "tickrate": "Tickrate",
+    "video_preset": "视频预设",
+    "transition_duration": "转场时长 (秒)",
+    "transition_type": "转场类型",
+    "save": "保存配置"
+  },
+  "preview": {
+    "title": "生成视频预览",
+    "unavailable": "预览不可用，请使用外部播放器打开",
+    "open_external": "打开外部播放器",
+    "no_video": "本次启动尚未生成视频"
+  },
+  "demo": {
+    "title": "Demo 解析",
+    "perfect_id_placeholder": "完美世界对战平台比赛ID",
+    "download_parse": "下载并解析",
+    "select_placeholder": "请选择 demo 文件 (.dem)",
+    "select_button": "选择 Demo",
+    "select_player": "选择玩家",
+    "round_label": "回合 {round} ({kills} 杀)",
+    "view_kill_details": "查看击杀详情",
+    "make": "制作",
+    "expand_all": "全部展开",
+    "collapse_all": "全部关闭",
+    "player_option": "{name} ({kills} 杀)"
+  },
+  "status": {
+    "ready": "就绪",
+    "downloading_demo": "正在下载 Demo...",
+    "download_failed": "下载失败",
+    "parsing_demo": "正在解析 Demo...",
+    "parse_done": "解析完成",
+    "parse_failed": "解析失败",
+    "checking_env": "正在检查环境...",
+    "preparing_env": "正在准备环境...",
+    "prepare_failed": "环境准备失败",
+    "need_cs2": "请先设置 CS2.exe",
+    "config_saved": "配置已保存",
+    "generating_cfg": "正在生成 CFG...",
+    "generating_cfg_and_record": "正在生成 CFG 并启动录制...",
+    "downloading": "正在下载...",
+    "launching_record": "正在启动录制...",
+    "recording": "正在录制...",
+    "merging_video": "正在合成视频...",
+    "task_done": "任务完成",
+    "task_failed": "任务失败",
+    "downloading_hlae": "正在下载 HLAE...",
+    "extracting_hlae": "正在解压 HLAE...",
+    "hlae_ready": "HLAE 已准备就绪",
+    "downloading_ffmpeg": "正在下载 FFmpeg...",
+    "extracting_ffmpeg": "正在解压 FFmpeg...",
+    "ffmpeg_ready": "FFmpeg 已准备就绪"
+  },
+  "warning": {
+    "env_not_ready": "请先完成环境检查并设置 CS2.exe",
+    "enter_match_id": "请输入完美世界比赛ID",
+    "select_demo": "请先选择 demo 文件",
+    "select_player": "请先选择玩家",
+    "select_rounds": "请选择回合",
+    "set_cs2": "请先设置 CS2.exe"
+  },
+  "info": {
+    "config_saved": "配置已保存",
+    "preview_unavailable": "视频预览不可用: {error}",
+    "demo_parsed": "Demo 解析完成",
+    "env_checked": "环境检查完成",
+    "cfg_generated": "CFG 已生成: {path}",
+    "output_video": "输出视频: {path}",
+    "downloading_demo_start": "开始下载完美世界 Demo..."
+  },
+  "log": {
+    "success_prefix": "成功: {message}",
+    "fail_prefix": "失败: {message}"
+  }
+}

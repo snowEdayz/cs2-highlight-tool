@@ -4,10 +4,10 @@
       <div class="app">
         <n-space vertical size="large">
           <n-card ref="headerCard">
-            <n-space vertical>
-              <n-h2>CS2 击杀集锦制作工具</n-h2>
-              <n-space align="center" size="small" class="author-row">
-                <button class="icon-link" type="button" @click="openExternal(`mailto:${author.email}`)" aria-label="邮箱">
+            <div class="header-top">
+              <n-h2 class="header-title">{{ t("app.title") }}</n-h2>
+              <div class="header-icons">
+                <button class="icon-link" type="button" @click="openExternal(`mailto:${author.email}`)" :aria-label="t('aria.email')">
                   <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
                     <path
                       fill="currentColor"
@@ -15,7 +15,7 @@
                     />
                   </svg>
                 </button>
-                <button class="icon-link" type="button" @click="openExternal(author.github)" aria-label="GitHub">
+                <button class="icon-link" type="button" @click="openExternal(author.github)" :aria-label="t('aria.github')">
                   <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
                     <path
                       fill="currentColor"
@@ -23,9 +23,12 @@
                     />
                   </svg>
                 </button>
-                <n-text depth="3" class="version-text">{{ appVersion }}</n-text>
-              </n-space>
-            </n-space>
+              </div>
+            </div>
+            <div class="header-bottom">
+              <n-text depth="3" class="version-text">{{ appVersion }}</n-text>
+              <n-select v-model:value="locale" size="small" class="lang-select" :options="languageOptions" />
+            </div>
           </n-card>
 
           <div :class="['status-bar', { fixed: statusFixed }]">
@@ -36,33 +39,37 @@
           <div v-if="statusFixed" class="status-spacer"></div>
 
           <template v-if="!isSetupComplete">
-            <n-card title="环境准备">
+            <n-card :title="t('setup.title')">
               <n-space vertical>
-                <n-text>正在检测并下载 FFmpeg和HLAE，请稍候。</n-text>
+                <n-text>{{ t("setup.description") }}</n-text>
                 <n-form label-placement="top" size="small">
                   <n-grid :cols="2" :x-gap="16" :y-gap="12" responsive="screen">
-                    <n-form-item-gi label="CS2.exe" :class="{ 'needs-attention': needsCS2Highlight }">
-                      <n-input v-model:value="form.cs2_exe" placeholder="请选择 CS2.exe 路径">
+                    <n-form-item-gi :label="t('setup.cs2_label')" :class="{ 'needs-attention': needsCS2Highlight }">
+                      <n-input v-model:value="form.cs2_exe" :placeholder="t('setup.cs2_placeholder')">
                         <template #suffix>
-                          <n-button size="tiny" @click="pickCs2Exe" :disabled="isPreparingEnv" :class="{ 'needs-attention': needsCS2Highlight }">选择</n-button>
+                          <n-button size="tiny" @click="pickCs2Exe" :disabled="isPreparingEnv" :class="{ 'needs-attention': needsCS2Highlight }">
+                            {{ t("common.select") }}
+                          </n-button>
                         </template>
                       </n-input>
                     </n-form-item-gi>
-                    <n-form-item-gi label="HLAE.exe">
-                      <n-input v-model:value="form.hlae_exe" placeholder="HLAE.exe 路径" disabled />
+                    <n-form-item-gi :label="t('setup.hlae_label')">
+                      <n-input v-model:value="form.hlae_exe" :placeholder="t('setup.hlae_placeholder')" disabled />
                     </n-form-item-gi>
-                    <n-form-item-gi label="FFmpeg 目录">
-                      <n-input v-model:value="form.ffmpeg_dir" placeholder="FFmpeg 目录" disabled />
+                    <n-form-item-gi :label="t('setup.ffmpeg_label')">
+                      <n-input v-model:value="form.ffmpeg_dir" :placeholder="t('setup.ffmpeg_placeholder')" disabled />
                     </n-form-item-gi>
                   </n-grid>
                 </n-form>
                 <n-space class="actions">
-                  <n-button type="primary" @click="confirmSetup" :disabled="isPreparingEnv">完成设置</n-button>
+                  <n-button type="primary" @click="confirmSetup" :disabled="isPreparingEnv">
+                    {{ t("setup.confirm") }}
+                  </n-button>
                 </n-space>
               </n-space>
             </n-card>
 
-            <n-card title="日志">
+            <n-card :title="t('common.logs')">
               <n-log ref="logRef" :log="logContent" :rows="12" />
             </n-card>
           </template>
@@ -70,64 +77,75 @@
           <n-grid v-else :cols="2" :x-gap="16" :y-gap="16" responsive="screen">
             <n-gi>
               <n-space vertical size="large">
-                <n-card title="配置">
+                <n-card :title="t('config.title')">
                   <n-form label-placement="top" size="small">
                     <n-grid :cols="2" :x-gap="16" :y-gap="12" responsive="screen">
-                      <n-form-item-gi label="输出目录">
-                        <n-input v-model:value="form.output_dir" placeholder="outputs 目录">
+                      <n-form-item-gi :label="t('config.output_dir')">
+                        <n-input v-model:value="form.output_dir" :placeholder="t('config.output_placeholder')">
                           <template #suffix>
-                            <n-button size="tiny" @click="pickOutputDir">选择</n-button>
+                            <n-button size="tiny" @click="pickOutputDir">{{ t("common.select") }}</n-button>
                           </template>
                         </n-input>
                       </n-form-item-gi>
-                      <n-form-item-gi label="录制 FPS">
+                      <n-form-item-gi :label="t('config.record_fps')">
                         <n-input-number v-model:value="form.record_fps" :min="1" />
                       </n-form-item-gi>
-                      <n-form-item-gi label="Tickrate">
+                      <n-form-item-gi :label="t('config.tickrate')">
                         <n-input-number v-model:value="form.tickrate" :min="1" />
                       </n-form-item-gi>
-                      <n-form-item-gi label="视频预设">
+                      <n-form-item-gi :label="t('config.video_preset')">
                         <n-select v-model:value="form.video_preset" :options="presetOptions" />
                       </n-form-item-gi>
-                      <n-form-item-gi label="转场时长 (秒)">
+                      <n-form-item-gi :label="t('config.transition_duration')">
                         <n-input-number v-model:value="form.transition_duration" :min="0" :step="0.1" />
                       </n-form-item-gi>
-                      <n-form-item-gi label="转场类型">
+                      <n-form-item-gi :label="t('config.transition_type')">
                         <n-select v-model:value="form.transition_type" :options="transitionOptions" />
                       </n-form-item-gi>
                     </n-grid>
                   </n-form>
                   <n-space class="actions">
-                    <n-button type="primary" @click="saveConfig">保存配置</n-button>
+                    <n-button type="primary" @click="saveConfig">{{ t("config.save") }}</n-button>
                   </n-space>
                 </n-card>
 
-                <n-card title="生成视频预览">
+                <n-card :title="t('preview.title')">
                   <div v-if="lastOutputPath" class="video-preview">
                     <video v-if="lastOutputUrl" :key="lastOutputUrl" :src="lastOutputUrl" controls preload="metadata"></video>
-                    <n-text v-else depth="3">预览不可用，请使用外部播放器打开</n-text>
+                    <n-text v-else depth="3">{{ t("preview.unavailable") }}</n-text>
                     <n-space align="center">
-                      <n-button size="small" @click="openVideoExternal">打开外部播放器</n-button>
+                      <n-button size="small" @click="openVideoExternal">{{ t("preview.open_external") }}</n-button>
                     </n-space>
                     <n-text depth="3" class="video-path">{{ lastOutputPath }}</n-text>
                   </div>
-                  <n-text v-else depth="3">本次启动尚未生成视频</n-text>
+                  <n-text v-else depth="3">{{ t("preview.no_video") }}</n-text>
                 </n-card>
               </n-space>
             </n-gi>
 
             <n-gi>
-              <n-card title="Demo 解析">
+              <n-card :title="t('demo.title')">
                 <n-space vertical>
-                  <n-input v-model:value="demoPath" placeholder="请选择 demo 文件 (.dem)" :disabled="!isEnvReady">
+                  <n-input
+                    v-model:value="perfectMatchId"
+                    :placeholder="t('demo.perfect_id_placeholder')"
+                    :disabled="isParsing || isDownloadingDemo || !isEnvReady"
+                  >
                     <template #suffix>
-                      <n-button size="tiny" @click="pickDemo" :disabled="!isEnvReady">选择 Demo</n-button>
+                      <n-button size="tiny" @click="downloadPerfectWorldDemo" :disabled="isParsing || isDownloadingDemo || !isEnvReady">
+                        {{ t("demo.download_parse") }}
+                      </n-button>
+                    </template>
+                  </n-input>
+                  <n-input v-model:value="demoPath" :placeholder="t('demo.select_placeholder')" :disabled="!isEnvReady">
+                    <template #suffix>
+                      <n-button size="tiny" @click="pickDemo" :disabled="!isEnvReady">{{ t("demo.select_button") }}</n-button>
                     </template>
                   </n-input>
                   <n-space>
                     <n-select
                       v-model:value="selectedPlayerSteamId"
-                      placeholder="选择玩家"
+                      :placeholder="t('demo.select_player')"
                       :options="playerOptions"
                       @update:value="refreshRounds"
                       style="min-width: 260px"
@@ -147,11 +165,11 @@
                             @update:checked="(val) => toggleRound(round.round, val)"
                             :disabled="isParsing || !isEnvReady"
                           />
-                          <n-text>回合 {{ round.round }} ({{ round.kills.length }} 杀)</n-text>
+                          <n-text>{{ t("demo.round_label", { round: round.round, kills: round.kills.length }) }}</n-text>
                         </n-space>
                       </template>
                       <n-collapse v-model:expanded-names="expandedRounds">
-                        <n-collapse-item title="查看击杀详情" :name="round.round">
+                        <n-collapse-item :title="t('demo.view_kill_details')" :name="round.round">
                           <DeathNoticeList :kills="round.kills" />
                         </n-collapse-item>
                       </n-collapse>
@@ -159,14 +177,14 @@
                   </div>
 
                   <n-space class="actions">
-                    <n-button type="primary" @click="runWorkflow(true)" :disabled="isParsing || !isEnvReady">制作</n-button>
+                    <n-button type="primary" @click="runWorkflow(true)" :disabled="isParsing || !isEnvReady">{{ t("demo.make") }}</n-button>
                   </n-space>
                 </n-space>
               </n-card>
             </n-gi>
 
             <n-gi :span="2">
-              <n-card title="日志">
+              <n-card :title="t('common.logs')">
                 <n-log ref="logRef" :log="logContent" :rows="12" />
               </n-card>
             </n-gi>
@@ -180,13 +198,17 @@
 <script setup>
 import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
 import { createDiscreteApi, darkTheme } from "naive-ui";
+import { useI18n } from "vue-i18n";
 import { EventsOn } from "../wailsjs/runtime/runtime";
 import { BrowserOpenURL } from "../wailsjs/runtime/runtime";
 import wailsConfig from "../../wails.json";
 import * as AppApi from "../wailsjs/go/main/App";
 import DeathNoticeList from "./components/DeathNoticeList.vue";
 
+const { t, locale } = useI18n();
+
 const demoPath = ref("");
+const perfectMatchId = ref("");
 const demoInfo = ref(null);
 const selectedPlayerSteamId = ref(null);
 const selectedRounds = ref(new Set());
@@ -197,9 +219,11 @@ const author = {
   github: "https://github.com/hkslover/cs2-highlight-tool",
 };
 const appVersion = `v${wailsConfig.version || "0.0.0"}`;
-const statusText = ref("就绪");
-const statusType = computed(() => (statusText.value === "就绪" ? "success" : "info"));
+const statusKey = ref("status.ready");
+const statusText = computed(() => t(statusKey.value));
+const statusType = computed(() => (statusKey.value === "status.ready" ? "success" : "info"));
 const isParsing = ref(false);
+const isDownloadingDemo = ref(false);
 const isCheckingEnv = ref(false);
 const isPreparingEnv = ref(false);
 const isEnvReady = ref(false);
@@ -244,10 +268,15 @@ const transitionOptions = [
   { label: "circleopen", value: "circleopen" },
 ];
 
+const languageOptions = computed(() => [
+  { label: t("language.zh"), value: "zh" },
+  { label: t("language.en"), value: "en" },
+]);
+
 const players = computed(() => demoInfo.value?.players || []);
 const playerOptions = computed(() =>
   players.value.map((p) => ({
-    label: `${p.name} (${p.total_kills} kills)`,
+    label: t("demo.player_option", { name: p.name, kills: p.total_kills }),
     value: p.steam_id,
   }))
 );
@@ -268,9 +297,9 @@ function normalizeLogMessage(message) {
     text = text.replace(/^=+\s*/, "").replace(/\s*=+$/, "");
   }
   if (text.startsWith("✓ ")) {
-    text = `成功: ${text.replace(/^✓\s*/, "")}`;
+    text = t("log.success_prefix", { message: text.replace(/^✓\s*/, "") });
   } else if (text.startsWith("✗ ")) {
-    text = `失败: ${text.replace(/^✗\s*/, "")}`;
+    text = t("log.fail_prefix", { message: text.replace(/^✗\s*/, "") });
   }
   return text;
 }
@@ -303,8 +332,14 @@ watch(
   { flush: "post" }
 );
 
-function setStatus(text) {
-  statusText.value = text || "就绪";
+watch(locale, (value) => {
+  if (value) {
+    localStorage.setItem("locale", value);
+  }
+});
+
+function setStatus(key) {
+  statusKey.value = key || "status.ready";
 }
 
 function openExternal(url) {
@@ -313,7 +348,7 @@ function openExternal(url) {
 }
 
 function formatError(err) {
-  if (!err) return "未知错误";
+  if (!err) return t("common.unknown_error");
   if (typeof err === "string") return err;
   if (err?.message) return err.message;
   try {
@@ -327,7 +362,7 @@ function callBackend(method, ...args) {
   if (typeof AppApi[method] === "function") {
     return AppApi[method](...args);
   }
-  return Promise.reject(new Error(`Wails API 未加载: ${method}`));
+  return Promise.reject(new Error(t("common.wails_api_not_loaded", { method })));
 }
 
 function fillConfig(cfg) {
@@ -372,7 +407,7 @@ async function pickHlaeExe() {
 
 async function pickDemo() {
   if (!isEnvReady.value) {
-    message.warning("请先完成环境检查并设置 CS2.exe");
+    message.warning(t("warning.env_not_ready"));
     return;
   }
   try {
@@ -382,6 +417,34 @@ async function pickDemo() {
     await tryParseDemo();
   } catch (err) {
     logLine(formatError(err), "error");
+  }
+}
+
+async function downloadPerfectWorldDemo() {
+  if (!isEnvReady.value) {
+    message.warning(t("warning.env_not_ready"));
+    return;
+  }
+  const matchId = String(perfectMatchId.value || "").trim();
+  if (!matchId) {
+    message.warning(t("warning.enter_match_id"));
+    return;
+  }
+  try {
+    isDownloadingDemo.value = true;
+    setStatus("status.downloading_demo");
+    logLine(t("info.downloading_demo_start"));
+    const path = await callBackend("DownloadPerfectWorldDemo", matchId);
+    demoPath.value = path;
+    await tryParseDemo();
+  } catch (err) {
+    const msg = formatError(err);
+    message.error(msg);
+    logLine(msg, "error");
+    setStatus("status.download_failed");
+  } finally {
+    isDownloadingDemo.value = false;
+    setTimeout(() => setStatus("status.ready"), 800);
   }
 }
 
@@ -403,9 +466,9 @@ async function saveConfig(silent = false) {
     const saved = await callBackend("SaveConfig", { ...form });
     fillConfig(saved);
     if (!isSilent) {
-      message.success("配置已保存");
-      logLine("配置已保存", "success");
-      setStatus("配置已保存");
+      message.success(t("info.config_saved"));
+      logLine(t("info.config_saved"), "success");
+      setStatus("status.config_saved");
     }
   } catch (err) {
     const msg = formatError(err);
@@ -426,7 +489,7 @@ async function updatePreviewUrl(path) {
     lastOutputUrl.value = url;
   } catch (err) {
     lastOutputUrl.value = "";
-    logLine(`视频预览不可用: ${formatError(err)}`, "warning");
+    logLine(t("info.preview_unavailable", { error: formatError(err) }), "warning");
   }
 }
 
@@ -441,31 +504,31 @@ async function openVideoExternal() {
 
 async function tryParseDemo() {
   if (!isEnvReady.value) {
-    logLine("请先完成环境检查并设置 CS2.exe", "warning");
+    logLine(t("warning.env_not_ready"), "warning");
     return;
   }
   if (!demoPath.value) {
-    logLine("请先选择 demo 文件", "warning");
+    logLine(t("warning.select_demo"), "warning");
     return;
   }
   try {
     isParsing.value = true;
-    setStatus("正在解析 Demo...");
+    setStatus("status.parsing_demo");
     const info = await callBackend("ParseDemo", demoPath.value);
     demoInfo.value = info;
     selectedPlayerSteamId.value = info.players?.[0]?.steam_id ?? null;
     selectedRounds.value = new Set();
     expandedRounds.value = [];
-    logLine("Demo 解析完成", "success");
-    setStatus("解析完成");
+    logLine(t("info.demo_parsed"), "success");
+    setStatus("status.parse_done");
   } catch (err) {
     const msg = formatError(err);
     message.error(msg);
     logLine(msg, "error");
-    setStatus("解析失败");
+    setStatus("status.parse_failed");
   } finally {
     isParsing.value = false;
-    setTimeout(() => setStatus("就绪"), 800);
+    setTimeout(() => setStatus("status.ready"), 800);
   }
 }
 
@@ -487,7 +550,7 @@ const allExpanded = computed(() => {
   return rounds.value.length > 0 && expandedRounds.value.length === rounds.value.length;
 });
 
-const expandAllLabel = computed(() => (allExpanded.value ? "全部关闭" : "全部展开"));
+const expandAllLabel = computed(() => (allExpanded.value ? t("demo.collapse_all") : t("demo.expand_all")));
 
 function toggleExpandAll() {
   if (allExpanded.value) {
@@ -499,27 +562,27 @@ function toggleExpandAll() {
 
 async function runWorkflow(autoMode) {
   if (!isEnvReady.value) {
-    message.warning("请先完成环境检查并设置 CS2.exe");
+    message.warning(t("warning.env_not_ready"));
     return;
   }
   await saveConfig(true);
   const player = players.value.find((p) => p.steam_id === selectedPlayerSteamId.value);
   if (!player) {
-    logLine("请先选择玩家", "warning");
+    logLine(t("warning.select_player"), "warning");
     return;
   }
   if (!demoPath.value) {
-    logLine("请先选择 demo 文件", "warning");
+    logLine(t("warning.select_demo"), "warning");
     return;
   }
   const selected = Array.from(selectedRounds.value);
   if (!selected.length) {
-    logLine("请选择回合", "warning");
+    logLine(t("warning.select_rounds"), "warning");
     return;
   }
 
   try {
-    setStatus(autoMode ? "正在生成 CFG 并启动录制..." : "正在生成 CFG...");
+    setStatus(autoMode ? "status.generating_cfg_and_record" : "status.generating_cfg");
     const res = await callBackend("RunWorkflow", {
       demo_path: demoPath.value,
       player_steam_id: player.steam_id,
@@ -527,20 +590,20 @@ async function runWorkflow(autoMode) {
       auto_mode: autoMode,
       debug_mode: false,
     });
-    if (res?.cfg_path) logLine(`CFG 已生成: ${res.cfg_path}`, "success");
+    if (res?.cfg_path) logLine(t("info.cfg_generated", { path: res.cfg_path }), "success");
     if (res?.output_path) {
-      logLine(`输出视频: ${res.output_path}`, "success");
+      logLine(t("info.output_video", { path: res.output_path }), "success");
       lastOutputPath.value = res.output_path;
       await updatePreviewUrl(res.output_path);
     }
-    setStatus("任务完成");
+    setStatus("status.task_done");
   } catch (err) {
     const msg = formatError(err);
     message.error(msg);
     logLine(msg, "error");
-    setStatus("任务失败");
+    setStatus("status.task_failed");
   } finally {
-    setTimeout(() => setStatus("就绪"), 1200);
+    setTimeout(() => setStatus("status.ready"), 1200);
   }
 }
 
@@ -550,11 +613,11 @@ async function checkEnvironment() {
     isCheckingEnv.value = true;
     isEnvReady.value = false;
     needsCS2Path.value = false;
-    setStatus("正在检查环境...");
+    setStatus("status.checking_env");
     await callBackend("CheckEnvironment");
     await loadConfig();
-    logLine("环境检查完成", "success");
-    message.success("环境检查完成");
+    logLine(t("info.env_checked"), "success");
+    message.success(t("info.env_checked"));
     isEnvReady.value = true;
     isSetupComplete.value = true;
   } catch (err) {
@@ -563,14 +626,14 @@ async function checkEnvironment() {
     logLine(msg, "error");
     if (msg.includes("CS2 未找到")) {
       needsCS2Path.value = true;
-      setStatus("请先设置 CS2.exe");
-      message.warning("请先设置 CS2.exe");
+      setStatus("status.need_cs2");
+      message.warning(t("warning.set_cs2"));
       isSetupComplete.value = false;
     }
   } finally {
     isCheckingEnv.value = false;
     if (!needsCS2Path.value) {
-      setStatus("就绪");
+      setStatus("status.ready");
     }
   }
 }
@@ -579,7 +642,7 @@ async function prepareEnvironment() {
   try {
     if (isPreparingEnv.value) return;
     isPreparingEnv.value = true;
-    setStatus("正在准备环境...");
+    setStatus("status.preparing_env");
     const cfg = await callBackend("PrepareEnvironment", false);
     fillConfig(cfg);
     configReady = true;
@@ -587,13 +650,13 @@ async function prepareEnvironment() {
       await checkEnvironment();
     } else {
       needsCS2Path.value = true;
-      setStatus("请先设置 CS2.exe");
+      setStatus("status.need_cs2");
     }
   } catch (err) {
     const msg = formatError(err);
     message.error(msg);
     logLine(msg, "error");
-    setStatus("环境准备失败");
+    setStatus("status.prepare_failed");
   } finally {
     isPreparingEnv.value = false;
   }
@@ -601,7 +664,7 @@ async function prepareEnvironment() {
 
 async function confirmSetup() {
   if (!form.cs2_exe) {
-    message.warning("请先设置 CS2.exe");
+    message.warning(t("warning.set_cs2"));
     return;
   }
   await saveConfig();
@@ -625,29 +688,29 @@ onMounted(async () => {
       logLine(msg.message, msg.level || "info");
       const text = msg.message;
       if (text.includes("正在下载 HLAE")) {
-        setStatus("正在下载 HLAE...");
+        setStatus("status.downloading_hlae");
       } else if (text.includes("正在解压 HLAE")) {
-        setStatus("正在解压 HLAE...");
+        setStatus("status.extracting_hlae");
       } else if (text.includes("HLAE 更新完成") || text.includes("HLAE 已是最新版本")) {
-        setStatus("HLAE 已准备就绪");
+        setStatus("status.hlae_ready");
       } else if (text.includes("正在下载 FFmpeg")) {
-        setStatus("正在下载 FFmpeg...");
+        setStatus("status.downloading_ffmpeg");
       } else if (text.includes("正在解压 FFmpeg")) {
-        setStatus("正在解压 FFmpeg...");
+        setStatus("status.extracting_ffmpeg");
       } else if (text.includes("FFmpeg 已准备就绪")) {
-        setStatus("FFmpeg 已准备就绪");
+        setStatus("status.ffmpeg_ready");
       } else if (text.includes("下载进度")) {
-        setStatus("正在下载...");
+        setStatus("status.downloading");
       } else if (text.includes("生成配置")) {
-        setStatus("正在生成 CFG...");
+        setStatus("status.generating_cfg");
       } else if (text.includes("启动录制")) {
-        setStatus("正在启动录制...");
+        setStatus("status.launching_record");
       } else if (text.includes("等待录制完成")) {
-        setStatus("正在录制...");
+        setStatus("status.recording");
       } else if (text.includes("视频合成")) {
-        setStatus("正在合成视频...");
+        setStatus("status.merging_video");
       } else if (text.includes("✓ 全部完成")) {
-        setStatus("任务完成");
+        setStatus("status.task_done");
       }
     }
   });
@@ -685,6 +748,31 @@ onMounted(async () => {
   flex-wrap: wrap;
 }
 
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header-title {
+  margin: 0;
+}
+
+.header-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-bottom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  justify-content: flex-end;
+}
+
 .icon-link {
   display: inline-flex;
   align-items: center;
@@ -705,7 +793,16 @@ onMounted(async () => {
 }
 
 .version-text {
-  margin-left: 4px;
+  margin-left: 0;
+}
+
+.lang-select {
+  margin-left: 6px;
+  width: 120px;
+}
+
+.lang-select :deep(.n-base-selection) {
+  width: 120px;
 }
 
 .video-preview {

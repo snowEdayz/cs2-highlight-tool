@@ -31,7 +31,7 @@ Parse game demo files → Select epic rounds → Automatically generate kill hig
 
 ---
 ## TODO
-- [ ]  **Multi-language Support**
+- ✅  **Multi-language Support**
 - [ ]  **Customizable CFG Recording**
 - [ ]  **Sharing Community**
 

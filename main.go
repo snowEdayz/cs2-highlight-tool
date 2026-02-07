@@ -446,16 +446,35 @@ func ensureFFmpegAvailable(exeDir string, cfg *Config, configPath string) error 
 	if err != nil {
 		return err
 	}
+	fallbackBin := filepath.Join(sourceDir, "bin")
 
 	targetDir := expectedFFmpegRoot
 	if _, err := os.Stat(targetDir); err == nil {
 		if err := os.RemoveAll(targetDir); err != nil {
-			return fmt.Errorf("清理旧 FFmpeg 目录失败: %w", err)
+			printWarning(fmt.Sprintf("清理旧 FFmpeg 目录失败，改用临时目录: %v", err))
+			cfg.FFmpegDir = fallbackBin
+			if configPath != "" {
+				_ = saveConfig(configPath, cfg)
+			}
+			if _, statErr := os.Stat(resolveFFmpegExe(exeDir, cfg)); statErr == nil {
+				printSuccess("FFmpeg 已准备就绪")
+				return nil
+			}
+			return fmt.Errorf("FFmpeg 解压后未找到 ffmpeg.exe")
 		}
 	}
 
 	if err := moveDir(sourceDir, targetDir); err != nil {
-		return fmt.Errorf("移动 FFmpeg 目录失败: %w", err)
+		printWarning(fmt.Sprintf("移动 FFmpeg 目录失败，改用临时目录: %v", err))
+		cfg.FFmpegDir = fallbackBin
+		if configPath != "" {
+			_ = saveConfig(configPath, cfg)
+		}
+		if _, statErr := os.Stat(resolveFFmpegExe(exeDir, cfg)); statErr == nil {
+			printSuccess("FFmpeg 已准备就绪")
+			return nil
+		}
+		return fmt.Errorf("FFmpeg 解压后未找到 ffmpeg.exe")
 	}
 	_ = os.RemoveAll(extractDir)
 

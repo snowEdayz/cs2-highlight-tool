@@ -28,8 +28,13 @@ jobs:
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
+      - name: Prepare Windows Icon
+        run: |
+          New-Item -ItemType Directory -Force -Path build\windows | Out-Null
+          Copy-Item -Force ".\previews\icon.ico" "build\windows\icon.ico"
+
       - name: Build Windows App
-        run: wails build --clean --platform windows/amd64 -icon "./previews/icon.ico"
+        run: wails build --clean --platform windows/amd64
 
       - name: Publish Release
         uses: softprops/action-gh-release@v2

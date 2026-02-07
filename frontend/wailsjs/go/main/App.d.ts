@@ -12,6 +12,8 @@ export function DownloadPerfectWorldDemo(arg1:string):Promise<string>;
 
 export function GetConfig():Promise<main.Config>;
 
+export function GetUpdateInfo():Promise<main.UpdateInfo>;
+
 export function GetVideoPreviewURL(arg1:string):Promise<string>;
 
 export function OpenVideoExternal(arg1:string):Promise<void>;

@@ -34,6 +34,9 @@
     "record_fps": "录制 FPS",
     "tickrate": "Tickrate",
     "video_preset": "视频预设",
+    "launch_resolution": "启动分辨率",
+    "resolution_16_9": "16:9 (默认)",
+    "resolution_4_3": "4:3 (1440x1080)",
     "transition_duration": "转场时长 (秒)",
     "transition_type": "转场类型",
     "save": "保存配置"
@@ -105,5 +108,15 @@
   "log": {
     "success_prefix": "成功: {message}",
     "fail_prefix": "失败: {message}"
+  },
+  "update": {
+    "title": "发现新版本",
+    "message": "当前版本: {current}\n最新版本: {latest}\n是否打开浏览器下载？",
+    "download": "下载",
+    "cancel": "取消"
+  },
+  "scroll": {
+    "to_top": "回到顶部",
+    "to_bottom": "回到底部"
   }
 }

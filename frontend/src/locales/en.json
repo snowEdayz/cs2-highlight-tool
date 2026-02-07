@@ -34,6 +34,9 @@
     "record_fps": "Record FPS",
     "tickrate": "Tickrate",
     "video_preset": "Video preset",
+    "launch_resolution": "Launch resolution",
+    "resolution_16_9": "16:9 (default)",
+    "resolution_4_3": "4:3 (1440x1080)",
     "transition_duration": "Transition duration (sec)",
     "transition_type": "Transition type",
     "save": "Save configuration"
@@ -105,5 +108,15 @@
   "log": {
     "success_prefix": "Success: {message}",
     "fail_prefix": "Failed: {message}"
+  },
+  "update": {
+    "title": "Update Available",
+    "message": "Current version: {current}\nLatest version: {latest}\nOpen browser to download?",
+    "download": "Download",
+    "cancel": "Cancel"
+  },
+  "scroll": {
+    "to_top": "To top",
+    "to_bottom": "To bottom"
   }
 }

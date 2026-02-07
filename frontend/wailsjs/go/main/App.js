@@ -22,6 +22,10 @@ export function GetConfig() {
   return window['go']['main']['App']['GetConfig']();
 }
 
+export function GetUpdateInfo() {
+  return window['go']['main']['App']['GetUpdateInfo']();
+}
+
 export function GetVideoPreviewURL(arg1) {
   return window['go']['main']['App']['GetVideoPreviewURL'](arg1);
 }

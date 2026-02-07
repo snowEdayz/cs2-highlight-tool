@@ -96,6 +96,9 @@
                       <n-form-item-gi :label="t('config.video_preset')">
                         <n-select v-model:value="form.video_preset" :options="presetOptions" />
                       </n-form-item-gi>
+                      <n-form-item-gi :label="t('config.launch_resolution')">
+                        <n-select v-model:value="form.launch_resolution" :options="resolutionOptions" />
+                      </n-form-item-gi>
                       <n-form-item-gi :label="t('config.transition_duration')">
                         <n-input-number v-model:value="form.transition_duration" :min="0" :step="0.1" />
                       </n-form-item-gi>
@@ -190,13 +193,23 @@
             </n-gi>
           </n-grid>
         </n-space>
+        <div class="scroll-fab">
+          <n-button
+            type="primary"
+            size="small"
+            @click="handleScrollJump"
+            :aria-label="isAtTop ? t('scroll.to_bottom') : t('scroll.to_top')"
+          >
+            {{ scrollFabIcon }}
+          </n-button>
+        </div>
       </div>
     </n-message-provider>
   </n-config-provider>
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
+import { computed, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { createDiscreteApi, darkTheme } from "naive-ui";
 import { useI18n } from "vue-i18n";
 import { EventsOn } from "../wailsjs/runtime/runtime";
@@ -234,7 +247,8 @@ const lastOutputUrl = ref("");
 const expandedRounds = ref([]);
 const headerCard = ref(null);
 const statusFixed = ref(false);
-const { message } = createDiscreteApi(["message"], {
+const isAtTop = ref(true);
+const { message, dialog } = createDiscreteApi(["message", "dialog"], {
   configProviderProps: {
     theme: darkTheme,
   },
@@ -254,6 +268,7 @@ const form = reactive({
   video_preset: "n1",
   transition_duration: 1,
   transition_type: "fade",
+  launch_resolution: "16:9",
 });
 
 const presetOptions = [
@@ -267,6 +282,11 @@ const transitionOptions = [
   { label: "slideright", value: "slideright" },
   { label: "circleopen", value: "circleopen" },
 ];
+
+const resolutionOptions = computed(() => [
+  { label: t("config.resolution_16_9"), value: "16:9" },
+  { label: t("config.resolution_4_3"), value: "4:3" },
+]);
 
 const languageOptions = computed(() => [
   { label: t("language.zh"), value: "zh" },
@@ -378,6 +398,7 @@ function fillConfig(cfg) {
   form.video_preset = cfg.video_preset || "n1";
   form.transition_duration = cfg.transition_duration || 1;
   form.transition_type = cfg.transition_type || "fade";
+  form.launch_resolution = cfg.launch_resolution || "16:9";
 }
 
 async function loadConfig() {
@@ -552,6 +573,21 @@ const allExpanded = computed(() => {
 
 const expandAllLabel = computed(() => (allExpanded.value ? t("demo.collapse_all") : t("demo.expand_all")));
 
+const scrollFabIcon = computed(() => (isAtTop.value ? "↓" : "↑"));
+
+function updateScrollState() {
+  const top = window.scrollY || document.documentElement.scrollTop || 0;
+  isAtTop.value = top <= 2;
+}
+
+function handleScrollJump() {
+  if (isAtTop.value) {
+    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
+  } else {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+}
+
 function toggleExpandAll() {
   if (allExpanded.value) {
     expandedRounds.value = [];
@@ -716,7 +752,36 @@ onMounted(async () => {
   });
 
   await prepareEnvironment();
+  await checkForUpdates();
+
+  updateScrollState();
+  window.addEventListener("scroll", updateScrollState, { passive: true });
 });
+
+onBeforeUnmount(() => {
+  window.removeEventListener("scroll", updateScrollState);
+});
+
+async function checkForUpdates() {
+  try {
+    const info = await callBackend("GetUpdateInfo");
+    if (!info?.available) return;
+    const content = t("update.message", { current: info.current, latest: info.latest });
+    dialog.info({
+      title: t("update.title"),
+      content: () => h("div", { style: "white-space: pre-line" }, content),
+      positiveText: t("update.download"),
+      negativeText: t("update.cancel"),
+      onPositiveClick: () => {
+        if (info.url) {
+          BrowserOpenURL(info.url);
+        }
+      },
+    });
+  } catch (_) {
+    return;
+  }
+}
 
 </script>
 
@@ -803,6 +868,13 @@ onMounted(async () => {
 
 .lang-select :deep(.n-base-selection) {
   width: 120px;
+}
+
+.scroll-fab {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 120;
 }
 
 .video-preview {

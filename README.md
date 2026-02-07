@@ -1,8 +1,23 @@
-# 🎬 CS2 Highlight Tool - 你的CS2击杀集锦生成器
+<p align="center">
+  <img src="previews/icon.ico" width="128" height="128" alt="Paytick Logo">
+</p>
+
+<h1 align="center">CS2 Highlight Tool - 你的CS2击杀集锦生成器</h1>
+
+<p align="center">
+  <a href="README.en.md">English</a> | 简体中文
+</p>
+
+<p align="center">
+  <a href="https://github.com/hkslover/cs2-highlight-tool/releases"><img src="https://img.shields.io/github/v/release/hkslover/cs2-highlight-tool?label=latest" alt="Release"></a>
+  <a href="https://github.com/hkslover/cs2-highlight-tool/releases"><img src="https://img.shields.io/github/downloads/hkslover/cs2-highlight-tool/total?color=blue" alt="Downloads"></a>
+  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
+</p>
 
 > 每周仅2次"完美时刻"不够用？🤯 打破限制，无限生成你的高光集锦！✨
-
-![](ScreenShot.png)
+# 预览
+![](previews/1.png)
+![](previews/2.png)
 
 ---
 

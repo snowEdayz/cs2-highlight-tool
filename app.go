@@ -89,6 +89,143 @@ func (a *App) startup(ctx context.Context) {
 	printSuccess("启动完成，等待环境初始化")
 }
 
+type releaseAsset struct {
+	BrowserDownloadURL string `json:"browser_download_url"`
+}
+
+type releaseInfo struct {
+	TagName string         `json:"tag_name"`
+	Assets  []releaseAsset `json:"assets"`
+	HTMLURL string         `json:"html_url"`
+}
+
+func getCurrentVersion() string {
+	if len(wailsConfigData) == 0 {
+		return "0.0.0"
+	}
+	var data struct {
+		Version string `json:"version"`
+	}
+	if err := json.Unmarshal(wailsConfigData, &data); err != nil {
+		return "0.0.0"
+	}
+	if data.Version == "" {
+		return "0.0.0"
+	}
+	return data.Version
+}
+
+func compareVersions(current, latest string) int {
+	parse := func(v string) []int {
+		v = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(v, "v"), "V"))
+		parts := strings.Split(v, ".")
+		out := make([]int, 0, len(parts))
+		for _, p := range parts {
+			n, err := strconv.Atoi(p)
+			if err != nil {
+				n = 0
+			}
+			out = append(out, n)
+		}
+		return out
+	}
+	a := parse(current)
+	b := parse(latest)
+	max := len(a)
+	if len(b) > max {
+		max = len(b)
+	}
+	for len(a) < max {
+		a = append(a, 0)
+	}
+	for len(b) < max {
+		b = append(b, 0)
+	}
+	for i := 0; i < max; i++ {
+		if a[i] < b[i] {
+			return -1
+		}
+		if a[i] > b[i] {
+			return 1
+		}
+	}
+	return 0
+}
+
+func (a *App) fetchLatestRelease() (*releaseInfo, error) {
+	client := &http.Client{
+		Timeout: 15 * time.Second,
+	}
+
+	apiURL := "https://api.github.com/repos/hkslover/cs2-highlight-tool/releases/latest"
+	if isChinaIP() {
+		apiURL = "https://gitee.com/api/v5/repos/hkslover/cs2-highlight-tool/releases/latest"
+	}
+
+	req, err := http.NewRequest("GET", apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", "CS2-Highlight-Tool")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("更新检查失败: %d", resp.StatusCode)
+	}
+
+	var info releaseInfo
+	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
+		return nil, err
+	}
+
+	return &info, nil
+}
+
+type UpdateInfo struct {
+	Available bool   `json:"available"`
+	Current   string `json:"current"`
+	Latest    string `json:"latest"`
+	URL       string `json:"url"`
+}
+
+func (a *App) GetUpdateInfo() (*UpdateInfo, error) {
+	current := getCurrentVersion()
+	info, err := a.fetchLatestRelease()
+	if err != nil || info == nil {
+		return &UpdateInfo{Available: false, Current: current}, nil
+	}
+	latest := info.TagName
+	if latest == "" {
+		return &UpdateInfo{Available: false, Current: current}, nil
+	}
+	if compareVersions(current, latest) >= 0 {
+		return &UpdateInfo{Available: false, Current: current, Latest: latest}, nil
+	}
+
+	downloadURL := info.HTMLURL
+	for _, asset := range info.Assets {
+		if asset.BrowserDownloadURL != "" {
+			downloadURL = asset.BrowserDownloadURL
+			break
+		}
+	}
+	if downloadURL == "" {
+		return &UpdateInfo{Available: false, Current: current, Latest: latest}, nil
+	}
+
+	return &UpdateInfo{
+		Available: true,
+		Current:   current,
+		Latest:    latest,
+		URL:       downloadURL,
+	}, nil
+}
+
 func loadStoredHLAEVersion(configPath string) string {
 	if configPath == "" {
 		return ""
@@ -187,6 +324,9 @@ func applyConfigDefaults(cfg *Config, baseCfg *Config) {
 	}
 	if cfg.TransitionType == "" {
 		cfg.TransitionType = baseCfg.TransitionType
+	}
+	if cfg.LaunchResolution != "4:3" && cfg.LaunchResolution != "16:9" {
+		cfg.LaunchResolution = baseCfg.LaunchResolution
 	}
 
 	if baseCfg.HLAEVersion != "" {

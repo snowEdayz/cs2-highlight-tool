@@ -50,6 +50,9 @@ var (
 //go:embed frontend/dist
 var assets embed.FS
 
+//go:embed wails.json
+var wailsConfigData []byte
+
 var appCtx context.Context
 
 const ffmpegDownloadURL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.7z"
@@ -588,6 +591,7 @@ type Config struct {
 	VideoPreset        string  `json:"video_preset"` // 录制预设: "c1" (libx264) 或 "n1" (hevc_nvenc)
 	TransitionDuration float64 `json:"transition_duration"`
 	TransitionType     string  `json:"transition_type"`
+	LaunchResolution   string  `json:"launch_resolution"`
 }
 
 type KillInfo struct {
@@ -627,6 +631,7 @@ func buildBaseConfig(exeDir string) *Config {
 		VideoPreset:        "n1",
 		TransitionDuration: 1,
 		TransitionType:     "fade",
+		LaunchResolution:   "16:9",
 	}
 }
 
@@ -705,6 +710,7 @@ func saveConfig(path string, cfg *Config) error {
 		"video_preset":        cfg.VideoPreset,
 		"transition_duration": cfg.TransitionDuration,
 		"transition_type":     cfg.TransitionType,
+		"launch_resolution":   cfg.LaunchResolution,
 	}
 
 	data, err := json.MarshalIndent(configData, "", "  ")
@@ -1214,7 +1220,10 @@ func launchHLAE(cfg *Config, demoPath, cfgName string) error {
 		return fmt.Errorf("AfxHookSource2.dll 不存在: %s", hookDll)
 	}
 
-	cmdLine := fmt.Sprintf(`-insecure -novid -console +playdemo "%s" +exec %s`, demoPath, cfgName)
+	cmdLine := fmt.Sprintf(`-insecure -novid -low -high +sv_lan 1 -coop_fullscreen -worldwide -console +playdemo "%s" +exec %s`, demoPath, cfgName)
+	if cfg.LaunchResolution == "4:3" {
+		cmdLine += " -w 1440 -h 1080"
+	}
 
 	args := []string{
 		"-noGui", "-autoStart", "-noConfig",
@@ -1324,22 +1333,20 @@ func mergeAudioVideo(videoPath, audioPath, outputPath, ffmpegExe string) error {
 	return cmd.Run()
 }
 
-func createTransitionsVideo(segments []string, outputPath, ffmpegExe string, duration float64, transType string) error {
+func createTransitionsVideo(segments []string, outputPath, ffmpegExe string, duration float64, transType string, preset string) error {
 	numSegs := len(segments)
+
+	encodeArgs := buildTransitionEncodeArgs(preset)
 
 	// 单个片段时，使用 FFmpeg 重新编码以确保格式正确
 	if numSegs == 1 {
-		cmd := execCommandHidden(ffmpegExe,
+		args := []string{
 			"-y",
 			"-i", segments[0],
-			"-c:v", "libx264",
-			"-crf", "23",
-			"-preset", "medium",
-			"-c:a", "aac",
-			"-b:a", "192k",
-			"-pix_fmt", "yuv420p",
-			outputPath,
-		)
+		}
+		args = append(args, encodeArgs...)
+		args = append(args, outputPath)
+		cmd := execCommandHidden(ffmpegExe, args...)
 		return cmd.Run()
 	}
 
@@ -1404,12 +1411,38 @@ func createTransitionsVideo(segments []string, outputPath, ffmpegExe string, dur
 
 	args = append(args, "-filter_complex", strings.Join(filters, ";"))
 	args = append(args, "-map", "[v]", "-map", "[a]")
-	args = append(args, "-c:v", "libx264", "-crf", "23", "-preset", "medium")
-	args = append(args, "-pix_fmt", "yuv420p")
+	args = append(args, encodeArgs...)
 	args = append(args, outputPath)
 
 	cmd := execCommandHidden(ffmpegExe, args...)
 	return cmd.Run()
+}
+
+func buildTransitionEncodeArgs(preset string) []string {
+	switch preset {
+	case "n1":
+		return []string{
+			"-c:v", "h264_nvenc",
+			"-g", "120",
+			"-preset", "p4",
+			"-tune", "hq",
+			"-rc", "vbr",
+			"-cq", "19",
+			"-pix_fmt", "yuv420p",
+			"-profile:v", "high",
+			"-c:a", "aac",
+			"-b:a", "192k",
+		}
+	default:
+		return []string{
+			"-c:v", "libx264",
+			"-crf", "23",
+			"-preset", "medium",
+			"-pix_fmt", "yuv420p",
+			"-c:a", "aac",
+			"-b:a", "192k",
+		}
+	}
 }
 
 func processRecordings(outputDir, demoName, exeDir string, selectedRounds []int, cfg *Config, debugMode bool) (string, error) {
@@ -1498,7 +1531,7 @@ func processRecordings(outputDir, demoName, exeDir string, selectedRounds []int,
 	finalOutput := filepath.Join(outputDir, demoName+roundsStr+".mp4")
 	printInfo("添加转场效果...")
 
-	if err := createTransitionsVideo(mergedSegments, finalOutput, ffmpegExe, cfg.TransitionDuration, cfg.TransitionType); err != nil {
+	if err := createTransitionsVideo(mergedSegments, finalOutput, ffmpegExe, cfg.TransitionDuration, cfg.TransitionType, cfg.VideoPreset); err != nil {
 		return "", fmt.Errorf("转场合成失败: %w", err)
 	}
 

@@ -1,8 +1,22 @@
-# 🎬 CS2 Highlight Tool - Your CS2 Kill Highlight Generator
+<p align="center">
+  <img src="previews/icon.ico" width="128" height="128" alt="Paytick Logo">
+</p>
 
-> Only 2 "Perfect Moments" per week not enough? 🤯 Break the limits, generate unlimited highlight reels! ✨
+<h1 align="center"> CS2 Highlight Tool - Your CS2 Kill Highlight Generator</h1>
 
-![](ScreenShot.png)
+<p align="center">
+  English | <a href="README.md">简体中文</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/hkslover/cs2-highlight-tool/releases"><img src="https://img.shields.io/github/v/release/hkslover/cs2-highlight-tool?label=latest" alt="Release"></a>
+  <a href="https://github.com/hkslover/cs2-highlight-tool/releases"><img src="https://img.shields.io/github/downloads/hkslover/cs2-highlight-tool/total?color=blue" alt="Downloads"></a>
+  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
+</p>
+
+# Previews
+![](previews/1.png)
+![](previews/2.png)
 
 ---
 

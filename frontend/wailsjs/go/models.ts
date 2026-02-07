@@ -12,6 +12,7 @@ export namespace main {
 	    video_preset: string;
 	    transition_duration: number;
 	    transition_type: string;
+	    launch_resolution: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Config(source);
@@ -30,6 +31,7 @@ export namespace main {
 	        this.video_preset = source["video_preset"];
 	        this.transition_duration = source["transition_duration"];
 	        this.transition_type = source["transition_type"];
+	        this.launch_resolution = source["launch_resolution"];
 	    }
 	}
 	export class KillInfo {
@@ -192,6 +194,25 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.cfg_path = source["cfg_path"];
 	        this.output_path = source["output_path"];
+	    }
+	}
+	
+	export class UpdateInfo {
+	    available: boolean;
+	    current: string;
+	    latest: string;
+	    url: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpdateInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.available = source["available"];
+	        this.current = source["current"];
+	        this.latest = source["latest"];
+	        this.url = source["url"];
 	    }
 	}
 

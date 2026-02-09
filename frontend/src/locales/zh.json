@@ -1,10 +1,12 @@
 {
   "app": {
-    "title": "CS2 击杀集锦制作工具"
+    "title": "CS2 击杀集锦制作工具",
+    "usage_stats": "该工具已经被运行: {run} 次，已经制作击杀集锦: {make} 次"
   },
   "aria": {
     "email": "邮箱",
-    "github": "GitHub"
+    "github": "GitHub",
+    "blog": "博客"
   },
   "language": {
     "zh": "中文",
@@ -13,6 +15,7 @@
   "common": {
     "select": "选择",
     "logs": "日志",
+    "ok": "知道了",
     "unknown_error": "未知错误",
     "wails_api_not_loaded": "Wails API 未加载: {method}"
   },
@@ -33,12 +36,17 @@
     "output_placeholder": "outputs 目录",
     "record_fps": "录制 FPS",
     "tickrate": "Tickrate",
+    "killer_pre_seconds": "击杀视角前置 (秒)",
+    "killer_post_seconds": "击杀视角后置 (秒)",
     "video_preset": "视频预设",
     "launch_resolution": "启动分辨率",
     "resolution_16_9": "16:9 (默认)",
     "resolution_4_3": "4:3 (1440x1080)",
     "transition_duration": "转场时长 (秒)",
     "transition_type": "转场类型",
+    "record_victim_view": "录制被击杀视角",
+    "victim_pre_seconds": "被击杀视角前置 (秒)",
+    "victim_post_seconds": "被击杀视角后置 (秒)",
     "save": "保存配置"
   },
   "preview": {
@@ -94,7 +102,9 @@
     "select_demo": "请先选择 demo 文件",
     "select_player": "请先选择玩家",
     "select_rounds": "请选择回合",
-    "set_cs2": "请先设置 CS2.exe"
+    "set_cs2": "请先设置 CS2.exe",
+    "path_has_cjk_title": "程序路径包含中文",
+    "path_has_cjk_desc": "检测到程序所在目录包含中文字符：\n{path}\n请将程序移动到不含中文名称的文件夹下再使用。"
   },
   "info": {
     "config_saved": "配置已保存",
@@ -103,7 +113,10 @@
     "env_checked": "环境检查完成",
     "cfg_generated": "CFG 已生成: {path}",
     "output_video": "输出视频: {path}",
-    "downloading_demo_start": "开始下载完美世界 Demo..."
+    "downloading_demo_start": "开始下载完美世界 Demo...",
+    "make_title": "开始制作前提示",
+    "make_tip_base": "即将启动录制并自动合成视频，期间尽可能保证CS2在前台执行，后台执行可能会发生问题",
+    "make_tip_victim": "你已开启被击杀视角，CS2会启动两次，请耐心等待"
   },
   "log": {
     "success_prefix": "成功: {message}",

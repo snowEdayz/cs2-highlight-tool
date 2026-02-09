@@ -14,7 +14,13 @@ export function GetConfig():Promise<main.Config>;
 
 export function GetUpdateInfo():Promise<main.UpdateInfo>;
 
+export function GetUsageStats():Promise<main.UsageStats>;
+
 export function GetVideoPreviewURL(arg1:string):Promise<string>;
+
+export function IncrementMakeCount():Promise<main.CountResponse>;
+
+export function IncrementRunCount():Promise<main.CountResponse>;
 
 export function OpenVideoExternal(arg1:string):Promise<void>;
 

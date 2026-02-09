@@ -13,6 +13,11 @@ export namespace main {
 	    transition_duration: number;
 	    transition_type: string;
 	    launch_resolution: string;
+	    record_victim_view: boolean;
+	    killer_pre_seconds: number;
+	    killer_post_seconds: number;
+	    victim_pre_seconds: number;
+	    victim_post_seconds: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new Config(source);
@@ -32,12 +37,30 @@ export namespace main {
 	        this.transition_duration = source["transition_duration"];
 	        this.transition_type = source["transition_type"];
 	        this.launch_resolution = source["launch_resolution"];
+	        this.record_victim_view = source["record_victim_view"];
+	        this.killer_pre_seconds = source["killer_pre_seconds"];
+	        this.killer_post_seconds = source["killer_post_seconds"];
+	        this.victim_pre_seconds = source["victim_pre_seconds"];
+	        this.victim_post_seconds = source["victim_post_seconds"];
+	    }
+	}
+	export class CountResponse {
+	    counts: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new CountResponse(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.counts = source["counts"];
 	    }
 	}
 	export class KillInfo {
 	    round: number;
 	    tick: number;
 	    victim_name: string;
+	    victim_entity_id: number;
 	    killer_name: string;
 	    weapon_name: string;
 	    is_headshot: boolean;
@@ -52,6 +75,7 @@ export namespace main {
 	        this.round = source["round"];
 	        this.tick = source["tick"];
 	        this.victim_name = source["victim_name"];
+	        this.victim_entity_id = source["victim_entity_id"];
 	        this.killer_name = source["killer_name"];
 	        this.weapon_name = source["weapon_name"];
 	        this.is_headshot = source["is_headshot"];
@@ -213,6 +237,20 @@ export namespace main {
 	        this.current = source["current"];
 	        this.latest = source["latest"];
 	        this.url = source["url"];
+	    }
+	}
+	export class UsageStats {
+	    run: number;
+	    make: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new UsageStats(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.run = source["run"];
+	        this.make = source["make"];
 	    }
 	}
 

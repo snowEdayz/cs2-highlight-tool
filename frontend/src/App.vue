@@ -23,10 +23,19 @@
                     />
                   </svg>
                 </button>
+                <button class="icon-link" type="button" @click="openExternal(author.blog)" :aria-label="t('aria.blog')">
+                  <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
+                    <path
+                      fill="currentColor"
+                      d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2a2 2 0 1 1 2 2c-1.1 0-2 .9-2 2v1h2v-1c0-.55.45-1 1-1 1.66 0 3-1.34 3-3 0-2.21-1.79-4-4-4z"
+                    />
+                  </svg>
+                </button>
               </div>
             </div>
             <div class="header-bottom">
               <n-text depth="3" class="version-text">{{ appVersion }}</n-text>
+              <n-text depth="3" class="stats-text">{{ usageStatsText }}</n-text>
               <n-select v-model:value="locale" size="small" class="lang-select" :options="languageOptions" />
             </div>
           </n-card>
@@ -102,8 +111,23 @@
                       <n-form-item-gi :label="t('config.transition_duration')">
                         <n-input-number v-model:value="form.transition_duration" :min="0" :step="0.1" />
                       </n-form-item-gi>
-                      <n-form-item-gi :label="t('config.transition_type')">
+                      <n-form-item-gi :label="t('config.transition_type')" :span="2">
                         <n-select v-model:value="form.transition_type" :options="transitionOptions" />
+                      </n-form-item-gi>
+                      <n-form-item-gi :label="t('config.killer_pre_seconds')">
+                        <n-input-number v-model:value="form.killer_pre_seconds" :min="1" :step="1" />
+                      </n-form-item-gi>
+                      <n-form-item-gi :label="t('config.killer_post_seconds')">
+                        <n-input-number v-model:value="form.killer_post_seconds" :min="1" :step="1" />
+                      </n-form-item-gi>
+                      <n-form-item-gi :label="t('config.record_victim_view')" :span="2">
+                        <n-switch v-model:value="form.record_victim_view"/>
+                      </n-form-item-gi>
+                      <n-form-item-gi v-if="form.record_victim_view" :label="t('config.victim_pre_seconds')">
+                        <n-input-number v-model:value="form.victim_pre_seconds" :min="1" :step="1" />
+                      </n-form-item-gi>
+                      <n-form-item-gi v-if="form.record_victim_view" :label="t('config.victim_post_seconds')">
+                        <n-input-number v-model:value="form.victim_post_seconds" :min="1" :step="1" />
                       </n-form-item-gi>
                     </n-grid>
                   </n-form>
@@ -213,7 +237,7 @@ import { computed, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch
 import { createDiscreteApi, darkTheme } from "naive-ui";
 import { useI18n } from "vue-i18n";
 import { EventsOn } from "../wailsjs/runtime/runtime";
-import { BrowserOpenURL } from "../wailsjs/runtime/runtime";
+import { BrowserOpenURL, Quit } from "../wailsjs/runtime/runtime";
 import wailsConfig from "../../wails.json";
 import * as AppApi from "../wailsjs/go/main/App";
 import DeathNoticeList from "./components/DeathNoticeList.vue";
@@ -230,8 +254,11 @@ const logRef = ref(null);
 const author = {
   email: "hk_snow@yeah.net",
   github: "https://github.com/hkslover/cs2-highlight-tool",
+  blog: "https://snowblog.xyz/posts/cs2-highlight-tool-faqs/",
 };
 const appVersion = `v${wailsConfig.version || "0.0.0"}`;
+const runCount = ref(null);
+const makeCount = ref(null);
 const statusKey = ref("status.ready");
 const statusText = computed(() => t(statusKey.value));
 const statusType = computed(() => (statusKey.value === "status.ready" ? "success" : "info"));
@@ -269,6 +296,11 @@ const form = reactive({
   transition_duration: 1,
   transition_type: "fade",
   launch_resolution: "16:9",
+  record_victim_view: false,
+  killer_pre_seconds: 5,
+  killer_post_seconds: 5,
+  victim_pre_seconds: 1,
+  victim_post_seconds: 1,
 });
 
 const presetOptions = [
@@ -292,6 +324,12 @@ const languageOptions = computed(() => [
   { label: t("language.zh"), value: "zh" },
   { label: t("language.en"), value: "en" },
 ]);
+
+const usageStatsText = computed(() => {
+  const runValue = runCount.value ?? "-";
+  const makeValue = makeCount.value ?? "-";
+  return t("app.usage_stats", { run: runValue, make: makeValue });
+});
 
 const players = computed(() => demoInfo.value?.players || []);
 const playerOptions = computed(() =>
@@ -336,6 +374,38 @@ function logLine(message, level = "info") {
   });
   if (logs.value.length > 500) {
     logs.value.shift();
+  }
+}
+
+async function fetchStats() {
+  try {
+    const data = await callBackend("GetUsageStats");
+    if (typeof data?.run === "number") runCount.value = data.run;
+    if (typeof data?.make === "number") makeCount.value = data.make;
+  } catch (_) {
+    return;
+  }
+}
+
+async function incrementRunCount() {
+  try {
+    const data = await callBackend("IncrementRunCount");
+    if (typeof data?.counts === "number") {
+      runCount.value = data.counts;
+    }
+  } catch (_) {
+    return;
+  }
+}
+
+async function incrementMakeCount() {
+  try {
+    const data = await callBackend("IncrementMakeCount");
+    if (typeof data?.counts === "number") {
+      makeCount.value = data.counts;
+    }
+  } catch (_) {
+    return;
   }
 }
 
@@ -399,6 +469,11 @@ function fillConfig(cfg) {
   form.transition_duration = cfg.transition_duration || 1;
   form.transition_type = cfg.transition_type || "fade";
   form.launch_resolution = cfg.launch_resolution || "16:9";
+  form.record_victim_view = cfg.record_victim_view || false;
+  form.killer_pre_seconds = cfg.killer_pre_seconds || 5;
+  form.killer_post_seconds = cfg.killer_post_seconds || 5;
+  form.victim_pre_seconds = cfg.victim_pre_seconds || 1;
+  form.victim_post_seconds = cfg.victim_post_seconds || 1;
 }
 
 async function loadConfig() {
@@ -596,6 +671,25 @@ function toggleExpandAll() {
   }
 }
 
+function buildMakeInfoText() {
+  let text = t("info.make_tip_base");
+  if (form.record_victim_view) {
+    text += `\n${t("info.make_tip_victim")}`;
+  }
+  return text;
+}
+
+function showMakeInfoDialog() {
+  return new Promise((resolve) => {
+    dialog.info({
+      title: t("info.make_title"),
+      content: () => h("div", { style: "white-space: pre-line" }, buildMakeInfoText()),
+      positiveText: t("common.ok"),
+      onPositiveClick: () => resolve(true),
+    });
+  });
+}
+
 async function runWorkflow(autoMode) {
   if (!isEnvReady.value) {
     message.warning(t("warning.env_not_ready"));
@@ -617,6 +711,7 @@ async function runWorkflow(autoMode) {
     return;
   }
 
+  await showMakeInfoDialog();
   try {
     setStatus(autoMode ? "status.generating_cfg_and_record" : "status.generating_cfg");
     const res = await callBackend("RunWorkflow", {
@@ -631,6 +726,7 @@ async function runWorkflow(autoMode) {
       logLine(t("info.output_video", { path: res.output_path }), "success");
       lastOutputPath.value = res.output_path;
       await updatePreviewUrl(res.output_path);
+      await incrementMakeCount();
     }
     setStatus("status.task_done");
   } catch (err) {
@@ -660,6 +756,14 @@ async function checkEnvironment() {
     const msg = formatError(err);
     message.error(msg);
     logLine(msg, "error");
+    if (msg.includes("程序路径包含中文")) {
+      const path = msg.replace(/^.*?:\s*/, "");
+      dialog.warning({
+        title: t("warning.path_has_cjk_title"),
+        content: () => h("div", { style: "white-space: pre-line" }, t("warning.path_has_cjk_desc", { path })),
+        positiveText: t("common.ok"),
+      });
+    }
     if (msg.includes("CS2 未找到")) {
       needsCS2Path.value = true;
       setStatus("status.need_cs2");
@@ -692,6 +796,18 @@ async function prepareEnvironment() {
     const msg = formatError(err);
     message.error(msg);
     logLine(msg, "error");
+    if (msg.includes("程序路径包含中文")) {
+      const path = msg.replace(/^.*?:\s*/, "");
+      dialog.warning({
+        title: t("warning.path_has_cjk_title"),
+        content: () => h("div", { style: "white-space: pre-line" }, t("warning.path_has_cjk_desc", { path })),
+        positiveText: t("common.ok"),
+        onPositiveClick: () => {
+          Quit();
+        },
+      });
+      return;
+    }
     setStatus("status.prepare_failed");
   } finally {
     isPreparingEnv.value = false;
@@ -718,6 +834,9 @@ onMounted(async () => {
     );
     observer.observe(headerCard.value.$el);
   }
+
+  await incrementRunCount();
+  await fetchStats();
 
   EventsOn("log", (msg) => {
     if (msg?.message) {
@@ -836,6 +955,10 @@ async function checkForUpdates() {
   gap: 8px;
   margin-top: 10px;
   justify-content: flex-end;
+}
+
+.stats-text {
+  margin-left: 6px;
 }
 
 .icon-link {

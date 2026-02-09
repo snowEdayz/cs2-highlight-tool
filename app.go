@@ -61,6 +61,15 @@ type RecordResult struct {
 	OutputPath string `json:"output_path"`
 }
 
+type UsageStats struct {
+	Run  int `json:"run"`
+	Make int `json:"make"`
+}
+
+type CountResponse struct {
+	Counts int `json:"counts"`
+}
+
 func NewApp() *App {
 	exePath, err := os.Executable()
 	if err != nil {
@@ -85,8 +94,89 @@ func (a *App) startup(ctx context.Context) {
 		}
 	}
 
+	if err := cleanupOutputDirectories(a.exeDir); err != nil {
+		printWarning(fmt.Sprintf("清理 outputs 目录失败: %v", err))
+	}
+
 	// 启动时仅初始化路径与上下文，环境准备交由前端触发
 	printSuccess("启动完成，等待环境初始化")
+}
+
+func (a *App) shutdown(ctx context.Context) {
+	if a.exeDir == "" {
+		exePath, err := os.Executable()
+		if err == nil {
+			a.exeDir = filepath.Dir(exePath)
+		}
+	}
+	if err := cleanupOutputDirectories(a.exeDir); err != nil {
+		printWarning(fmt.Sprintf("清理 outputs 目录失败: %v", err))
+	}
+}
+
+func cleanupOutputDirectories(exeDir string) error {
+	if exeDir == "" {
+		return nil
+	}
+	outputDir := filepath.Join(exeDir, "outputs")
+	entries, err := os.ReadDir(outputDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			if err := os.RemoveAll(filepath.Join(outputDir, entry.Name())); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+const statsBaseURL = "https://snowblog.xyz/api/v1"
+
+func fetchStatsJSON(path string, out interface{}) error {
+	client := &http.Client{Timeout: 8 * time.Second}
+	req, err := http.NewRequest(http.MethodGet, statsBaseURL+path, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("stats request failed: %s", resp.Status)
+	}
+	return json.NewDecoder(resp.Body).Decode(out)
+}
+
+func (a *App) GetUsageStats() (*UsageStats, error) {
+	var stats UsageStats
+	if err := fetchStatsJSON("/stats", &stats); err != nil {
+		return nil, err
+	}
+	return &stats, nil
+}
+
+func (a *App) IncrementRunCount() (*CountResponse, error) {
+	var res CountResponse
+	if err := fetchStatsJSON("/run", &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (a *App) IncrementMakeCount() (*CountResponse, error) {
+	var res CountResponse
+	if err := fetchStatsJSON("/make", &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
 }
 
 type releaseAsset struct {
@@ -247,6 +337,10 @@ func (a *App) PrepareEnvironment(debugMode bool) (*Config, error) {
 	baseCfg := buildBaseConfig(a.exeDir)
 	baseCfg.HLAEVersion = loadStoredHLAEVersion(a.configPath)
 
+	if containsCJK(a.exeDir) {
+		return nil, fmt.Errorf("程序路径包含中文: %s", a.exeDir)
+	}
+
 	// 先准备 FFmpeg/HLAE，再读取/修复配置
 	if err := ensureFFmpegAvailable(a.exeDir, baseCfg, ""); err != nil {
 		return nil, err
@@ -315,6 +409,18 @@ func applyConfigDefaults(cfg *Config, baseCfg *Config) {
 	}
 	if cfg.Tickrate <= 0 {
 		cfg.Tickrate = baseCfg.Tickrate
+	}
+	if cfg.KillerPreSeconds <= 0 {
+		cfg.KillerPreSeconds = baseCfg.KillerPreSeconds
+	}
+	if cfg.KillerPostSeconds <= 0 {
+		cfg.KillerPostSeconds = baseCfg.KillerPostSeconds
+	}
+	if cfg.VictimPreSeconds <= 0 {
+		cfg.VictimPreSeconds = baseCfg.VictimPreSeconds
+	}
+	if cfg.VictimPostSeconds <= 0 {
+		cfg.VictimPostSeconds = baseCfg.VictimPostSeconds
 	}
 	if cfg.VideoPreset == "" {
 		cfg.VideoPreset = baseCfg.VideoPreset
@@ -780,8 +886,14 @@ func (a *App) RunWorkflow(req RecordRequest) (*RecordResult, error) {
 		return nil, fmt.Errorf("选择的回合没有击杀数据")
 	}
 
-	preTicks := int(5 * float64(a.config.Tickrate))
-	postTicks := int(5 * float64(a.config.Tickrate))
+	preTicks := int(a.config.KillerPreSeconds * float64(a.config.Tickrate))
+	postTicks := int(a.config.KillerPostSeconds * float64(a.config.Tickrate))
+	if preTicks < 0 {
+		preTicks = 0
+	}
+	if postTicks < 0 {
+		postTicks = 0
+	}
 	segments := buildSegments(selectedKills, preTicks, postTicks)
 	if len(segments) == 0 {
 		return nil, fmt.Errorf("未生成有效片段")
@@ -817,13 +929,32 @@ func (a *App) RunWorkflow(req RecordRequest) (*RecordResult, error) {
 		return nil, err
 	}
 
+	if a.config.RecordVictimView {
+		victimCfgName := cfgName + "_victim"
+		printTitle("\n启动被害者视角录制")
+		if err := launchHLAE(a.config, req.DemoPath, victimCfgName); err != nil {
+			return nil, err
+		}
+
+		if err := waitForCS2Completion(60 * time.Minute); err != nil {
+			killCS2Processes()
+			return nil, err
+		}
+	}
+
 	printTitle("\n视频合成")
 	finalOutput, err := processRecordings(a.config.OutputDir, demoName, a.exeDir, req.SelectedRounds, a.config, req.DebugMode)
 	if err != nil {
 		return nil, err
 	}
+	if err := cleanupOutputDirectories(a.exeDir); err != nil {
+		printWarning(fmt.Sprintf("清理 outputs 目录失败: %v", err))
+	}
 
 	result.OutputPath = finalOutput
+	if req.AutoMode && !req.DebugMode {
+		result.CfgPath = ""
+	}
 	printSuccess("\n✓ 全部完成！")
 
 	return result, nil

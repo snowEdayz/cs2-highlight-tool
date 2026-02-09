@@ -19,6 +19,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unicode"
 
 	"github.com/bodgit/sevenzip"
 	"github.com/fatih/color"
@@ -55,7 +56,10 @@ var wailsConfigData []byte
 
 var appCtx context.Context
 
-const ffmpegDownloadURL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.7z"
+const (
+	ffmpegDownloadURLGlobal = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.7z"
+	ffmpegDownloadURLCN     = "https://gitee.com/hkslover/ffmpeg_release/releases/download/v8.0.1/ffmpeg-8.0.1-essentials_build.7z"
+)
 
 type LogMessage struct {
 	Level   string `json:"level"`
@@ -137,6 +141,13 @@ func isChinaIP() bool {
 	}
 
 	return false
+}
+
+func getFFmpegDownloadURL() string {
+	if isChinaIP() {
+		return ffmpegDownloadURLCN
+	}
+	return ffmpegDownloadURLGlobal
 }
 
 // 获取最新 HLAE 版本信息
@@ -426,7 +437,8 @@ func ensureFFmpegAvailable(exeDir string, cfg *Config, configPath string) error 
 	printWarning("未找到 FFmpeg，开始下载...")
 	printInfo("正在下载 FFmpeg...")
 	tempArchive := filepath.Join(exeDir, "ffmpeg_temp.7z")
-	if err := downloadFile(ffmpegDownloadURL, tempArchive); err != nil {
+	downloadURL := getFFmpegDownloadURL()
+	if err := downloadFile(downloadURL, tempArchive); err != nil {
 		return fmt.Errorf("下载 FFmpeg 失败: %w", err)
 	}
 	defer os.Remove(tempArchive)
@@ -611,12 +623,18 @@ type Config struct {
 	TransitionDuration float64 `json:"transition_duration"`
 	TransitionType     string  `json:"transition_type"`
 	LaunchResolution   string  `json:"launch_resolution"`
+	RecordVictimView   bool    `json:"record_victim_view"`
+	KillerPreSeconds   float64 `json:"killer_pre_seconds"`
+	KillerPostSeconds  float64 `json:"killer_post_seconds"`
+	VictimPreSeconds   float64 `json:"victim_pre_seconds"`
+	VictimPostSeconds  float64 `json:"victim_post_seconds"`
 }
 
 type KillInfo struct {
 	Round      int    `json:"round"`
 	Tick       int    `json:"tick"`
 	VictimName string `json:"victim_name"`
+	VictimID   int    `json:"victim_entity_id"`
 	KillerName string `json:"killer_name"`
 	WeaponName string `json:"weapon_name"`
 	IsHeadshot bool   `json:"is_headshot"`
@@ -650,7 +668,12 @@ func buildBaseConfig(exeDir string) *Config {
 		VideoPreset:        "n1",
 		TransitionDuration: 1,
 		TransitionType:     "fade",
-		LaunchResolution:   "16:9",
+		LaunchResolution:   "4:3",
+		RecordVictimView:   false,
+		KillerPreSeconds:   5,
+		KillerPostSeconds:  5,
+		VictimPreSeconds:   2,
+		VictimPostSeconds:  2,
 	}
 }
 
@@ -730,6 +753,11 @@ func saveConfig(path string, cfg *Config) error {
 		"transition_duration": cfg.TransitionDuration,
 		"transition_type":     cfg.TransitionType,
 		"launch_resolution":   cfg.LaunchResolution,
+		"record_victim_view":  cfg.RecordVictimView,
+		"killer_pre_seconds":  cfg.KillerPreSeconds,
+		"killer_post_seconds": cfg.KillerPostSeconds,
+		"victim_pre_seconds":  cfg.VictimPreSeconds,
+		"victim_post_seconds": cfg.VictimPostSeconds,
 	}
 
 	data, err := json.MarshalIndent(configData, "", "  ")
@@ -909,6 +937,10 @@ func setupFFmpegIni(exeDir string, cfg *Config) error {
 func checkEnvironment(exeDir string, cfg *Config, configPath string) error {
 	printTitle("\n环境检查")
 
+	if containsCJK(exeDir) {
+		return fmt.Errorf("程序路径包含中文: %s", exeDir)
+	}
+
 	if err := ensureFFmpegAvailable(exeDir, cfg, configPath); err != nil {
 		return err
 	}
@@ -1002,6 +1034,7 @@ func parseDemoKills(demoPath string) (map[uint64]*PlayerInfo, map[int][]KillInfo
 			Round:      currentRound,
 			Tick:       parser.GameState().IngameTick(),
 			VictimName: e.Victim.Name,
+			VictimID:   e.Victim.EntityID,
 			KillerName: e.Killer.Name,
 			WeaponName: weaponName,
 			IsHeadshot: e.IsHeadshot,
@@ -1134,6 +1167,47 @@ func buildSegments(kills []KillInfo, preTicks, postTicks int) []Segment {
 	return segments
 }
 
+func buildVictimSegments(kills []KillInfo, preTicks, postTicks int) []Segment {
+	if len(kills) == 0 {
+		return nil
+	}
+
+	sortedKills := make([]KillInfo, len(kills))
+	copy(sortedKills, kills)
+	sort.Slice(sortedKills, func(i, j int) bool {
+		return sortedKills[i].Tick < sortedKills[j].Tick
+	})
+
+	segments := make([]Segment, 0, len(sortedKills))
+	for _, k := range sortedKills {
+		startTick := k.Tick - preTicks
+		if startTick < 0 {
+			startTick = 0
+		}
+		endTick := k.Tick + postTicks
+		segments = append(segments, Segment{
+			StartTick: startTick,
+			EndTick:   endTick,
+			Kills:     []KillInfo{k},
+		})
+	}
+
+	return segments
+}
+
+func segmentsToKills(segments []Segment) []KillInfo {
+	if len(segments) == 0 {
+		return nil
+	}
+	var kills []KillInfo
+	for _, seg := range segments {
+		if len(seg.Kills) > 0 {
+			kills = append(kills, seg.Kills...)
+		}
+	}
+	return kills
+}
+
 // ==================== CFG 生成 ====================
 
 func buildFFmpegParams(preset string) (string, string, error) {
@@ -1155,6 +1229,15 @@ func buildFFmpegParams(preset string) (string, string, error) {
 
 func windowsToUnixPath(path string) string {
 	return strings.ReplaceAll(path, "\\", "/")
+}
+
+func containsCJK(value string) bool {
+	for _, r := range value {
+		if unicode.Is(unicode.Han, r) {
+			return true
+		}
+	}
+	return false
 }
 
 func generateCFG(demoPath, cfgPath, outputDir string, segments []Segment, targetName string, targetSlot int, cfg *Config) error {
@@ -1212,8 +1295,128 @@ func generateCFG(demoPath, cfgPath, outputDir string, segments []Segment, target
 		lines = append(lines, fmt.Sprintf(`mirv_cmd addAtTick %d "mirv_streams record start"`, seg.StartTick+specDelay+2))
 		lines = append(lines, fmt.Sprintf(`mirv_cmd addAtTick %d "mirv_streams record end"`, seg.EndTick+1))
 	}
-
 	lines = append(lines, fmt.Sprintf(`mirv_cmd addAtTick %d "quit"`, segments[len(segments)-1].EndTick+10))
+
+	if cfg.RecordVictimView {
+		victimPreTicks := int(cfg.VictimPreSeconds * float64(cfg.Tickrate))
+		victimPostTicks := int(cfg.VictimPostSeconds * float64(cfg.Tickrate))
+		if victimPreTicks < 0 {
+			victimPreTicks = 0
+		}
+		if victimPostTicks < 0 {
+			victimPostTicks = 0
+		}
+
+		victimSegments := buildVictimSegments(segmentsToKills(segments), victimPreTicks, victimPostTicks)
+		if len(victimSegments) == 0 {
+			return fmt.Errorf("未生成有效片段")
+		}
+
+		victimCfgName := strings.TrimSuffix(filepath.Base(cfgPath), filepath.Ext(cfgPath)) + "_victim"
+		victimCfgPath := filepath.Join(filepath.Dir(cfgPath), victimCfgName+".cfg")
+
+		var victimLines []string
+		victimLines = append(victimLines, "mirv_cmd clear")
+		victimLines = append(victimLines, "r_show_build_info 0")
+		victimLines = append(victimLines, "cl_trueview_show_status 0")
+		victimLines = append(victimLines, "engine_no_focus_sleep 0")
+		victimLines = append(victimLines, "cl_demo_predict 0")
+		victimLines = append(victimLines, "spec_show_xray 0")
+		victimLines = append(victimLines, "mirv_streams record screen enabled 1")
+		victimLines = append(victimLines, fmt.Sprintf("mirv_streams record fps %d", cfg.RecordFPS))
+		victimLines = append(victimLines, "mirv_streams record startMovieWav 1")
+		victimLines = append(victimLines, fmt.Sprintf(`mirv_streams settings add ffmpeg %s "%s {QUOTE}{AFX_STREAM_PATH}.mp4{QUOTE}"`, presetName, ffmpegParams))
+		victimLines = append(victimLines, fmt.Sprintf("mirv_streams record screen settings %s", presetName))
+
+		baseOutputVictim := baseOutput + "_victim"
+		victimLines = append(victimLines, fmt.Sprintf(`mirv_streams record name "%s"`, baseOutputVictim))
+		const victimSpecDelay = 4
+		prevEndTick := -1
+		prevStartTick := -1
+		lastRecordEndIdx := -1
+		nearPreTicks := victimPreTicks
+		nearPostTicks := victimPostTicks
+		if nearPreTicks > 8 {
+			nearPreTicks = 8
+		}
+		if nearPostTicks > 8 {
+			nearPostTicks = 8
+		}
+		if nearPreTicks < 1 {
+			nearPreTicks = 1
+		}
+		if nearPostTicks < 1 {
+			nearPostTicks = 1
+		}
+		for _, seg := range victimSegments {
+			killTick := seg.StartTick
+			if len(seg.Kills) > 0 {
+				killTick = seg.Kills[0].Tick
+			}
+			victimSlot := 0
+			if len(seg.Kills) > 0 {
+				victimSlot = seg.Kills[0].VictimID
+			}
+			if victimSlot <= 0 {
+				return fmt.Errorf("未找到被击杀玩家")
+			}
+
+			startTick := seg.StartTick
+			endTick := seg.EndTick
+			useJump := true
+			jumpTick := initialTick
+			if prevEndTick >= 0 {
+				if startTick <= prevEndTick+10 {
+					useJump = false
+					desiredStart := killTick - nearPreTicks
+					if desiredStart < 0 {
+						desiredStart = 0
+					}
+					desiredEnd := killTick + nearPostTicks
+					newPrevEnd := desiredStart - 2
+					if newPrevEnd < prevStartTick {
+						newPrevEnd = prevStartTick
+					}
+					if lastRecordEndIdx >= 0 && newPrevEnd < prevEndTick {
+						victimLines[lastRecordEndIdx] = fmt.Sprintf(`mirv_cmd addAtTick %d "mirv_streams record end"`, newPrevEnd+1)
+						prevEndTick = newPrevEnd
+					}
+					if desiredStart < prevEndTick+2 {
+						startTick = prevEndTick + 2
+					} else {
+						startTick = desiredStart
+					}
+					endTick = desiredEnd
+					if endTick < startTick {
+						endTick = startTick
+					}
+				} else {
+					jumpTick = prevEndTick + 10
+				}
+			}
+
+			if useJump {
+				victimLines = append(victimLines, fmt.Sprintf(`mirv_cmd addAtTick %d "demo_gototick %d"`, jumpTick, startTick))
+			}
+			victimLines = append(victimLines, fmt.Sprintf(`mirv_cmd addAtTick %d "spec_mode 1"`, startTick))
+			victimLines = append(victimLines, fmt.Sprintf(`mirv_cmd addAtTick %d "spec_player %d"`, startTick+victimSpecDelay, victimSlot))
+			victimLines = append(victimLines, fmt.Sprintf(`mirv_cmd addAtTick %d "mirv_streams record start"`, startTick+victimSpecDelay+2))
+			victimLines = append(victimLines, fmt.Sprintf(`mirv_cmd addAtTick %d "mirv_streams record end"`, endTick+1))
+			lastRecordEndIdx = len(victimLines) - 1
+			prevStartTick = startTick
+			prevEndTick = endTick
+		}
+
+		if prevEndTick < 0 {
+			prevEndTick = victimSegments[len(victimSegments)-1].EndTick
+		}
+		victimLines = append(victimLines, fmt.Sprintf(`mirv_cmd addAtTick %d "quit"`, prevEndTick+10))
+
+		victimContent := strings.Join(victimLines, "\n") + "\n"
+		if err := os.WriteFile(victimCfgPath, []byte(victimContent), 0644); err != nil {
+			return fmt.Errorf("写入被害者 CFG 失败: %w", err)
+		}
+	}
 
 	content := strings.Join(lines, "\n") + "\n"
 	if err := os.WriteFile(cfgPath, []byte(content), 0644); err != nil {
@@ -1464,22 +1667,16 @@ func buildTransitionEncodeArgs(preset string) []string {
 	}
 }
 
-func processRecordings(outputDir, demoName, exeDir string, selectedRounds []int, cfg *Config, debugMode bool) (string, error) {
-	// ffmpeg.exe 在 ffmpeg/bin
-	ffmpegExe := resolveFFmpegExe(exeDir, cfg)
-
-	baseDir := filepath.Join(outputDir, demoName)
+func collectVideoFiles(baseDir string) ([]string, error) {
 	if _, err := os.Stat(baseDir); err != nil {
-		return "", fmt.Errorf("输出目录不存在: %s", baseDir)
+		return nil, fmt.Errorf("输出目录不存在: %s", baseDir)
 	}
 
-	// 查找录制文件（新结构：视频在外层，音频在take子目录）
 	entries, err := os.ReadDir(baseDir)
 	if err != nil {
-		return "", fmt.Errorf("读取输出目录失败: %w", err)
+		return nil, fmt.Errorf("读取输出目录失败: %w", err)
 	}
 
-	// 查找所有 take*.mp4 视频文件
 	var videoFiles []string
 	for _, entry := range entries {
 		if !entry.IsDir() && strings.HasPrefix(strings.ToLower(entry.Name()), "take") && strings.HasSuffix(strings.ToLower(entry.Name()), ".mp4") {
@@ -1488,11 +1685,33 @@ func processRecordings(outputDir, demoName, exeDir string, selectedRounds []int,
 	}
 
 	if len(videoFiles) == 0 {
-		return "", fmt.Errorf("未找到录制视频文件")
+		return nil, fmt.Errorf("未找到录制视频文件")
 	}
 
 	sort.Strings(videoFiles)
-	printInfo(fmt.Sprintf("找到 %d 个录制片段", len(videoFiles)))
+	return videoFiles, nil
+}
+
+func processRecordings(outputDir, demoName, exeDir string, selectedRounds []int, cfg *Config, debugMode bool) (string, error) {
+	// ffmpeg.exe 在 ffmpeg/bin
+	ffmpegExe := resolveFFmpegExe(exeDir, cfg)
+
+	baseDir := filepath.Join(outputDir, demoName)
+	videoFiles, err := collectVideoFiles(baseDir)
+	if err != nil {
+		return "", err
+	}
+	printInfo(fmt.Sprintf("找到 %d 个击杀者片段", len(videoFiles)))
+
+	if cfg.RecordVictimView {
+		victimBaseDir := baseDir + "_victim"
+		victimFiles, err := collectVideoFiles(victimBaseDir)
+		if err != nil {
+			return "", err
+		}
+		printInfo(fmt.Sprintf("找到 %d 个被害者片段", len(victimFiles)))
+		videoFiles = append(videoFiles, victimFiles...)
+	}
 
 	// 创建临时目录
 	tempDir := filepath.Join(outputDir, "_temp")
@@ -1504,6 +1723,7 @@ func processRecordings(outputDir, demoName, exeDir string, selectedRounds []int,
 	for i, videoFile := range videoFiles {
 		// 视频文件: baseDir/take0000.mp4
 		// 音频文件: baseDir/take0000/audio.wav
+		baseDir := filepath.Dir(videoFile)
 		baseName := strings.TrimSuffix(filepath.Base(videoFile), filepath.Ext(videoFile))
 		audioFile := filepath.Join(baseDir, baseName, "audio.wav")
 
@@ -1580,12 +1800,19 @@ func processRecordings(outputDir, demoName, exeDir string, selectedRounds []int,
 	if err := os.Remove(cfgPath); err == nil {
 		printInfo("已删除生成的 cfg 文件: " + cfgPath)
 	}
+	if cfg.RecordVictimView {
+		victimCfgPath := filepath.Join(cfg.CfgDir, "auto_"+demoName+"_victim.cfg")
+		if err := os.Remove(victimCfgPath); err == nil {
+			printInfo("已删除生成的 cfg 文件: " + victimCfgPath)
+		}
+	}
 
 	// 清理视频文件和对应的音频目录
 	for _, videoFile := range videoFiles {
 		// 删除视频文件
 		os.Remove(videoFile)
 		// 删除对应的音频目录
+		baseDir := filepath.Dir(videoFile)
 		baseName := strings.TrimSuffix(filepath.Base(videoFile), filepath.Ext(videoFile))
 		audioDir := filepath.Join(baseDir, baseName)
 		os.RemoveAll(audioDir)
@@ -1641,6 +1868,7 @@ func main() {
 		Assets:           assets,
 		BackgroundColour: &options.RGBA{R: 20, G: 20, B: 20, A: 1},
 		OnStartup:        app.startup,
+		OnShutdown:       app.shutdown,
 		Bind:             []interface{}{app},
 	})
 	if err != nil {

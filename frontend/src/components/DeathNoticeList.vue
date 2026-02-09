@@ -146,8 +146,9 @@ const labelToId = Object.entries(cs2WeaponMap).reduce((acc, [id, label]) => {
 const weaponAliases = [
   { match: /ak-?47/, id: "ak47" },
   { match: /awp/, id: "awp" },
+  { match: /m4a4/, id: "m4a1" },
   { match: /m4a1[-_ ]s|m4a1s/, id: "m4a1_silencer" },
-  { match: /m4a1/, id: "m4a1" },
+  { match: /m4a1/, id: "m4a1_silencer" },
   { match: /usp-?s/, id: "usp_silencer" },
   { match: /usp/, id: "usp_silencer_off" },
   { match: /glock/, id: "glock" },

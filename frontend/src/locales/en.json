@@ -1,10 +1,12 @@
 {
   "app": {
-    "title": "CS2 Highlight Tool"
+    "title": "CS2 Highlight Tool",
+    "usage_stats": "The tool has been run {run} times and has created highlight reels {make} times."
   },
   "aria": {
     "email": "Email",
-    "github": "GitHub"
+    "github": "GitHub",
+    "blog": "Blog"
   },
   "language": {
     "zh": "Chinese",
@@ -13,6 +15,7 @@
   "common": {
     "select": "Select",
     "logs": "Logs",
+    "ok": "OK",
     "unknown_error": "Unknown error",
     "wails_api_not_loaded": "Wails API not loaded: {method}"
   },
@@ -33,12 +36,17 @@
     "output_placeholder": "outputs folder",
     "record_fps": "Record FPS",
     "tickrate": "Tickrate",
+    "killer_pre_seconds": "Killer view pre (sec)",
+    "killer_post_seconds": "Killer view post (sec)",
     "video_preset": "Video preset",
     "launch_resolution": "Launch resolution",
     "resolution_16_9": "16:9 (default)",
     "resolution_4_3": "4:3 (1440x1080)",
     "transition_duration": "Transition duration (sec)",
     "transition_type": "Transition type",
+    "record_victim_view": "Record victim view",
+    "victim_pre_seconds": "Victim view pre (sec)",
+    "victim_post_seconds": "Victim view post (sec)",
     "save": "Save configuration"
   },
   "preview": {
@@ -94,7 +102,9 @@
     "select_demo": "Please select a demo file first",
     "select_player": "Please select a player first",
     "select_rounds": "Please select rounds",
-    "set_cs2": "Please set CS2.exe first"
+    "set_cs2": "Please set CS2.exe first",
+    "path_has_cjk_title": "Path Contains Chinese Characters",
+    "path_has_cjk_desc": "The app is located in a path that contains Chinese characters:\n{path}\nPlease move the app to a folder without Chinese characters."
   },
   "info": {
     "config_saved": "Configuration saved",
@@ -103,7 +113,10 @@
     "env_checked": "Environment check completed",
     "cfg_generated": "CFG generated: {path}",
     "output_video": "Output video: {path}",
-    "downloading_demo_start": "Downloading Perfect World demo..."
+    "downloading_demo_start": "Downloading Perfect World demo...",
+    "make_title": "Before You Start",
+    "make_tip_base": "Recording will start and the video will be merged automatically. Keep CS2 in the foreground during recording, background execution may cause issues.",
+    "make_tip_victim": "Victim view recording is enabled. CS2 will launch twice, please be patient."
   },
   "log": {
     "success_prefix": "Success: {message}",

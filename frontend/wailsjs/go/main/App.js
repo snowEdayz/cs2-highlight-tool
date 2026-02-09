@@ -26,8 +26,20 @@ export function GetUpdateInfo() {
   return window['go']['main']['App']['GetUpdateInfo']();
 }
 
+export function GetUsageStats() {
+  return window['go']['main']['App']['GetUsageStats']();
+}
+
 export function GetVideoPreviewURL(arg1) {
   return window['go']['main']['App']['GetVideoPreviewURL'](arg1);
+}
+
+export function IncrementMakeCount() {
+  return window['go']['main']['App']['IncrementMakeCount']();
+}
+
+export function IncrementRunCount() {
+  return window['go']['main']['App']['IncrementRunCount']();
 }
 
 export function OpenVideoExternal(arg1) {

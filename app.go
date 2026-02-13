@@ -137,8 +137,6 @@ func cleanupOutputDirectories(exeDir string) error {
 	return nil
 }
 
-const statsBaseURL = "https://snowblog.xyz/api/v1"
-
 func fetchStatsJSON(path string, out interface{}) error {
 	client := &http.Client{Timeout: 8 * time.Second}
 	req, err := http.NewRequest(http.MethodGet, statsBaseURL+path, nil)
@@ -248,9 +246,9 @@ func (a *App) fetchLatestRelease() (*releaseInfo, error) {
 		Timeout: 15 * time.Second,
 	}
 
-	apiURL := "https://api.github.com/repos/hkslover/cs2-highlight-tool/releases/latest"
+	apiURL := updateAPIURLGitHub
 	if isChinaIP() {
-		apiURL = "https://gitee.com/api/v5/repos/hkslover/cs2-highlight-tool/releases/latest"
+		apiURL = updateAPIURLGitee
 	}
 
 	req, err := http.NewRequest("GET", apiURL, nil)
@@ -682,7 +680,7 @@ func (a *App) DownloadPerfectWorldDemo(matchID string) (string, error) {
 
 	if isNumericMatchID(matchID) {
 		baseName := fmt.Sprintf("%s_0.dem", matchID)
-		downloadURL := fmt.Sprintf("https://pwaweblogin.wmpvp.com/csgo/demo/%s", baseName)
+		downloadURL := fmt.Sprintf(perfectWorldDemoURLFormat, baseName)
 		return downloadAndResolveDemo(demoDir, baseName, downloadURL, "完美世界")
 	}
 
@@ -793,7 +791,7 @@ func fetch5EDemoURL(matchCode string) (string, error) {
 		return "", fmt.Errorf("5E matchcode 不能为空")
 	}
 
-	apiURL := fmt.Sprintf("https://gate.5eplay.com/crane/http/api/data/match/%s", url.PathEscape(matchCode))
+	apiURL := fmt.Sprintf(fiveEMatchAPIURLFormat, url.PathEscape(matchCode))
 	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("创建 5E 请求失败: %w", err)

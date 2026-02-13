@@ -624,6 +624,7 @@ type Config struct {
 	TransitionType     string  `json:"transition_type"`
 	LaunchResolution   string  `json:"launch_resolution"`
 	RecordVictimView   bool    `json:"record_victim_view"`
+	PlayTeamVoice      bool    `json:"play_team_voice"`
 	KillerPreSeconds   float64 `json:"killer_pre_seconds"`
 	KillerPostSeconds  float64 `json:"killer_post_seconds"`
 	VictimPreSeconds   float64 `json:"victim_pre_seconds"`
@@ -670,8 +671,9 @@ func buildBaseConfig(exeDir string) *Config {
 		TransitionType:     "fade",
 		LaunchResolution:   "4:3",
 		RecordVictimView:   false,
-		KillerPreSeconds:   5,
-		KillerPostSeconds:  5,
+		PlayTeamVoice:      false,
+		KillerPreSeconds:   4,
+		KillerPostSeconds:  4,
 		VictimPreSeconds:   2,
 		VictimPostSeconds:  2,
 	}
@@ -754,6 +756,7 @@ func saveConfig(path string, cfg *Config) error {
 		"transition_type":     cfg.TransitionType,
 		"launch_resolution":   cfg.LaunchResolution,
 		"record_victim_view":  cfg.RecordVictimView,
+		"play_team_voice":     cfg.PlayTeamVoice,
 		"killer_pre_seconds":  cfg.KillerPreSeconds,
 		"killer_post_seconds": cfg.KillerPostSeconds,
 		"victim_pre_seconds":  cfg.VictimPreSeconds,
@@ -1244,6 +1247,20 @@ func generateCFG(demoPath, cfgPath, outputDir string, segments []Segment, target
 	os.MkdirAll(filepath.Dir(cfgPath), 0755)
 	os.MkdirAll(outputDir, 0755)
 
+	// 始终基于配置重建击杀者片段，确保 killer_pre_seconds / killer_post_seconds 生效。
+	killerPreTicks := int(cfg.KillerPreSeconds * float64(cfg.Tickrate))
+	killerPostTicks := int(cfg.KillerPostSeconds * float64(cfg.Tickrate))
+	if killerPreTicks < 0 {
+		killerPreTicks = 0
+	}
+	if killerPostTicks < 0 {
+		killerPostTicks = 0
+	}
+	segments = buildSegments(segmentsToKills(segments), killerPreTicks, killerPostTicks)
+	if len(segments) == 0 {
+		return fmt.Errorf("未生成有效片段")
+	}
+
 	demoName := strings.TrimSuffix(filepath.Base(demoPath), filepath.Ext(demoPath))
 
 	// 获取预设配置
@@ -1258,6 +1275,13 @@ func generateCFG(demoPath, cfgPath, outputDir string, segments []Segment, target
 	lines = append(lines, "engine_no_focus_sleep 0")
 	lines = append(lines, "cl_demo_predict 0")
 	lines = append(lines, "spec_show_xray 0")
+	if cfg.PlayTeamVoice {
+		lines = append(lines, "tv_listen_voice_indices -1")
+	} else {
+		lines = append(lines, "tv_listen_voice_indices 0")
+	}
+	lines = append(lines, "spec_mode 1")
+	lines = append(lines, fmt.Sprintf("spec_player %d", targetSlot))
 	lines = append(lines, "mirv_streams record screen enabled 1")
 	lines = append(lines, fmt.Sprintf("mirv_streams record fps %d", cfg.RecordFPS))
 	lines = append(lines, "mirv_streams record startMovieWav 1")
@@ -1273,7 +1297,6 @@ func generateCFG(demoPath, cfgPath, outputDir string, segments []Segment, target
 		initialTick = 64
 		specDelay   = 4
 	)
-
 	// 转场模式：每个片段单独录制
 	for idx, seg := range segments {
 		var jumpTick int
@@ -1282,7 +1305,6 @@ func generateCFG(demoPath, cfgPath, outputDir string, segments []Segment, target
 		} else {
 			jumpTick = segments[idx-1].EndTick + 10
 		}
-
 		lines = append(lines, fmt.Sprintf(`mirv_cmd addAtTick %d "demo_gototick %d"`, jumpTick, seg.StartTick))
 		lines = append(lines, fmt.Sprintf(`mirv_cmd addAtTick %d "spec_mode 1"`, seg.StartTick))
 

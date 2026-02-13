@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	goruntime "runtime"
 	"sort"
 	"strconv"
@@ -668,12 +669,7 @@ func (a *App) ParseDemo(demoPath string) (*DemoInfo, error) {
 func (a *App) DownloadPerfectWorldDemo(matchID string) (string, error) {
 	matchID = strings.TrimSpace(matchID)
 	if matchID == "" {
-		return "", fmt.Errorf("比赛 ID 不能为空")
-	}
-	for _, r := range matchID {
-		if r < '0' || r > '9' {
-			return "", fmt.Errorf("比赛 ID 只能包含数字")
-		}
+		return "", fmt.Errorf("比赛 ID 或 5E 分享链接不能为空")
 	}
 	if a.exeDir == "" {
 		return "", fmt.Errorf("程序目录未初始化")
@@ -684,7 +680,25 @@ func (a *App) DownloadPerfectWorldDemo(matchID string) (string, error) {
 		return "", fmt.Errorf("创建 demos 目录失败: %w", err)
 	}
 
-	baseName := fmt.Sprintf("%s_0.dem", matchID)
+	if isNumericMatchID(matchID) {
+		baseName := fmt.Sprintf("%s_0.dem", matchID)
+		downloadURL := fmt.Sprintf("https://pwaweblogin.wmpvp.com/csgo/demo/%s", baseName)
+		return downloadAndResolveDemo(demoDir, baseName, downloadURL, "完美世界")
+	}
+
+	matchCode, err := extract5EMatchCode(matchID)
+	if err != nil {
+		return "", fmt.Errorf("请输入纯数字完美比赛 ID 或有效的 5E 对局分享链接")
+	}
+	demoURL, err := fetch5EDemoURL(matchCode)
+	if err != nil {
+		return "", err
+	}
+	baseName := fmt.Sprintf("%s.dem", matchCode)
+	return downloadAndResolveDemo(demoDir, baseName, demoURL, "5E")
+}
+
+func downloadAndResolveDemo(demoDir, baseName, downloadURL, source string) (string, error) {
 	demoPath := filepath.Join(demoDir, baseName)
 	if _, err := os.Stat(demoPath); err == nil {
 		printInfo("已存在 Demo 文件，跳过下载")
@@ -694,8 +708,7 @@ func (a *App) DownloadPerfectWorldDemo(matchID string) (string, error) {
 	zipPath := demoPath + ".zip"
 	_ = os.Remove(zipPath)
 
-	downloadURL := fmt.Sprintf("https://pwaweblogin.wmpvp.com/csgo/demo/%s", baseName)
-	printTitle("\n下载完美世界 Demo")
+	printTitle(fmt.Sprintf("\n下载%s Demo", source))
 	printInfo(fmt.Sprintf("下载地址: %s", downloadURL))
 	printInfo(fmt.Sprintf("保存路径: %s", zipPath))
 
@@ -729,6 +742,96 @@ func (a *App) DownloadPerfectWorldDemo(matchID string) (string, error) {
 	}
 	printSuccess("Demo 下载完成")
 	return found, nil
+}
+
+func isNumericMatchID(input string) bool {
+	if input == "" {
+		return false
+	}
+	for _, r := range input {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func extract5EMatchCode(input string) (string, error) {
+	text := strings.TrimSpace(input)
+	if text == "" {
+		return "", fmt.Errorf("5E 分享链接为空")
+	}
+
+	// 支持复制整段分享文本：可能包含前缀说明 + URL
+	reQuery := regexp.MustCompile(`matchcode=([A-Za-z0-9_-]+)`)
+	if m := reQuery.FindStringSubmatch(text); len(m) == 2 && m[1] != "" {
+		return m[1], nil
+	}
+
+	reDirect := regexp.MustCompile(`\bg\d+-n-\d+\b`)
+	if m := reDirect.FindString(text); m != "" {
+		return m, nil
+	}
+
+	start := strings.Index(text, "http")
+	if start >= 0 {
+		urlText := strings.Fields(text[start:])[0]
+		if u, err := url.Parse(urlText); err == nil {
+			matchCode := strings.TrimSpace(u.Query().Get("matchcode"))
+			if matchCode != "" {
+				return matchCode, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("未能从输入中提取 5E matchcode")
+}
+
+func fetch5EDemoURL(matchCode string) (string, error) {
+	matchCode = strings.TrimSpace(matchCode)
+	if matchCode == "" {
+		return "", fmt.Errorf("5E matchcode 不能为空")
+	}
+
+	apiURL := fmt.Sprintf("https://gate.5eplay.com/crane/http/api/data/match/%s", url.PathEscape(matchCode))
+	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("创建 5E 请求失败: %w", err)
+	}
+	req.Header.Set("User-Agent", "cs2-highlight-tool")
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("请求 5E 对局信息失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("5E 接口返回异常状态码: %d", resp.StatusCode)
+	}
+
+	var payload struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+		Data    struct {
+			Main struct {
+				DemoURL string `json:"demo_url"`
+			} `json:"main"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return "", fmt.Errorf("解析 5E 接口响应失败: %w", err)
+	}
+
+	demoURL := strings.TrimSpace(payload.Data.Main.DemoURL)
+	if demoURL == "" {
+		if payload.Message != "" {
+			return "", fmt.Errorf("5E 对局未返回 demo 下载地址: %s", payload.Message)
+		}
+		return "", fmt.Errorf("5E 对局未返回 demo 下载地址")
+	}
+	return demoURL, nil
 }
 
 func isZipFile(path string) bool {

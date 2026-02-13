@@ -14,6 +14,7 @@ export namespace main {
 	    transition_type: string;
 	    launch_resolution: string;
 	    record_victim_view: boolean;
+	    play_team_voice: boolean;
 	    killer_pre_seconds: number;
 	    killer_post_seconds: number;
 	    victim_pre_seconds: number;
@@ -38,6 +39,7 @@ export namespace main {
 	        this.transition_type = source["transition_type"];
 	        this.launch_resolution = source["launch_resolution"];
 	        this.record_victim_view = source["record_victim_view"];
+	        this.play_team_voice = source["play_team_voice"];
 	        this.killer_pre_seconds = source["killer_pre_seconds"];
 	        this.killer_post_seconds = source["killer_post_seconds"];
 	        this.victim_pre_seconds = source["victim_pre_seconds"];

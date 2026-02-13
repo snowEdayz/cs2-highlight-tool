@@ -44,6 +44,7 @@
     "resolution_4_3": "4:3 (1440x1080)",
     "transition_duration": "Transition duration (sec)",
     "transition_type": "Transition type",
+    "play_team_voice": "Play teammate voice while recording",
     "record_victim_view": "Record victim view",
     "victim_pre_seconds": "Victim view pre (sec)",
     "victim_post_seconds": "Victim view post (sec)",
@@ -57,7 +58,7 @@
   },
   "demo": {
     "title": "Demo Parsing",
-    "perfect_id_placeholder": "Perfect World match ID",
+    "perfect_id_placeholder": "Perfect World match ID or 5E share link",
     "download_parse": "Download & Parse",
     "select_placeholder": "Select demo file (.dem)",
     "select_button": "Select Demo",
@@ -98,7 +99,7 @@
   },
   "warning": {
     "env_not_ready": "Please finish environment checks and set CS2.exe first",
-    "enter_match_id": "Please enter the Perfect World match ID",
+    "enter_match_id": "Please enter a Perfect World match ID or 5E share link",
     "select_demo": "Please select a demo file first",
     "select_player": "Please select a player first",
     "select_rounds": "Please select rounds",
@@ -113,7 +114,7 @@
     "env_checked": "Environment check completed",
     "cfg_generated": "CFG generated: {path}",
     "output_video": "Output video: {path}",
-    "downloading_demo_start": "Downloading Perfect World demo...",
+    "downloading_demo_start": "Downloading demo...",
     "make_title": "Before You Start",
     "make_tip_base": "Recording will start and the video will be merged automatically. Keep CS2 in the foreground during recording, background execution may cause issues.",
     "make_tip_victim": "Victim view recording is enabled. CS2 will launch twice, please be patient."

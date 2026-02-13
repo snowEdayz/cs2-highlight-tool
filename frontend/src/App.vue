@@ -120,6 +120,9 @@
                       <n-form-item-gi :label="t('config.killer_post_seconds')">
                         <n-input-number v-model:value="form.killer_post_seconds" :min="1" :step="1" />
                       </n-form-item-gi>
+                      <n-form-item-gi :label="t('config.play_team_voice')" :span="2">
+                        <n-switch v-model:value="form.play_team_voice" />
+                      </n-form-item-gi>
                       <n-form-item-gi :label="t('config.record_victim_view')" :span="2">
                         <n-switch v-model:value="form.record_victim_view"/>
                       </n-form-item-gi>
@@ -297,6 +300,7 @@ const form = reactive({
   transition_type: "fade",
   launch_resolution: "16:9",
   record_victim_view: false,
+  play_team_voice: false,
   killer_pre_seconds: 5,
   killer_post_seconds: 5,
   victim_pre_seconds: 1,
@@ -470,6 +474,7 @@ function fillConfig(cfg) {
   form.transition_type = cfg.transition_type || "fade";
   form.launch_resolution = cfg.launch_resolution || "16:9";
   form.record_victim_view = cfg.record_victim_view || false;
+  form.play_team_voice = cfg.play_team_voice || false;
   form.killer_pre_seconds = cfg.killer_pre_seconds || 5;
   form.killer_post_seconds = cfg.killer_post_seconds || 5;
   form.victim_pre_seconds = cfg.victim_pre_seconds || 1;

@@ -44,6 +44,7 @@
     "resolution_4_3": "4:3 (1440x1080)",
     "transition_duration": "转场时长 (秒)",
     "transition_type": "转场类型",
+    "play_team_voice": "录制时附带玩家语音",
     "record_victim_view": "录制被击杀视角",
     "victim_pre_seconds": "被击杀视角前置 (秒)",
     "victim_post_seconds": "被击杀视角后置 (秒)",
@@ -57,7 +58,7 @@
   },
   "demo": {
     "title": "Demo 解析",
-    "perfect_id_placeholder": "完美世界对战平台比赛ID",
+    "perfect_id_placeholder": "完美世界比赛ID或5E对局分享链接",
     "download_parse": "下载并解析",
     "select_placeholder": "请选择 demo 文件 (.dem)",
     "select_button": "选择 Demo",
@@ -98,7 +99,7 @@
   },
   "warning": {
     "env_not_ready": "请先完成环境检查并设置 CS2.exe",
-    "enter_match_id": "请输入完美世界比赛ID",
+    "enter_match_id": "请输入完美世界比赛ID或5E分享链接",
     "select_demo": "请先选择 demo 文件",
     "select_player": "请先选择玩家",
     "select_rounds": "请选择回合",
@@ -113,7 +114,7 @@
     "env_checked": "环境检查完成",
     "cfg_generated": "CFG 已生成: {path}",
     "output_video": "输出视频: {path}",
-    "downloading_demo_start": "开始下载完美世界 Demo...",
+    "downloading_demo_start": "开始下载 Demo...",
     "make_title": "开始制作前提示",
     "make_tip_base": "即将启动录制并自动合成视频，期间尽可能保证CS2在前台执行，后台执行可能会发生问题",
     "make_tip_victim": "你已开启被击杀视角，CS2会启动两次，请耐心等待"

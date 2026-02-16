@@ -42,10 +42,21 @@
 
           <div :class="['status-bar', { fixed: statusFixed }]">
             <n-alert :type="statusType" :bordered="false">
-              {{ statusText }}
+              {{ statusDisplayText }}
             </n-alert>
           </div>
-          <div v-if="statusFixed" class="status-spacer"></div>
+          <div v-if="downloadProgressActive" :class="['download-progress-bar', { fixed: statusFixed }]">
+            <n-progress
+              class="download-progress-component"
+              type="line"
+              :percentage="downloadProgressValue"
+              :show-indicator="false"
+              :processing="true"
+              :status="downloadProgressIndeterminate ? 'default' : 'success'"
+            />
+            <span class="download-progress-text">{{ downloadProgressText }}</span>
+          </div>
+          <div v-if="statusFixed" :class="['status-spacer', { 'with-progress': downloadProgressActive }]"></div>
 
           <template v-if="!isSetupComplete">
             <n-card :title="t('setup.title')">
@@ -184,6 +195,14 @@
                     <n-button size="small" @click="toggleExpandAll" :disabled="!rounds.length || !isEnvReady">
                       {{ expandAllLabel }}
                     </n-button>
+                    <n-button
+                      size="small"
+                      @click="renderAllRound2D"
+                      :loading="isRenderingAll2D"
+                      :disabled="!rounds.length || !isEnvReady"
+                    >
+                      {{ t("demo.render_all_2d") }}
+                    </n-button>
                   </n-space>
 
                   <div class="rounds">
@@ -200,7 +219,87 @@
                       </template>
                       <n-collapse v-model:expanded-names="expandedRounds">
                         <n-collapse-item :title="t('demo.view_kill_details')" :name="round.round">
-                          <DeathNoticeList :kills="round.kills" />
+                          <div class="round-details-layout">
+                            <div class="round-render-toolbar">
+                              <n-button
+                                size="tiny"
+                                type="primary"
+                                @click="renderRound2D(round)"
+                                :loading="getRoundRenderState(round.round).loading"
+                                :disabled="!round.kills?.length"
+                              >
+                                {{ t("demo.render_2d") }}
+                              </n-button>
+                              <n-text v-if="!round.kills?.length" depth="3">{{ t("demo.empty_round") }}</n-text>
+                            </div>
+
+                            <DeathNoticeList :kills="round.kills" />
+
+                            <n-alert
+                              v-if="getRoundRenderState(round.round).error"
+                              type="warning"
+                              :bordered="false"
+                              class="round-render-alert"
+                            >
+                              {{ getRoundRenderState(round.round).error }}
+                            </n-alert>
+
+                            <div
+                              v-if="getRoundRenderState(round.round).mapData"
+                              class="round-map-wrapper"
+                            >
+                              <div class="round-map-stage">
+                                <img
+                                  :src="getRoundRenderState(round.round).mapData.image_data"
+                                  class="round-map-image"
+                                  :alt="`map-${round.round}`"
+                                  @load="(event) => onMapImageLoad(round.round, event)"
+                                />
+                                <svg
+                                  class="round-map-overlay"
+                                  :viewBox="`0 0 ${getRoundRenderState(round.round).imageWidth} ${getRoundRenderState(round.round).imageHeight}`"
+                                  preserveAspectRatio="xMidYMid meet"
+                                >
+                                  <defs>
+                                    <filter id="kill-point-shadow" x="-50%" y="-50%" width="200%" height="200%">
+                                      <feDropShadow dx="0" dy="0" stdDeviation="2.2" flood-color="#000" flood-opacity="0.6" />
+                                    </filter>
+                                  </defs>
+                                  <polyline
+                                    v-if="getRoundRenderState(round.round).points.length > 1"
+                                    class="round-map-kill-path"
+                                    :points="buildPointsPolyline(getRoundRenderState(round.round).points)"
+                                  />
+                                  <g v-for="point in getRoundRenderState(round.round).points" :key="point.id">
+                                    <circle :cx="point.x" :cy="point.y" r="18" :fill="point.color" fill-opacity="0.22" />
+                                    <circle
+                                      :cx="point.x"
+                                      :cy="point.y"
+                                      r="12"
+                                      :fill="point.color"
+                                      fill-opacity="0.95"
+                                      stroke="#f5f7fa"
+                                      stroke-width="2.5"
+                                      filter="url(#kill-point-shadow)"
+                                    >
+                                      <title>{{ point.tooltip }}</title>
+                                    </circle>
+                                    <text
+                                      :x="point.x"
+                                      :y="point.y + 4"
+                                      text-anchor="middle"
+                                      class="round-map-point-index"
+                                    >
+                                      {{ point.order }}
+                                    </text>
+                                  </g>
+                                </svg>
+                              </div>
+                              <n-text v-if="!getRoundRenderState(round.round).points.length" depth="3">
+                                {{ t("demo.no_renderable_kills") }}
+                              </n-text>
+                            </div>
+                          </div>
                         </n-collapse-item>
                       </n-collapse>
                     </n-card>
@@ -278,6 +377,26 @@ const expandedRounds = ref([]);
 const headerCard = ref(null);
 const statusFixed = ref(false);
 const isAtTop = ref(true);
+const isRenderingAll2D = ref(false);
+const round2DState = reactive({});
+const downloadProgressActive = ref(false);
+const downloadProgressValue = ref(0);
+const downloadProgressIndeterminate = ref(false);
+const statusDisplayText = computed(() => {
+  if (!downloadProgressActive.value) {
+    return statusText.value;
+  }
+  if (downloadProgressIndeterminate.value) {
+    return t("status.downloading");
+  }
+  return `${t("status.downloading")} ${Math.round(downloadProgressValue.value)}%`;
+});
+const downloadProgressText = computed(() => {
+  if (downloadProgressIndeterminate.value) {
+    return "--";
+  }
+  return `${Math.round(downloadProgressValue.value)}%`;
+});
 const { message, dialog } = createDiscreteApi(["message", "dialog"], {
   configProviderProps: {
     theme: darkTheme,
@@ -456,6 +575,10 @@ function callBackend(method, ...args) {
   if (typeof AppApi[method] === "function") {
     return AppApi[method](...args);
   }
+  const directApi = window?.go?.main?.App;
+  if (directApi && typeof directApi[method] === "function") {
+    return directApi[method](...args);
+  }
   return Promise.reject(new Error(t("common.wails_api_not_loaded", { method })));
 }
 
@@ -620,6 +743,7 @@ async function tryParseDemo() {
     selectedPlayerSteamId.value = info.players?.[0]?.steam_id ?? null;
     selectedRounds.value = new Set();
     expandedRounds.value = [];
+    clearRound2DState();
     logLine(t("info.demo_parsed"), "success");
     setStatus("status.parse_done");
   } catch (err) {
@@ -635,6 +759,7 @@ async function tryParseDemo() {
 
 function refreshRounds() {
   selectedRounds.value = new Set();
+  clearRound2DState();
 }
 
 function toggleRound(round, checked) {
@@ -673,6 +798,134 @@ function toggleExpandAll() {
     expandedRounds.value = [];
   } else {
     expandedRounds.value = rounds.value.map((r) => r.round);
+  }
+}
+
+function clearRound2DState() {
+  Object.keys(round2DState).forEach((key) => {
+    delete round2DState[key];
+  });
+}
+
+function createRound2DState() {
+  return {
+    loading: false,
+    error: "",
+    mapData: null,
+    points: [],
+    imageWidth: 1024,
+    imageHeight: 1024,
+  };
+}
+
+function getRoundRenderState(roundNumber) {
+  if (!round2DState[roundNumber]) {
+    round2DState[roundNumber] = createRound2DState();
+  }
+  return round2DState[roundNumber];
+}
+
+function onMapImageLoad(roundNumber, event) {
+  const state = getRoundRenderState(roundNumber);
+  const target = event?.target;
+  const naturalWidth = Number(target?.naturalWidth || 0);
+  const naturalHeight = Number(target?.naturalHeight || 0);
+  if (naturalWidth > 0) {
+    state.imageWidth = naturalWidth;
+  }
+  if (naturalHeight > 0) {
+    state.imageHeight = naturalHeight;
+  }
+}
+
+function convertWorldToPixel(worldX, worldY, mapData) {
+  return {
+    x: (worldX - mapData.pos_x) / mapData.scale,
+    y: (mapData.pos_y - worldY) / mapData.scale,
+  };
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function killPointColor(side) {
+  if (side === "ct") return "#4f8dff";
+  if (side === "t") return "#ff9b3d";
+  return "#d9d9d9";
+}
+
+function buildPointTooltip(kill) {
+  const killer = kill.killer_name || "Unknown";
+  const victim = kill.victim_name || "Unknown";
+  const tick = kill.tick ?? "-";
+  const weapon = kill.weapon_name || "Unknown";
+  return `${killer} -> ${victim} | tick: ${tick} | ${weapon}`;
+}
+
+function buildPointsPolyline(points) {
+  return points.map((point) => `${point.x},${point.y}`).join(" ");
+}
+
+async function renderRound2D(round) {
+  const state = getRoundRenderState(round.round);
+  const sortedKills = [...(round.kills || [])].sort((a, b) => (a.tick || 0) - (b.tick || 0));
+  if (!sortedKills.length) {
+    state.error = t("demo.empty_round");
+    state.mapData = null;
+    state.points = [];
+    return;
+  }
+
+  const mapName = sortedKills.find((kill) => kill.map_name)?.map_name || "";
+  if (!mapName) {
+    state.error = t("demo.map_name_missing");
+    state.mapData = null;
+    state.points = [];
+    return;
+  }
+
+  state.loading = true;
+  state.error = "";
+  try {
+    const mapData = await callBackend("GetMap2DRenderData", mapName);
+    if (!mapData?.image_data || !mapData?.scale) {
+      throw new Error(t("demo.map_metadata_missing"));
+    }
+    state.mapData = mapData;
+    const maxX = state.imageWidth > 0 ? state.imageWidth : 1024;
+    const maxY = state.imageHeight > 0 ? state.imageHeight : 1024;
+    state.points = sortedKills
+      .filter((kill) => kill.can_render_2d_kill)
+      .map((kill, index) => {
+        const pixel = convertWorldToPixel(kill.victim_x, kill.victim_y, mapData);
+        return {
+          id: `${round.round}-${kill.tick}-${index}`,
+          x: clamp(pixel.x, 0, maxX),
+          y: clamp(pixel.y, 0, maxY),
+          order: index + 1,
+          color: killPointColor(kill.killer_side),
+          tooltip: buildPointTooltip(kill),
+        };
+      });
+  } catch (err) {
+    state.mapData = null;
+    state.points = [];
+    state.error = formatError(err);
+  } finally {
+    state.loading = false;
+  }
+}
+
+async function renderAllRound2D() {
+  if (!rounds.value.length || isRenderingAll2D.value) return;
+  isRenderingAll2D.value = true;
+  try {
+    for (const round of rounds.value) {
+      await renderRound2D(round);
+    }
+  } finally {
+    isRenderingAll2D.value = false;
   }
 }
 
@@ -859,8 +1112,6 @@ onMounted(async () => {
         setStatus("status.extracting_ffmpeg");
       } else if (text.includes("FFmpeg 已准备就绪")) {
         setStatus("status.ffmpeg_ready");
-      } else if (text.includes("下载进度")) {
-        setStatus("status.downloading");
       } else if (text.includes("生成配置")) {
         setStatus("status.generating_cfg");
       } else if (text.includes("启动录制")) {
@@ -872,6 +1123,29 @@ onMounted(async () => {
       } else if (text.includes("✓ 全部完成")) {
         setStatus("status.task_done");
       }
+    }
+  });
+
+  EventsOn("download_progress", (payload) => {
+    const active = Boolean(payload?.active);
+    downloadProgressActive.value = active;
+    if (!active) {
+      downloadProgressValue.value = 0;
+      downloadProgressIndeterminate.value = false;
+      return;
+    }
+
+    const indeterminate = Boolean(payload?.indeterminate);
+    downloadProgressIndeterminate.value = indeterminate;
+    if (indeterminate) {
+      // Keep a gentle animation by cycling percentage while total size is unknown.
+      downloadProgressValue.value = (downloadProgressValue.value + 8) % 100;
+      return;
+    }
+
+    const percent = Number(payload?.percent ?? 0);
+    if (Number.isFinite(percent)) {
+      downloadProgressValue.value = Math.min(100, Math.max(0, percent));
     }
   });
 
@@ -931,6 +1205,41 @@ async function checkForUpdates() {
 
 .status-spacer {
   height: 52px;
+}
+
+.status-spacer.with-progress {
+  height: 88px;
+}
+
+.download-progress-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  background: #0f1115;
+  padding: 4px 0 8px;
+}
+
+.download-progress-bar.fixed {
+  position: fixed;
+  top: 52px;
+  left: 0;
+  right: 0;
+  z-index: 99;
+  background: rgba(20, 20, 20, 0.85);
+  backdrop-filter: blur(6px);
+  padding: 4px 16px 8px;
+}
+
+.download-progress-component {
+  flex: 1;
+}
+
+.download-progress-text {
+  min-width: 54px;
+  text-align: right;
+  font-size: 12px;
+  color: #cfd6dd;
+  line-height: 1;
 }
 
 .author-row {
@@ -1020,6 +1329,68 @@ async function checkForUpdates() {
 
 .video-path {
   word-break: break-all;
+}
+
+.round-details-layout {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.round-render-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.round-render-alert {
+  margin-top: 2px;
+}
+
+.round-map-wrapper {
+  width: 100%;
+  max-width: 100%;
+  margin-top: 4px;
+}
+
+.round-map-stage {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.round-map-image {
+  width: 100%;
+  max-width: 100%;
+  display: block;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.round-map-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+}
+
+.round-map-kill-path {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.75);
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+}
+
+.round-map-point-index {
+  fill: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.6);
+  stroke-width: 3px;
 }
 
 .needs-attention :deep(.n-input__border) {

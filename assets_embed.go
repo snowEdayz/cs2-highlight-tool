@@ -22,4 +22,7 @@ const (
 
 	hlaeReleaseAPIURLGitee  = "https://gitee.com/api/v5/repos/hkslover/advancedfx/releases/latest"
 	hlaeReleaseAPIURLGitHub = "https://api.github.com/repos/advancedfx/advancedfx/releases/latest"
+
+	mapExtractorReleaseAPIURLGitHub = "https://api.github.com/repos/hkslover/cs2-map-extractor/releases/latest"
+	mapExtractorReleaseAPIURLGitee  = "https://gitee.com/api/v5/repos/hkslover/cs2-map-extractor/releases/latest"
 )

@@ -679,6 +679,10 @@ func (a *App) DownloadPerfectWorldDemo(matchID string) (string, error) {
 	}
 
 	if isNumericMatchID(matchID) {
+		if existing, err := findExistingDemoByKeywords(demoDir, []string{strings.ToLower(matchID)}); err == nil {
+			printInfo("已存在匹配的完美世界 Demo，跳过下载")
+			return existing, nil
+		}
 		baseName := fmt.Sprintf("%s_0.dem", matchID)
 		downloadURL := fmt.Sprintf(perfectWorldDemoURLFormat, baseName)
 		return downloadAndResolveDemo(demoDir, baseName, downloadURL, "完美世界")
@@ -687,6 +691,10 @@ func (a *App) DownloadPerfectWorldDemo(matchID string) (string, error) {
 	matchCode, err := extract5EMatchCode(matchID)
 	if err != nil {
 		return "", fmt.Errorf("请输入纯数字完美比赛 ID 或有效的 5E 对局分享链接")
+	}
+	if existing, err := findExistingDemoByKeywords(demoDir, []string{strings.ToLower(matchCode)}); err == nil {
+		printInfo("已存在匹配的 5E Demo，跳过下载")
+		return existing, nil
 	}
 	demoURL, err := fetch5EDemoURL(matchCode)
 	if err != nil {
@@ -881,6 +889,45 @@ func findDemoFile(rootDir, baseName string) (string, error) {
 	}
 	if bestPath == "" {
 		return "", fmt.Errorf("未找到解压后的 demo 文件")
+	}
+	return bestPath, nil
+}
+
+func findExistingDemoByKeywords(rootDir string, keywords []string) (string, error) {
+	var bestPath string
+	var bestTime time.Time
+
+	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if info.IsDir() {
+			return nil
+		}
+		nameLower := strings.ToLower(info.Name())
+		if !strings.HasSuffix(nameLower, ".dem") {
+			return nil
+		}
+		for _, keyword := range keywords {
+			keyword = strings.TrimSpace(strings.ToLower(keyword))
+			if keyword == "" {
+				continue
+			}
+			if !strings.Contains(nameLower, keyword) {
+				return nil
+			}
+		}
+		if bestPath == "" || info.ModTime().After(bestTime) {
+			bestPath = path
+			bestTime = info.ModTime()
+		}
+		return nil
+	})
+	if err != nil {
+		return "", fmt.Errorf("扫描已下载 demo 失败: %w", err)
+	}
+	if bestPath == "" {
+		return "", fmt.Errorf("未命中匹配 demo")
 	}
 	return bestPath, nil
 }

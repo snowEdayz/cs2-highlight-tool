@@ -61,12 +61,24 @@ export namespace main {
 	export class KillInfo {
 	    round: number;
 	    tick: number;
+	    map_name: string;
 	    victim_name: string;
 	    victim_entity_id: number;
+	    victim_steam_id: number;
+	    victim_side: string;
+	    victim_x: number;
+	    victim_y: number;
+	    victim_z: number;
 	    killer_name: string;
+	    killer_steam_id: number;
+	    killer_side: string;
+	    killer_x: number;
+	    killer_y: number;
+	    killer_z: number;
 	    weapon_name: string;
 	    is_headshot: boolean;
 	    is_wallbang: boolean;
+	    can_render_2d_kill: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new KillInfo(source);
@@ -76,12 +88,24 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.round = source["round"];
 	        this.tick = source["tick"];
+	        this.map_name = source["map_name"];
 	        this.victim_name = source["victim_name"];
 	        this.victim_entity_id = source["victim_entity_id"];
+	        this.victim_steam_id = source["victim_steam_id"];
+	        this.victim_side = source["victim_side"];
+	        this.victim_x = source["victim_x"];
+	        this.victim_y = source["victim_y"];
+	        this.victim_z = source["victim_z"];
 	        this.killer_name = source["killer_name"];
+	        this.killer_steam_id = source["killer_steam_id"];
+	        this.killer_side = source["killer_side"];
+	        this.killer_x = source["killer_x"];
+	        this.killer_y = source["killer_y"];
+	        this.killer_z = source["killer_z"];
 	        this.weapon_name = source["weapon_name"];
 	        this.is_headshot = source["is_headshot"];
 	        this.is_wallbang = source["is_wallbang"];
+	        this.can_render_2d_kill = source["can_render_2d_kill"];
 	    }
 	}
 	export class RoundSummary {
@@ -187,6 +211,26 @@ export namespace main {
 		}
 	}
 	
+	export class Map2DRenderData {
+	    map_name: string;
+	    pos_x: number;
+	    pos_y: number;
+	    scale: number;
+	    image_data: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Map2DRenderData(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.map_name = source["map_name"];
+	        this.pos_x = source["pos_x"];
+	        this.pos_y = source["pos_y"];
+	        this.scale = source["scale"];
+	        this.image_data = source["image_data"];
+	    }
+	}
 	
 	export class RecordRequest {
 	    demo_path: string;

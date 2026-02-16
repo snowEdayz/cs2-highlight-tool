@@ -11,9 +11,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bodgit/sevenzip"
+)
+
+var (
+	chinaIPOnce   sync.Once
+	chinaIPCached bool
 )
 
 // Gitee Release API 响应结构
@@ -26,19 +32,25 @@ type GiteeRelease struct {
 }
 
 func isChinaIP() bool {
-	conn, err := net.DialTimeout("tcp", "www.google.com:80", 3*time.Second)
-	if err == nil {
-		conn.Close()
-		return false
-	}
+	chinaIPOnce.Do(func() {
+		conn, err := net.DialTimeout("tcp", "www.google.com:80", 3*time.Second)
+		if err == nil {
+			conn.Close()
+			chinaIPCached = false
+			return
+		}
 
-	connCN, errCN := net.DialTimeout("tcp", "www.baidu.com:80", 3*time.Second)
-	if errCN == nil {
-		connCN.Close()
-		return true
-	}
+		connCN, errCN := net.DialTimeout("tcp", "www.baidu.com:80", 3*time.Second)
+		if errCN == nil {
+			connCN.Close()
+			chinaIPCached = true
+			return
+		}
 
-	return false
+		chinaIPCached = false
+	})
+
+	return chinaIPCached
 }
 
 func getFFmpegDownloadURL() string {
@@ -115,6 +127,8 @@ func downloadFile(url, filepath string) error {
 	downloaded := int64(0)
 	buffer := make([]byte, 32*1024)
 	lastPrint := time.Now()
+	emitProgress(true, 0, totalSize <= 0)
+	defer emitProgress(false, 0, false)
 
 	for {
 		n, err := resp.Body.Read(buffer)
@@ -129,10 +143,9 @@ func downloadFile(url, filepath string) error {
 			if time.Since(lastPrint) > time.Second {
 				if totalSize > 0 {
 					percent := float64(downloaded) / float64(totalSize) * 100
-					printInfo(fmt.Sprintf("下载进度: %.1f%% (%.2f MB / %.2f MB)",
-						percent,
-						float64(downloaded)/(1024*1024),
-						float64(totalSize)/(1024*1024)))
+					emitProgress(true, percent, false)
+				} else {
+					emitProgress(true, 0, true)
 				}
 				lastPrint = time.Now()
 			}
@@ -145,6 +158,7 @@ func downloadFile(url, filepath string) error {
 		}
 	}
 
+	emitProgress(true, 100, false)
 	printSuccess(fmt.Sprintf("下载完成: %.2f MB", float64(downloaded)/(1024*1024)))
 	return nil
 }

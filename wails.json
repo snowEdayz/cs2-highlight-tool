@@ -1,6 +1,6 @@
 {
   "name": "cs2-highlight-tool",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "outputfilename": "cs2-highlight-tool",
   "frontend:install": "npm install",
   "frontend:build": "npm run build",

@@ -1,12 +1,12 @@
 <template>
   <ul class="death-notice-list">
     <li v-for="(kill, idx) in kills" :key="kill.tick ?? idx" class="death-notice">
-      <span class="name attacker">{{ kill.killer_name }}</span>
+      <span :class="['name', playerSideClass(kill?.killer_side)]">{{ kill.killer_name }}</span>
       <img v-if="weaponId(kill.weapon_name)" :src="weaponIcon(weaponId(kill.weapon_name))" class="weapon-icon" alt="weapon" />
       <span class="weapon-name">{{ weaponLabel(kill.weapon_name) }}</span>
       <img v-if="kill.is_headshot" :src="iconSrc('headshot')" class="suffix-icon" alt="headshot" />
       <img v-if="kill.is_wallbang" :src="iconSrc('penetrate')" class="suffix-icon" alt="penetrate" />
-      <span class="name victim">{{ kill.victim_name }}</span>
+      <span :class="['name', playerSideClass(kill?.victim_side)]">{{ kill.victim_name }}</span>
     </li>
   </ul>
 </template>
@@ -220,6 +220,12 @@ function weaponIcon(id) {
 function iconSrc(name) {
   return `/cs2/deathnotice/${name}.svg`;
 }
+
+function playerSideClass(side) {
+  if (side === "ct") return "side-ct";
+  if (side === "t") return "side-t";
+  return "side-t";
+}
 </script>
 
 <style scoped>
@@ -253,11 +259,11 @@ function iconSrc(name) {
   text-overflow: ellipsis;
 }
 
-.attacker {
+.side-ct {
   color: #6f9ce6;
 }
 
-.victim {
+.side-t {
   color: #eabe54;
 }
 

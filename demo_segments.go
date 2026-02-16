@@ -3,24 +3,39 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 
 	dem "github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs"
+	common "github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs/common"
 	events "github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs/events"
+	msg "github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs/msg"
 )
 
 type KillInfo struct {
-	Round      int    `json:"round"`
-	Tick       int    `json:"tick"`
-	VictimName string `json:"victim_name"`
-	VictimID   int    `json:"victim_entity_id"`
-	KillerName string `json:"killer_name"`
-	WeaponName string `json:"weapon_name"`
-	IsHeadshot bool   `json:"is_headshot"`
-	IsWallbang bool   `json:"is_wallbang"`
+	Round           int     `json:"round"`
+	Tick            int     `json:"tick"`
+	MapName         string  `json:"map_name"`
+	VictimName      string  `json:"victim_name"`
+	VictimID        int     `json:"victim_entity_id"`
+	VictimSteamID   uint64  `json:"victim_steam_id"`
+	VictimSide      string  `json:"victim_side"`
+	VictimX         float64 `json:"victim_x"`
+	VictimY         float64 `json:"victim_y"`
+	VictimZ         float64 `json:"victim_z"`
+	KillerName      string  `json:"killer_name"`
+	KillerSteamID   uint64  `json:"killer_steam_id"`
+	KillerSide      string  `json:"killer_side"`
+	KillerX         float64 `json:"killer_x"`
+	KillerY         float64 `json:"killer_y"`
+	KillerZ         float64 `json:"killer_z"`
+	WeaponName      string  `json:"weapon_name"`
+	IsHeadshot      bool    `json:"is_headshot"`
+	IsWallbang      bool    `json:"is_wallbang"`
+	CanRender2DKill bool    `json:"can_render_2d_kill"`
 }
 
 type Segment struct {
@@ -48,10 +63,29 @@ func parseDemoKills(demoPath string) (map[uint64]*PlayerInfo, map[int][]KillInfo
 	players := make(map[uint64]*PlayerInfo)
 	kills := make(map[int][]KillInfo)
 	currentRound := 0
+	currentMapName := ""
+
+	parser.RegisterNetMessageHandler(func(m *msg.CSVCMsg_ServerInfo) {
+		if m == nil {
+			return
+		}
+		if mapName := normalizeMapName(m.GetMapName()); mapName != "" {
+			currentMapName = mapName
+		}
+	})
+	parser.RegisterNetMessageHandler(func(m *msg.CNETMsg_SignonState) {
+		if m == nil {
+			return
+		}
+		if mapName := normalizeMapName(m.GetMapName()); mapName != "" {
+			currentMapName = mapName
+		}
+	})
 
 	// 注册回合开始事件
 	parser.RegisterEventHandler(func(e events.RoundStart) {
-		currentRound = parser.GameState().TotalRoundsPlayed()
+		// TotalRoundsPlayed() 在首回合开始时是 0，这里统一转成从 1 开始的回合编号。
+		currentRound = parser.GameState().TotalRoundsPlayed() + 1
 	})
 
 	// 注册击杀事件
@@ -80,16 +114,33 @@ func parseDemoKills(demoPath string) (map[uint64]*PlayerInfo, map[int][]KillInfo
 			weaponName = e.Weapon.String()
 		}
 
+		killerPos := e.Killer.Position()
+		victimPos := e.Victim.Position()
+		canRender2D := hasRenderableCoordinates(killerPos.X, killerPos.Y, killerPos.Z) &&
+			hasRenderableCoordinates(victimPos.X, victimPos.Y, victimPos.Z)
+
 		// 记录击杀
 		killInfo := KillInfo{
-			Round:      currentRound,
-			Tick:       parser.GameState().IngameTick(),
-			VictimName: e.Victim.Name,
-			VictimID:   e.Victim.EntityID,
-			KillerName: e.Killer.Name,
-			WeaponName: weaponName,
-			IsHeadshot: e.IsHeadshot,
-			IsWallbang: e.PenetratedObjects > 0,
+			Round:           currentRound,
+			Tick:            parser.GameState().IngameTick(),
+			MapName:         currentMapName,
+			VictimName:      e.Victim.Name,
+			VictimID:        e.Victim.EntityID,
+			VictimSteamID:   e.Victim.SteamID64,
+			VictimSide:      teamToSide(e.Victim.Team),
+			VictimX:         victimPos.X,
+			VictimY:         victimPos.Y,
+			VictimZ:         victimPos.Z,
+			KillerName:      e.Killer.Name,
+			KillerSteamID:   e.Killer.SteamID64,
+			KillerSide:      teamToSide(e.Killer.Team),
+			KillerX:         killerPos.X,
+			KillerY:         killerPos.Y,
+			KillerZ:         killerPos.Z,
+			WeaponName:      weaponName,
+			IsHeadshot:      e.IsHeadshot,
+			IsWallbang:      e.PenetratedObjects > 0,
+			CanRender2DKill: canRender2D,
 		}
 
 		killsByRound := kills[int(e.Killer.SteamID64)]
@@ -253,4 +304,32 @@ func segmentsToKills(segments []Segment) []KillInfo {
 		}
 	}
 	return kills
+}
+
+func normalizeMapName(name string) string {
+	value := strings.TrimSpace(strings.ToLower(name))
+	value = strings.TrimPrefix(value, "maps/")
+	value = strings.TrimSuffix(value, ".vpk")
+	return strings.TrimSpace(value)
+}
+
+func teamToSide(team common.Team) string {
+	switch team {
+	case common.TeamCounterTerrorists:
+		return "ct"
+	case common.TeamTerrorists:
+		return "t"
+	default:
+		return "unknown"
+	}
+}
+
+func hasRenderableCoordinates(x, y, z float64) bool {
+	if math.IsNaN(x) || math.IsNaN(y) || math.IsNaN(z) {
+		return false
+	}
+	if math.IsInf(x, 0) || math.IsInf(y, 0) || math.IsInf(z, 0) {
+		return false
+	}
+	return !(x == 0 && y == 0 && z == 0)
 }

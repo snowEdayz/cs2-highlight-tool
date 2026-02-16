@@ -22,6 +22,10 @@ export function GetConfig() {
   return window['go']['main']['App']['GetConfig']();
 }
 
+export function GetMap2DRenderData(arg1) {
+  return window['go']['main']['App']['GetMap2DRenderData'](arg1);
+}
+
 export function GetUpdateInfo() {
   return window['go']['main']['App']['GetUpdateInfo']();
 }

@@ -37,6 +37,12 @@ type LogMessage struct {
 	Time    string `json:"time"`
 }
 
+type ProgressMessage struct {
+	Active        bool    `json:"active"`
+	Percent       float64 `json:"percent"`
+	Indeterminate bool    `json:"indeterminate"`
+}
+
 func emitLog(level, message string) {
 	if appCtx == nil {
 		return
@@ -45,6 +51,17 @@ func emitLog(level, message string) {
 		Level:   level,
 		Message: message,
 		Time:    time.Now().Format(time.RFC3339),
+	})
+}
+
+func emitProgress(active bool, percent float64, indeterminate bool) {
+	if appCtx == nil {
+		return
+	}
+	runtime.EventsEmit(appCtx, "download_progress", ProgressMessage{
+		Active:        active,
+		Percent:       percent,
+		Indeterminate: indeterminate,
 	})
 }
 

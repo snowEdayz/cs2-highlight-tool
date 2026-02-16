@@ -16,7 +16,6 @@
 
 # Previews
 ![](previews/1.png)
-![](previews/2.png)
 
 ---
 
@@ -46,6 +45,8 @@ Parse game demo files → Select epic rounds → Automatically generate kill hig
 ---
 ## TODO
 - ✅  **Multi-language Support**
+- ✅  **Support for Player Voice Recording**
+- ✅  **2D Kill Render**
 - [ ]  **Customizable CFG Recording**
 - [ ]  **Sharing Community**
 

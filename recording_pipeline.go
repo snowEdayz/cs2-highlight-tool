@@ -135,6 +135,46 @@ func mergeAudioVideo(videoPath, audioPath, outputPath, ffmpegExe string) error {
 	return cmd.Run()
 }
 
+func concatSegmentsNoTransition(segments []string, outputPath, ffmpegExe string, preset string) error {
+	numSegs := len(segments)
+	encodeArgs := buildTransitionEncodeArgs(preset)
+
+	if numSegs == 0 {
+		return fmt.Errorf("无可拼接片段")
+	}
+
+	if numSegs == 1 {
+		args := []string{
+			"-y",
+			"-i", segments[0],
+		}
+		args = append(args, encodeArgs...)
+		args = append(args, outputPath)
+		cmd := execCommandHidden(ffmpegExe, args...)
+		return cmd.Run()
+	}
+
+	var args []string
+	args = append(args, "-y")
+	for _, seg := range segments {
+		args = append(args, "-i", seg)
+	}
+
+	var sb strings.Builder
+	for i := 0; i < numSegs; i++ {
+		sb.WriteString(fmt.Sprintf("[%d:v:0][%d:a:0]", i, i))
+	}
+	sb.WriteString(fmt.Sprintf("concat=n=%d:v=1:a=1[v][a]", numSegs))
+
+	args = append(args, "-filter_complex", sb.String())
+	args = append(args, "-map", "[v]", "-map", "[a]")
+	args = append(args, encodeArgs...)
+	args = append(args, outputPath)
+
+	cmd := execCommandHidden(ffmpegExe, args...)
+	return cmd.Run()
+}
+
 func createTransitionsVideo(segments []string, outputPath, ffmpegExe string, duration float64, transType string, preset string) error {
 	numSegs := len(segments)
 
@@ -277,12 +317,13 @@ func processRecordings(outputDir, demoName, exeDir string, selectedRounds []int,
 	ffmpegExe := resolveFFmpegExe(exeDir, cfg)
 
 	baseDir := filepath.Join(outputDir, demoName)
-	videoFiles, err := collectVideoFiles(baseDir)
+	killerVideoFiles, err := collectVideoFiles(baseDir)
 	if err != nil {
 		return "", err
 	}
-	printInfo(fmt.Sprintf("找到 %d 个击杀者片段", len(videoFiles)))
+	printInfo(fmt.Sprintf("找到 %d 个击杀者片段", len(killerVideoFiles)))
 
+	var victimVideoFiles []string
 	if cfg.RecordVictimView {
 		victimBaseDir := baseDir + "_victim"
 		victimFiles, err := collectVideoFiles(victimBaseDir)
@@ -290,7 +331,7 @@ func processRecordings(outputDir, demoName, exeDir string, selectedRounds []int,
 			return "", err
 		}
 		printInfo(fmt.Sprintf("找到 %d 个被害者片段", len(victimFiles)))
-		videoFiles = append(videoFiles, victimFiles...)
+		victimVideoFiles = victimFiles
 	}
 
 	// 创建临时目录
@@ -299,35 +340,43 @@ func processRecordings(outputDir, demoName, exeDir string, selectedRounds []int,
 
 	// 合成各个片段
 	printInfo("合成视频片段...")
-	var mergedSegments []string
-	for i, videoFile := range videoFiles {
-		// 视频文件: baseDir/take0000.mp4
-		// 音频文件: baseDir/take0000/audio.wav
-		baseDir := filepath.Dir(videoFile)
-		baseName := strings.TrimSuffix(filepath.Base(videoFile), filepath.Ext(videoFile))
-		audioFile := filepath.Join(baseDir, baseName, "audio.wav")
+	mergeSegmentSet := func(videoFiles []string, tag string) []string {
+		merged := make([]string, 0, len(videoFiles))
+		for i, videoFile := range videoFiles {
+			// 视频文件: baseDir/take0000.mp4
+			// 音频文件: baseDir/take0000/audio.wav
+			segmentDir := filepath.Dir(videoFile)
+			baseName := strings.TrimSuffix(filepath.Base(videoFile), filepath.Ext(videoFile))
+			audioFile := filepath.Join(segmentDir, baseName, "audio.wav")
 
-		if _, err := os.Stat(videoFile); err != nil {
-			printWarning(fmt.Sprintf("片段 %d 视频文件不存在: %s", i+1, videoFile))
-			continue
+			if _, err := os.Stat(videoFile); err != nil {
+				printWarning(fmt.Sprintf("%s片段 %d 视频文件不存在: %s", tag, i+1, videoFile))
+				continue
+			}
+			if _, err := os.Stat(audioFile); err != nil {
+				printWarning(fmt.Sprintf("%s片段 %d 音频文件不存在: %s", tag, i+1, audioFile))
+				continue
+			}
+
+			tempOutput := filepath.Join(tempDir, fmt.Sprintf("seg_%s_%03d.mp4", tag, i))
+
+			if err := mergeAudioVideo(videoFile, audioFile, tempOutput, ffmpegExe); err != nil {
+				printError(fmt.Sprintf("合成%s片段 %d 失败: %v", tag, i+1, err))
+				continue
+			}
+
+			merged = append(merged, tempOutput)
 		}
-		if _, err := os.Stat(audioFile); err != nil {
-			printWarning(fmt.Sprintf("片段 %d 音频文件不存在: %s", i+1, audioFile))
-			continue
-		}
-
-		tempOutput := filepath.Join(tempDir, fmt.Sprintf("seg_%03d.mp4", i))
-
-		if err := mergeAudioVideo(videoFile, audioFile, tempOutput, ffmpegExe); err != nil {
-			printError(fmt.Sprintf("合成片段 %d 失败: %v", i+1, err))
-			continue
-		}
-
-		mergedSegments = append(mergedSegments, tempOutput)
+		return merged
 	}
 
-	if len(mergedSegments) == 0 {
-		return "", fmt.Errorf("没有成功合成的片段")
+	killerMergedSegments := mergeSegmentSet(killerVideoFiles, "killer")
+	if len(killerMergedSegments) == 0 {
+		return "", fmt.Errorf("没有成功合成的击杀者片段")
+	}
+	victimMergedSegments := mergeSegmentSet(victimVideoFiles, "victim")
+	if cfg.RecordVictimView && len(victimVideoFiles) > 0 && len(victimMergedSegments) == 0 {
+		return "", fmt.Errorf("没有成功合成的被害者片段")
 	}
 
 	// 构建回合信息字符串
@@ -346,12 +395,30 @@ func processRecordings(outputDir, demoName, exeDir string, selectedRounds []int,
 		roundsStr = fmt.Sprintf("_R%d-%d", selectedRounds[0], selectedRounds[len(selectedRounds)-1])
 	}
 
-	// 添加转场效果
+	// 先生成击杀者（保留原有转场逻辑）
 	finalOutput := filepath.Join(outputDir, demoName+roundsStr+".mp4")
-	printInfo("添加转场效果...")
+	printInfo("添加击杀者转场效果...")
+	killerOutput := filepath.Join(tempDir, "killer_transitions.mp4")
 
-	if err := createTransitionsVideo(mergedSegments, finalOutput, ffmpegExe, cfg.TransitionDuration, cfg.TransitionType, cfg.VideoPreset); err != nil {
+	if err := createTransitionsVideo(killerMergedSegments, killerOutput, ffmpegExe, cfg.TransitionDuration, cfg.TransitionType, cfg.VideoPreset); err != nil {
 		return "", fmt.Errorf("转场合成失败: %w", err)
+	}
+
+	// 被害者视角直接拼接，再与击杀者段直连
+	if len(victimMergedSegments) > 0 {
+		printInfo("拼接被害者视角")
+		victimOutput := filepath.Join(tempDir, "victim_concat.mp4")
+		if err := concatSegmentsNoTransition(victimMergedSegments, victimOutput, ffmpegExe, cfg.VideoPreset); err != nil {
+			return "", fmt.Errorf("被害者无转场拼接失败: %w", err)
+		}
+		printInfo("拼接最终视频")
+		if err := concatSegmentsNoTransition([]string{killerOutput, victimOutput}, finalOutput, ffmpegExe, cfg.VideoPreset); err != nil {
+			return "", fmt.Errorf("最终视频拼接失败: %w", err)
+		}
+	} else {
+		if err := concatSegmentsNoTransition([]string{killerOutput}, finalOutput, ffmpegExe, cfg.VideoPreset); err != nil {
+			return "", fmt.Errorf("输出视频失败: %w", err)
+		}
 	}
 
 	// 获取文件大小
@@ -388,7 +455,9 @@ func processRecordings(outputDir, demoName, exeDir string, selectedRounds []int,
 	}
 
 	// 清理视频文件和对应的音频目录
-	for _, videoFile := range videoFiles {
+	allVideoFiles := append([]string{}, killerVideoFiles...)
+	allVideoFiles = append(allVideoFiles, victimVideoFiles...)
+	for _, videoFile := range allVideoFiles {
 		// 删除视频文件
 		os.Remove(videoFile)
 		// 删除对应的音频目录

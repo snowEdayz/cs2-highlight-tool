@@ -9,6 +9,8 @@ var assets embed.FS
 var wailsConfigData []byte
 
 const (
+	ipTestURL = "https://api.ip.sb/geoip"
+
 	ffmpegDownloadURLGlobal = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.7z"
 	ffmpegDownloadURLCN     = "https://gitee.com/hkslover/ffmpeg_release/releases/download/v8.0.1/ffmpeg-8.0.1-essentials_build.7z"
 

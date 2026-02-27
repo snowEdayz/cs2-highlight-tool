@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -22,6 +21,10 @@ var (
 	chinaIPCached bool
 )
 
+type GeoIPResponse struct {
+	CountryCode string `json:"country_code"`
+}
+
 // Gitee Release API 响应结构
 type GiteeRelease struct {
 	TagName string `json:"tag_name"`
@@ -33,21 +36,53 @@ type GiteeRelease struct {
 
 func isChinaIP() bool {
 	chinaIPOnce.Do(func() {
-		conn, err := net.DialTimeout("tcp", "www.google.com:80", 3*time.Second)
-		if err == nil {
-			conn.Close()
+		client := &http.Client{
+			Timeout: 3 * time.Second,
+		}
+		resp, err := client.Get(ipTestURL)
+		if err != nil {
+			chinaIPCached = false
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
 			chinaIPCached = false
 			return
 		}
 
-		connCN, errCN := net.DialTimeout("tcp", "www.baidu.com:80", 3*time.Second)
-		if errCN == nil {
-			connCN.Close()
-			chinaIPCached = true
+		var geoData GeoIPResponse
+		decoder := json.NewDecoder(resp.Body)
+		err = decoder.Decode(&geoData)
+		if err != nil {
+			chinaIPCached = false
 			return
 		}
+		countryCode := geoData.CountryCode
 
-		chinaIPCached = false
+		if countryCode == "CN" {
+			printSuccess("检测到中国 IP")
+			chinaIPCached = true
+		} else {
+			printWarning("检测到非中国 IP")
+			chinaIPCached = false
+		}
+
+		// conn, err := net.DialTimeout("tcp", "www.google.com:80", 3*time.Second)
+		// if err == nil {
+		// 	conn.Close()
+		// 	chinaIPCached = false
+		// 	return
+		// }
+
+		// connCN, errCN := net.DialTimeout("tcp", "www.baidu.com:80", 3*time.Second)
+		// if errCN == nil {
+		// 	connCN.Close()
+		// 	chinaIPCached = true
+		// 	return
+		// }
+
+		// chinaIPCached = false
 	})
 
 	return chinaIPCached

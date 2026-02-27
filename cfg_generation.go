@@ -129,7 +129,7 @@ func generateCFG(demoPath, cfgPath, outputDir string, segments []Segment, target
 		lines = append(lines, fmt.Sprintf(`mirv_cmd addAtTick %d "mirv_streams record start"`, seg.StartTick+specDelay+2))
 		lines = append(lines, fmt.Sprintf(`mirv_cmd addAtTick %d "mirv_streams record end"`, seg.EndTick+1))
 	}
-	lines = append(lines, fmt.Sprintf(`mirv_cmd addAtTick %d "quit"`, segments[len(segments)-1].EndTick+10))
+	lines = append(lines, fmt.Sprintf(`mirv_cmd addAtTick %d "quit"`, segments[len(segments)-1].EndTick+10+2))
 
 	if cfg.RecordVictimView {
 		victimPreTicks := int(cfg.VictimPreSeconds * float64(cfg.Tickrate))
@@ -253,7 +253,7 @@ func generateCFG(demoPath, cfgPath, outputDir string, segments []Segment, target
 		if prevEndTick < 0 {
 			prevEndTick = victimSegments[len(victimSegments)-1].EndTick
 		}
-		victimLines = append(victimLines, fmt.Sprintf(`mirv_cmd addAtTick %d "quit"`, prevEndTick+10))
+		victimLines = append(victimLines, fmt.Sprintf(`mirv_cmd addAtTick %d "quit"`, prevEndTick+10+2))
 
 		victimContent := strings.Join(victimLines, "\n") + "\n"
 		if err := os.WriteFile(victimCfgPath, []byte(victimContent), 0644); err != nil {

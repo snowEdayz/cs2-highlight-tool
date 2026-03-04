@@ -17,8 +17,11 @@ import (
 )
 
 var (
-	chinaIPOnce   sync.Once
-	chinaIPCached bool
+	chinaIPMu       sync.Mutex
+	chinaIPCached   bool
+	chinaIPCacheTTL = 10 * time.Minute
+	chinaIPFailTTL  = 30 * time.Second
+	chinaIPCacheExp time.Time
 )
 
 type GeoIPResponse struct {
@@ -35,57 +38,74 @@ type GiteeRelease struct {
 }
 
 func isChinaIP() bool {
-	chinaIPOnce.Do(func() {
-		client := &http.Client{
-			Timeout: 3 * time.Second,
-		}
-		resp, err := client.Get(ipTestURL)
-		if err != nil {
-			chinaIPCached = false
-			return
-		}
-		defer resp.Body.Close()
+	now := time.Now()
+	chinaIPMu.Lock()
+	if now.Before(chinaIPCacheExp) {
+		cached := chinaIPCached
+		chinaIPMu.Unlock()
+		return cached
+	}
+	chinaIPMu.Unlock()
 
-		if resp.StatusCode != http.StatusOK {
-			chinaIPCached = false
-			return
-		}
+	client := &http.Client{
+		Timeout: 3 * time.Second,
+	}
+	req, err := http.NewRequest("GET", ipTestURL, nil)
+	if err != nil {
+		printWarning(fmt.Sprintf("IP 地区检测请求创建失败: %v", err))
+		chinaIPMu.Lock()
+		chinaIPCached = false
+		chinaIPCacheExp = now.Add(chinaIPFailTTL)
+		chinaIPMu.Unlock()
+		return false
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "application/json")
 
-		var geoData GeoIPResponse
-		decoder := json.NewDecoder(resp.Body)
-		err = decoder.Decode(&geoData)
-		if err != nil {
-			chinaIPCached = false
-			return
-		}
-		countryCode := geoData.CountryCode
+	resp, err := client.Do(req)
+	if err != nil {
+		printWarning(fmt.Sprintf("IP 地区检测失败: %v", err))
+		chinaIPMu.Lock()
+		chinaIPCached = false
+		chinaIPCacheExp = now.Add(chinaIPFailTTL)
+		chinaIPMu.Unlock()
+		return false
+	}
+	defer resp.Body.Close()
 
-		if countryCode == "CN" {
-			printSuccess("检测到中国 IP")
-			chinaIPCached = true
-		} else {
-			printWarning("检测到非中国 IP")
-			chinaIPCached = false
-		}
+	if resp.StatusCode != http.StatusOK {
+		printWarning(fmt.Sprintf("IP 地区检测失败，状态码: %d", resp.StatusCode))
+		chinaIPMu.Lock()
+		chinaIPCached = false
+		chinaIPCacheExp = now.Add(chinaIPFailTTL)
+		chinaIPMu.Unlock()
+		return false
+	}
 
-		// conn, err := net.DialTimeout("tcp", "www.google.com:80", 3*time.Second)
-		// if err == nil {
-		// 	conn.Close()
-		// 	chinaIPCached = false
-		// 	return
-		// }
+	var geoData GeoIPResponse
+	decoder := json.NewDecoder(resp.Body)
+	if err := decoder.Decode(&geoData); err != nil {
+		printWarning(fmt.Sprintf("IP 地区检测解析失败: %v", err))
+		chinaIPMu.Lock()
+		chinaIPCached = false
+		chinaIPCacheExp = now.Add(chinaIPFailTTL)
+		chinaIPMu.Unlock()
+		return false
+	}
 
-		// connCN, errCN := net.DialTimeout("tcp", "www.baidu.com:80", 3*time.Second)
-		// if errCN == nil {
-		// 	connCN.Close()
-		// 	chinaIPCached = true
-		// 	return
-		// }
+	countryCode := strings.ToUpper(strings.TrimSpace(geoData.CountryCode))
+	isChina := countryCode == "CN"
+	if isChina {
+		printInfo("检测到中国 IP")
+	} else {
+		printInfo("检测到非中国 IP")
+	}
 
-		// chinaIPCached = false
-	})
-
-	return chinaIPCached
+	chinaIPMu.Lock()
+	chinaIPCached = isChina
+	chinaIPCacheExp = now.Add(chinaIPCacheTTL)
+	chinaIPMu.Unlock()
+	return isChina
 }
 
 func getFFmpegDownloadURL() string {

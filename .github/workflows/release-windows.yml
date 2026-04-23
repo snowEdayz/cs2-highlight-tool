@@ -36,6 +36,12 @@ jobs:
           New-Item -ItemType Directory -Force -Path build\windows | Out-Null
           Copy-Item -Force ".\previews\icon.ico" "build\windows\icon.ico"
 
+      - name: Build Frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
       - name: Build Windows App
         run: wails build -upx --clean --platform windows/amd64
 

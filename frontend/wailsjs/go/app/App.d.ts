@@ -11,6 +11,8 @@ export function ApplySelfUpdate():Promise<envsetup.StartupState>;
 
 export function CheckPlatformClients():Promise<Array<app.PlatformClientStatus>>;
 
+export function ClearOutputsDirectory():Promise<app.OutputsStorageStats>;
+
 export function ConcatEditClips(arg1:app.EditConcatRequest):Promise<string>;
 
 export function EnterMainApp():Promise<void>;
@@ -30,6 +32,8 @@ export function GetClipActionSettings():Promise<app.ClipActionSettings>;
 export function GetClipSettings():Promise<app.ClipSettings>;
 
 export function GetFiveEPlayerName():Promise<string>;
+
+export function GetOutputsStorageStats():Promise<app.OutputsStorageStats>;
 
 export function GetProduceHistorySnapshot():Promise<app.ProduceHistorySnapshot>;
 
@@ -56,6 +60,8 @@ export function ListWanmeiRecentMatches(arg1:number):Promise<wanmei.WanmeiMatchL
 export function OpenExternalURL(arg1:string):Promise<void>;
 
 export function OpenManualDownload(arg1:string):Promise<void>;
+
+export function OpenOutputsDirectory():Promise<void>;
 
 export function OpenProducedClipInFolder(arg1:string):Promise<void>;
 

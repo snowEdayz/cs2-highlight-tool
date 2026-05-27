@@ -434,6 +434,22 @@ export namespace app {
 		    return a;
 		}
 	}
+	export class OutputsStorageStats {
+	    output_dir: string;
+	    video_count: number;
+	    total_size_bytes: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new OutputsStorageStats(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.output_dir = source["output_dir"];
+	        this.video_count = source["video_count"];
+	        this.total_size_bytes = source["total_size_bytes"];
+	    }
+	}
 	export class PlatformClientCloseResult {
 	    exe_name: string;
 	    closed: boolean;

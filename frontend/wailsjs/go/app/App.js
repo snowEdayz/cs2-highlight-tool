@@ -10,6 +10,10 @@ export function CheckPlatformClients() {
   return window['go']['app']['App']['CheckPlatformClients']();
 }
 
+export function ClearOutputsDirectory() {
+  return window['go']['app']['App']['ClearOutputsDirectory']();
+}
+
 export function ConcatEditClips(arg1) {
   return window['go']['app']['App']['ConcatEditClips'](arg1);
 }
@@ -48,6 +52,10 @@ export function GetClipSettings() {
 
 export function GetFiveEPlayerName() {
   return window['go']['app']['App']['GetFiveEPlayerName']();
+}
+
+export function GetOutputsStorageStats() {
+  return window['go']['app']['App']['GetOutputsStorageStats']();
 }
 
 export function GetProduceHistorySnapshot() {
@@ -100,6 +108,10 @@ export function OpenExternalURL(arg1) {
 
 export function OpenManualDownload(arg1) {
   return window['go']['app']['App']['OpenManualDownload'](arg1);
+}
+
+export function OpenOutputsDirectory() {
+  return window['go']['app']['App']['OpenOutputsDirectory']();
 }
 
 export function OpenProducedClipInFolder(arg1) {

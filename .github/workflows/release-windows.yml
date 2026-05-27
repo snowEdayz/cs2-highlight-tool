@@ -18,12 +18,12 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
+          go-version: "1.23"
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "22"
 
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.11.0
@@ -32,18 +32,20 @@ jobs:
         run: choco install upx -y
 
       - name: Prepare Windows Icon
+        shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path build\windows | Out-Null
-          Copy-Item -Force ".\previews\icon.ico" "build\windows\icon.ico"
-
-      - name: Build Frontend
-        run: |
-          cd frontend
-          npm ci
-          npm run build
+          if (Test-Path "icon.ico") {
+            New-Item -ItemType Directory -Path "build/windows" -Force | Out-Null
+            Copy-Item -Path "icon.ico" -Destination "build/windows/icon.ico" -Force
+            Write-Host "Using icon from repository root: icon.ico"
+          } elseif (Test-Path "build/windows/icon.ico") {
+            Write-Host "Using existing icon: build/windows/icon.ico"
+          } else {
+            throw "No icon found. Commit icon.ico at repository root or build/windows/icon.ico."
+          }
 
       - name: Build Windows App
-        run: wails build -upx --clean --platform windows/amd64
+        run: wails build -upx --platform windows/amd64
 
       - name: Publish Release
         uses: softprops/action-gh-release@v2

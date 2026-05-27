@@ -1,0 +1,171 @@
+<template>
+  <div>
+    <div class="transition-box">
+      <span class="transition-label">{{ t("main.edit.transition_mode") }}</span>
+      <n-radio-group
+        size="small"
+        :value="transitionMode"
+        @update:value="handleTransitionModeChange"
+      >
+        <n-radio-button value="none">{{ t("main.edit.transition_none") }}</n-radio-button>
+        <n-radio-button value="fade">{{ t("main.edit.transition_fade") }}</n-radio-button>
+      </n-radio-group>
+      <n-select
+        v-if="transitionMode === 'fade'"
+        size="small"
+        class="transition-select"
+        :value="transitionDuration"
+        :options="transitionDurationOptions"
+        @update:value="handleTransitionDurationChange"
+      />
+    </div>
+
+    <div class="sequence-actions">
+      <n-space align="center" wrap>
+        <n-button
+          type="primary"
+          :loading="exporting"
+          :disabled="!hasSequence || exporting"
+          @click="handleExport"
+        >
+          {{ exporting ? t("main.edit.exporting") : t("main.edit.export") }}
+        </n-button>
+        <n-button
+          size="small"
+          quaternary
+          :disabled="!hasSequence || exporting"
+          @click="handleClear"
+        >
+          {{ t("main.edit.clear") }}
+        </n-button>
+        <n-tag v-if="exportPath" type="success" size="small">
+          {{ t("main.edit.export_success", { path: basename(exportPath) }) }}
+        </n-tag>
+        <n-button
+          v-if="exportPath"
+          size="small"
+          quaternary
+          :disabled="exporting"
+          @click="handleOpenFolder"
+        >
+          {{ t("main.produce.open_clip_folder") }}
+        </n-button>
+      </n-space>
+      <n-space
+        v-if="exporting || composeProgress.active"
+        vertical
+        :size="6"
+        class="compose-progress-block"
+      >
+        <n-progress
+          type="line"
+          :show-indicator="true"
+          :percentage="composePercent"
+          status="success"
+        />
+        <n-text depth="3">{{ composeProgressLabel }}</n-text>
+      </n-space>
+      <n-alert
+        v-if="exportError"
+        type="error"
+        closable
+        @close="handleClearError"
+      >
+        {{ exportError }}
+      </n-alert>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { t } from "@/shared/i18n";
+import type { ComposeProgressMessage } from "@/shared/types";
+
+const props = defineProps<{
+  hasSequence: boolean;
+  exporting: boolean;
+  exportError: string;
+  exportPath: string;
+  transitionMode: string;
+  transitionDuration: number;
+  composeProgress: ComposeProgressMessage;
+  composePercent: number;
+  composeProgressLabel: string;
+  transitionDurationOptions: Array<{ label: string; value: number }>;
+}>();
+
+const emit = defineEmits<{
+  (e: "export"): void;
+  (e: "clear"): void;
+  (e: "open-folder"): void;
+  (e: "clear-error"): void;
+  (e: "update:transition-mode", value: string | number): void;
+  (e: "update:transition-duration", value: string | number | null): void;
+}>();
+
+function handleTransitionModeChange(value: string | number) {
+  emit("update:transition-mode", value);
+}
+
+function handleTransitionDurationChange(value: string | number | null) {
+  emit("update:transition-duration", value);
+}
+
+function handleExport() {
+  emit("export");
+}
+
+function handleClear() {
+  emit("clear");
+}
+
+function handleOpenFolder() {
+  emit("open-folder");
+}
+
+function handleClearError() {
+  emit("clear-error");
+}
+
+function basename(path: string): string {
+  if (!path) return "";
+  return path.replaceAll("\\", "/").split("/").pop() || path;
+}
+</script>
+
+<style scoped>
+.transition-box {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #303732;
+  background: rgba(26, 30, 27, 0.4);
+  flex-shrink: 0;
+}
+
+.transition-label {
+  color: #a7b2aa;
+  font-size: 12px;
+}
+
+.transition-select {
+  width: 110px;
+}
+
+.sequence-actions {
+  border-top: 1px solid #303732;
+  padding: 10px 12px;
+  background: rgba(17, 19, 18, 0.5);
+  flex-shrink: 0;
+}
+
+.sequence-actions > :not(:last-child) {
+  margin-bottom: 8px;
+}
+
+.compose-progress-block {
+  margin-top: 8px;
+}
+</style>

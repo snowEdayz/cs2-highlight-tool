@@ -1,0 +1,62 @@
+:root {
+  color: #edf1ee;
+  background: #111312;
+  font-family: "Barlow Semi Condensed", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: #111312;
+  overflow: hidden;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+.eyebrow {
+  color: #85d3a7;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.main-app {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 38px);
+  padding: 10px 14px;
+  gap: 10px;
+}
+
+.main-steps-bar {
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+
+.main-steps-bar .n-steps {
+  cursor: pointer;
+}
+
+.main-view {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}

@@ -1,128 +1,92 @@
-<p align="center">
-  <img src="previews/icon.ico" width="128" height="128" alt="Paytick Logo">
-</p>
+<div align="center">
+  <img src="build/windows/icon.ico" alt="CS2 Highlight Tool Logo" width="88" />
+  <h1>CS2 Highlight Tool</h1>
+  <p>CS2 Demo 导入、片段选择、录制制作与后期拼接的一体化桌面工具。</p>
 
-<h1 align="center">CS2 Highlight Tool - 你的CS2击杀集锦生成器</h1>
+  <p>
+    <a href="https://github.com/hkslover/cs2-highlight-tool-v2/releases"><img src="https://img.shields.io/github/v/release/hkslover/cs2-highlight-tool-v2?style=flat-square" alt="release"></a>
+    <a href="https://github.com/hkslover/cs2-highlight-tool-v2/actions/workflows/release-windows.yml"><img src="https://img.shields.io/github/actions/workflow/status/hkslover/cs2-highlight-tool-v2/release-windows.yml?style=flat-square&label=release-windows" alt="release-windows"></a>
+  </p>
 
-<p align="center">
-  <a href="README.en.md">English</a> | 简体中文
-</p>
+  <p>
+    <a href="https://cs2.snowblog.xyz">官网</a> ·
+    <a href="https://github.com/hkslover/cs2-highlight-tool-v2/releases">下载 Releases</a> ·
+    <a href="#quickstart">快速开始</a> ·
+    <a href="#dev">我是开发者</a> ·
+  </p>
+</div>
 
-<p align="center">
-  <a href="https://github.com/hkslover/cs2-highlight-tool/releases"><img src="https://img.shields.io/github/v/release/hkslover/cs2-highlight-tool?label=latest" alt="Release"></a>
-  <a href="https://github.com/hkslover/cs2-highlight-tool/releases"><img src="https://img.shields.io/github/downloads/hkslover/cs2-highlight-tool/total?color=blue" alt="Downloads"></a>
-  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
-</p>
+## 导航
 
-> 每周仅2次"完美时刻"不够用？🤯 打破限制，无限生成你的高光集锦！✨
-# 预览
-![](previews/1.png)
-
----
-
-## 🎯 开发背景
-
-作为一个热爱CS2的国内玩家，你是否也经历过这些烦恼：😤
-
-- 使用完美对战平台时，每周仅有 **2次** "完美时刻"生成机会，根本不够用
-- 渴望将精彩操作集锦分享给基友，却发现这周生成次数已经用完
-
-**于是，这个项目诞生了！** 🎉
-
-CS2 Highlight Tool 让你：
-- ✅ **无限次**生成击杀集锦，想剪多少就剪多少
-- ✅ **完全掌控**录制参数和转场效果
-- ✅ **隐私安全**，所有数据都在本地处理
-
-告别次数焦虑，让每一场精彩（唐氏）操作都值得被记录！📹
-
----
-
-## 🚀 项目简介
-
-一个基于 **Wails + Vue + Naive UI** 打造的 **CS2 Demo 击杀集锦制作工具**！  
-解析游戏 demo 文件 → 挑选炫酷回合 → 自动生成击杀集锦 —— 从此高光时刻，由你定义！💥
+- [软件截图](#screenshots)
+- [核心功能](#features)
+- [我是用户](#quickstart)
+- [我是开发者](#dev)
+- [特别鸣谢](#thanks)
 
 
----
-## TODO
-- ✅  **多语言支持**
-- ✅  **支持玩家语音录制**
-- ✅  **2D击杀图渲染**
-- [ ]  **客制化CFG录制**
-- [ ]  **分享社区**
 
-随缘更新
+<a id="screenshots"></a>
+## 软件截图
 
----
+### 导入页面
+![](docs/images/screenshots/import.png)
 
-## ✨ 为什么选择我？
+### 选择片段
+![](docs/images/screenshots/choose.png)
 
-| 特性 | CS2 Highlight Tool （🥇完美小工具） | CS Demo Manager（过于专业） | ClutchKings（受限于网络问题） |
-|------|----------------------|------------------|-------------|
-| **隐私保护** | 🏠 全程本地运行 | 本地运行 | 云端依赖 |
-| **上手难度** | ⚡ 自动配置环境，一键开剪 | 需要手动安装依赖 | 需要外网访问 |
-| **定制程度** | 🎛️ 录制参数、CFG、转场效果完全可控 | 有限定制 | 模板化 |
-| **使用体验** | 🎮 简单直观 | 功能专业繁杂 | 较直观 |
+### 制作
+![](docs/images/screenshots/produce.png)
 
----
-
-## 🛠️ 安装与运行
-
-### 方法一：懒人专属（推荐🌟）
-直接前往 [Release 页面](https://github.com/hkslover/cs2-highlight-tool/releases) 下载 `.exe` 文件，双击即用！🚀
-
-### 方法二：极客模式
-如果你喜欢从源码开始：
-
-```bash
-#   安装必备环境
-#   - Go 1.22+
-#   - Node.js 18+
-#   - Wails CLI
+### 剪辑
+![](docs/images/screenshots/edit.png)
 
 
-git clone https://github.com/hkslover/cs2-highlight-tool
-cd CS2-Highlight-Tool
-wails dev 
+<a id="features"></a>
+## 核心功能
 
-wails build --clean --platform windows/amd64
-```
+| 模块 | 能力 |
+| --- | --- |
+| Demo 导入 | 支持本地文件导入、完美对战平台导入、5E 平台导入 |
+| 片段选择 | 按玩家/回合筛选击杀片段，支持击杀者与被害者视角组合 |
+| 制作录制 | 生成配置并驱动录制流程，提供实时状态与制作历史 |
+| 后期剪辑 | 对已产出片段进行拼接导出，支持基础转场与时间线调整 |
 
----
+<a id="quickstart"></a>
+## 快速开始（用户）
 
-## 🎮 使用流程
+1. 前往 [Releases](https://github.com/hkslover/cs2-highlight-tool-v2/releases) 下载 Windows 可执行文件。
+2. 启动软件，等待首次环境准备完成（必要时按提示修复组件）。
+3. 在 `导入` 页面导入 DEM（本地 / 完美 / 5E）。
+4. 在 `选择片段` 页面选择要制作的击杀片段与参数。
+5. 在 `制作` 页面开始录制，完成后进入 `剪辑` 页面拼接导出。
 
-1. **启动应用** → 自动下载配置 HLAE、FFmpeg
-2. **设置 CS2 路径** → 告诉工具你的游戏藏在哪 🎯
-3. **选择 Demo 文件**
-4. **勾选高光回合** → "这波五杀必须放进集锦！" ✔️
-5. **生成并预览** → 等待魔法发生，然后秀翻全场！ 🎥✨
+<a id="dev"></a>
+## 本地开发（开发者）
 
-**🎉 从此，你再也不用担心：**
-- "这周次数用完了，下个五杀怎么办？"
-- "刚才那波残局太帅了，但没次数保存了..."
-- "想做个赛季集锦，但平台不支持"
+先决条件（建议）：
 
----
+- Go `1.24+`
+- Node.js（建议 LTS）
+- Wails CLI `v2`
 
-## 🙏 特别鸣谢
+常用命令：
 
-本项目之所以强大，离不开以下开源项目的支持（不分先后）：
+| 场景 | 命令 |
+| --- | --- |
+| 开发模式 | `wails dev` |
+| 构建产物 | `wails build` |
+| 后端测试 | `go test ./...` |
+| 前端构建校验 | `cd frontend && npm run build` |
 
+<a id="thanks"></a>
+## 特别鸣谢
+排名不分先后
 - [advancedfx/advancedfx (HLAE)](https://github.com/advancedfx/advancedfx)
 - [demoinfocs-golang](https://github.com/markus-wa/demoinfocs-golang)
 - [FFmpeg](https://ffmpeg.org/)
 - [Purple-CSGO](https://github.com/Purple-CSGO/)
 - [wails](https://wails.io/)
+- [cs-demo-manager](https://github.com/akiver/cs-demo-manager)
 
 ---
-
-
-*"让每一个精彩瞬间，都不被限制，不被辜负。"* 🎯
-
-
-
-> 💡 **小提示**：如果觉得好用，别忘了点个 Star ⭐ **让更多CS2玩家**看到！  
-> 有问题或建议？欢迎提交 Issue 或加入讨论！  
-> **一起打破限制，创造无限精彩！** 

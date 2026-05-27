@@ -1,12 +1,14 @@
-module github.com/hkslover/cs2-highlight-tool
+module cs2-highlight-tool-v2
 
 go 1.24.0
 
 require (
 	github.com/bodgit/sevenzip v1.6.1
-	github.com/fatih/color v1.18.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/markus-wa/demoinfocs-golang/v5 v5.2.0
 	github.com/wailsapp/wails/v2 v2.11.0
+	golang.org/x/net v0.35.0
+	golang.org/x/sys v0.30.0
 )
 
 require (
@@ -19,7 +21,6 @@ require (
 	github.com/golang/geo v0.0.0-20230421003525-6adc56603217 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/jchv/go-winloader v0.0.0-20210711035445-715c2860da7e // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
@@ -51,10 +52,8 @@ require (
 	go4.org v0.0.0-20200411211856-f5505b9728dd // indirect
 	golang.org/x/crypto v0.33.0 // indirect
 	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63 // indirect
-	golang.org/x/net v0.35.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
 
-// replace github.com/wailsapp/wails/v2 v2.11.0 => C:\Users\Administrator\go\pkg\mod
+// replace github.com/wailsapp/wails/v2 v2.11.0 => /Users/snow/go/pkg/mod

@@ -4,13 +4,13 @@
   <p>CS2 Demo 导入、片段选择、录制制作与后期拼接的一体化桌面工具。</p>
 
   <p>
-    <a href="https://github.com/hkslover/cs2-highlight-tool-v2/releases"><img src="https://img.shields.io/github/v/release/hkslover/cs2-highlight-tool-v2?style=flat-square" alt="release"></a>
-    <a href="https://github.com/hkslover/cs2-highlight-tool-v2/actions/workflows/release-windows.yml"><img src="https://img.shields.io/github/actions/workflow/status/hkslover/cs2-highlight-tool-v2/release-windows.yml?style=flat-square&label=release-windows" alt="release-windows"></a>
+    <a href="https://github.com/hkslover/cs2-highlight-tool/releases"><img src="https://img.shields.io/github/v/release/hkslover/cs2-highlight-tool?style=flat-square" alt="release"></a>
+    <a href="https://github.com/hkslover/cs2-highlight-tool/actions/workflows/release-windows.yml"><img src="https://img.shields.io/github/actions/workflow/status/hkslover/cs2-highlight-tool/release-windows.yml?style=flat-square&label=release-windows" alt="release-windows"></a>
   </p>
 
   <p>
     <a href="https://cs2.snowblog.xyz">官网</a> ·
-    <a href="https://github.com/hkslover/cs2-highlight-tool-v2/releases">下载 Releases</a> ·
+    <a href="https://github.com/hkslover/cs2-highlight-tool/releases">下载 Releases</a> ·
     <a href="#quickstart">快速开始</a> ·
     <a href="#dev">我是开发者</a> ·
   </p>
@@ -55,7 +55,7 @@
 <a id="quickstart"></a>
 ## 快速开始（用户）
 
-1. 前往 [Releases](https://github.com/hkslover/cs2-highlight-tool-v2/releases) 下载 Windows 可执行文件。
+1. 前往 [Releases](https://github.com/hkslover/cs2-highlight-tool/releases) 下载 Windows 可执行文件。
 2. 启动软件，等待首次环境准备完成（必要时按提示修复组件）。
 3. 在 `导入` 页面导入 DEM（本地 / 完美 / 5E）。
 4. 在 `选择片段` 页面选择要制作的击杀片段与参数。

@@ -73,8 +73,8 @@
       "sub_placeholder": "功能开发中…",
       "fivee_refresh": "刷新",
       "fivee_player_hint": "输入玩家名称查询最近战绩",
-      "fivee_player_placeholder": "玩家名称",
-      "fivee_player_empty": "请先输入玩家名称",
+      "fivee_player_placeholder": "玩家ID",
+      "fivee_player_empty": "请先输入玩家ID",
       "fivee_query_action": "查询战绩",
       "fivee_list_empty": "暂无可导入的 5E 战绩",
       "fivee_col_time": "结束时间",
@@ -362,8 +362,8 @@
   },
   "workspace": {
     "init": {
-      "title": "设置工作目录",
-      "description": "请选择一个父目录（英文、无空格），程序将在其中自动创建 cs2HighLightTool 子目录作为数据根目录，用于存放 HLAE、插件、FFmpeg、配置以及录制输出。",
+      "title": "设置安装目录",
+      "description": "请选择一个目录（英文、无空格），工具将在其中自动创建 cs2HighLightTool 目录作为工具工作目录，用于存放组件等内容。",
       "browse_button": "浏览…",
       "path_placeholder": "未选择目录",
       "confirm_button": "使用此目录",
@@ -379,12 +379,12 @@
       "generic": "路径无效"
     },
     "reset": {
-      "button": "重置工作目录",
-      "confirm_title": "⚠️ 确认重置工作目录",
+      "button": "重置安装目录",
+      "confirm_title": "⚠️ 确认重置安装目录",
       "confirm_content": "将清除 {dataDir} 下的所有应用数据，操作不可撤销。",
       "confirm_yes": "确认重置",
       "confirm_no": "取消",
-      "success": "已重置工作目录",
+      "success": "已重置安装目录",
       "failure": "重置失败：{error}"
     }
   }

@@ -97,8 +97,8 @@
       "pcol_assists": "Assists",
       "fivee_refresh": "Refresh",
       "fivee_player_hint": "Enter player name to query recent matches",
-      "fivee_player_placeholder": "Player name",
-      "fivee_player_empty": "Please enter a player name first",
+      "fivee_player_placeholder": "Player ID",
+      "fivee_player_empty": "Please enter a player ID first",
       "fivee_query_action": "Query Matches",
       "fivee_list_empty": "No 5E matches available to import",
       "fivee_col_time": "End Time",
@@ -358,6 +358,34 @@
       "enter_main_failed": "Failed to enter main page: {error}",
       "logs_exported": "Logs exported: {path}",
       "export_logs_failed": "Failed to export logs: {error}"
+    }
+  },
+  "workspace": {
+    "init": {
+      "title": "Set Installation Directory",
+      "description": "Choose a directory using English characters and no spaces. The tool will automatically create a cs2HighLightTool directory inside it as the tool workspace for components and related files.",
+      "browse_button": "Browse...",
+      "path_placeholder": "No directory selected",
+      "confirm_button": "Use This Directory",
+      "exit_button": "Exit App"
+    },
+    "validate": {
+      "invalid_chinese": "Path cannot contain Chinese or non-ASCII characters",
+      "invalid_space": "Path cannot contain spaces",
+      "invalid_symbol": "Path contains invalid characters",
+      "invalid_root": "Cannot select the drive root directory",
+      "invalid_length": "Path length exceeds 200 characters",
+      "invalid_unwritable": "Cannot write to this location. Please check permissions.",
+      "generic": "Invalid path"
+    },
+    "reset": {
+      "button": "Reset Installation Directory",
+      "confirm_title": "⚠️ Confirm Reset Installation Directory",
+      "confirm_content": "This will delete all application data under {dataDir}. This action cannot be undone.",
+      "confirm_yes": "Confirm Reset",
+      "confirm_no": "Cancel",
+      "success": "Installation directory has been reset",
+      "failure": "Reset failed: {error}"
     }
   }
 }

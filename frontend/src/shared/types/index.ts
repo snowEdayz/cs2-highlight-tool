@@ -29,6 +29,7 @@ export type {
 
 export type {
   ClipSettings,
+  DemoStorageStats,
   OutputsStorageStats,
   ClipParameterOverrides,
   GeneratePluginSelectedItem,

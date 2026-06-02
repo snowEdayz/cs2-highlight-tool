@@ -63,6 +63,63 @@ func TestClearOutputsDirectoryRemovesChildrenAndKeepsDirectory(t *testing.T) {
 	}
 }
 
+func TestDemoStorageStatsCountsDemosAndAllFileBytes(t *testing.T) {
+	dataDir := t.TempDir()
+	app := &App{exeDir: t.TempDir(), dataDir: dataDir}
+	demoDir := filepath.Join(dataDir, "demo")
+	writeTestFile(t, filepath.Join(demoDir, "raw", "match_a.dem"), 10)
+	writeTestFile(t, filepath.Join(demoDir, "wanmei", "match_b", "match_b.DEM"), 20)
+	writeTestFile(t, filepath.Join(demoDir, "5e", "match_c", "notes.txt"), 30)
+	writeTestFile(t, filepath.Join(demoDir, "5e", "match_c", "match_c.dem"), 40)
+
+	stats, err := app.GetDemoStorageStats()
+	if err != nil {
+		t.Fatalf("GetDemoStorageStats: %v", err)
+	}
+
+	if stats.DemoDir != demoDir {
+		t.Fatalf("DemoDir=%q want %q", stats.DemoDir, demoDir)
+	}
+	if stats.DemoCount != 3 {
+		t.Fatalf("DemoCount=%d want 3", stats.DemoCount)
+	}
+	if stats.TotalSizeBytes != 100 {
+		t.Fatalf("TotalSizeBytes=%d want 100", stats.TotalSizeBytes)
+	}
+}
+
+func TestClearDemoDirectoryRemovesChildrenAndKeepsDirectory(t *testing.T) {
+	dataDir := t.TempDir()
+	app := &App{exeDir: t.TempDir(), dataDir: dataDir}
+	demoDir := filepath.Join(dataDir, "demo")
+	writeTestFile(t, filepath.Join(demoDir, "raw", "match_a.dem"), 10)
+	writeTestFile(t, filepath.Join(demoDir, "wanmei", "match_b", "match_b.dem"), 20)
+
+	stats, err := app.ClearDemoDirectory()
+	if err != nil {
+		t.Fatalf("ClearDemoDirectory: %v", err)
+	}
+
+	if stats.DemoDir != demoDir {
+		t.Fatalf("DemoDir=%q want %q", stats.DemoDir, demoDir)
+	}
+	if stats.DemoCount != 0 || stats.TotalSizeBytes != 0 {
+		t.Fatalf("stats after clear mismatch: %+v", stats)
+	}
+	if info, err := os.Stat(demoDir); err != nil {
+		t.Fatalf("demo directory should remain: %v", err)
+	} else if !info.IsDir() {
+		t.Fatalf("demo path should be directory")
+	}
+	entries, err := os.ReadDir(demoDir)
+	if err != nil {
+		t.Fatalf("ReadDir demo: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("demo directory should be empty, got %d entries", len(entries))
+	}
+}
+
 func writeTestFile(t *testing.T, path string, size int) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {

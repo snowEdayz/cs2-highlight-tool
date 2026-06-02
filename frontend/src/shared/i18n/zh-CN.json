@@ -261,7 +261,8 @@
       "clip_title": "片段配置",
       "recording_title": "录制配置",
       "editing_title": "剪辑设置",
-      "outputs_title": "输出目录",
+      "outputs_title": "视频输出目录",
+      "demo_title": "demo 目录",
       "debug_title": "调试配置",
       "other_title": "其他设置",
       "save": "保存",
@@ -292,6 +293,7 @@
       "record_output_dir_placeholder": "例如: D:/cs2/outputs",
       "enable_spec_show_xray_zero": "关闭 X 光",
       "outputs_video_count": "视频数量",
+      "demo_count": "Dem数量",
       "outputs_total_size": "占用空间",
       "outputs_dir": "目录位置",
       "outputs_refresh": "刷新",
@@ -302,6 +304,9 @@
       "outputs_clear_confirm_positive": "确认删除",
       "outputs_clear_confirm_negative": "取消",
       "outputs_clear_success": "输出目录已清理",
+      "demo_clear_confirm_title": "确认清理 demo 目录？",
+      "demo_clear_confirm_content": "将删除 demo 目录下的所有文件和文件夹（当前 {count} 个 demo 文件，{size}），此操作不可恢复。",
+      "demo_clear_success": "demo目录已清理",
       "keep_produce_intermediates": "保留制作中间产物",
       "browse": "浏览"
     }
@@ -310,8 +315,8 @@
     "title": "启动环境准备",
     "tasks_title": "环境任务",
     "export_logs": "导出日志",
-    "ready_text": "环境准备完成，可以进入主页面。",
-    "enter_main": "进入主页面",
+    "ready_text": "环境准备完成。",
+    "enter_main": "进入",
     "self_update_name": "软件更新",
     "status": {
       "pending": "等待",
@@ -379,12 +384,12 @@
       "generic": "路径无效"
     },
     "reset": {
-      "button": "重置安装目录",
-      "confirm_title": "⚠️ 确认重置安装目录",
+      "button": "重置工作目录",
+      "confirm_title": "确认重置重置工作目录",
       "confirm_content": "将清除 {dataDir} 下的所有应用数据，操作不可撤销。",
       "confirm_yes": "确认重置",
       "confirm_no": "取消",
-      "success": "已重置安装目录",
+      "success": "已重置工作目录",
       "failure": "重置失败：{error}"
     }
   }

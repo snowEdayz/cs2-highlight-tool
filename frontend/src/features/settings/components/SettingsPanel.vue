@@ -75,44 +75,43 @@
       </n-space>
     </n-card>
 
-    <n-card size="small" :bordered="true" class="section-card">
-      <template #header>
-        <span class="section-title">{{ t("main.settings.outputs_title") }}</span>
-      </template>
+    <StorageDirectoryCard
+      :title="t('main.settings.outputs_title')"
+      :primary-value="outputsStats.video_count"
+      :primary-label="t('main.settings.outputs_video_count')"
+      :total-size="formatBytes(outputsStats.total_size_bytes)"
+      :total-size-label="t('main.settings.outputs_total_size')"
+      :path-label="t('main.settings.outputs_dir')"
+      :path="outputsStats.output_dir"
+      :refresh-label="t('main.settings.outputs_refresh')"
+      :open-label="t('main.settings.outputs_open')"
+      :clear-label="t('main.settings.outputs_clear')"
+      :loading="outputsLoading"
+      :opening="openingOutputsDir"
+      :clearing="clearingOutputs"
+      @refresh="loadOutputsStats"
+      @open="openOutputsDirectory"
+      @clear="confirmClearOutputs"
+    />
 
-      <n-space vertical :size="12">
-        <div class="outputs-summary">
-          <div class="outputs-stat">
-            <span class="outputs-stat-value">{{ outputsStats.video_count }}</span>
-            <span class="outputs-stat-label">{{ t("main.settings.outputs_video_count") }}</span>
-          </div>
-          <div class="outputs-stat">
-            <span class="outputs-stat-value">{{ formatBytes(outputsStats.total_size_bytes) }}</span>
-            <span class="outputs-stat-label">{{ t("main.settings.outputs_total_size") }}</span>
-          </div>
-        </div>
-        <div class="output-dir-row">
-          <span class="setting-label">{{ t("main.settings.outputs_dir") }}</span>
-          <span class="output-dir-path" :title="outputsStats.output_dir">{{ outputsStats.output_dir || "-" }}</span>
-        </div>
-        <div class="outputs-actions">
-          <n-button size="small" :loading="outputsLoading" @click="loadOutputsStats">
-            {{ t("main.settings.outputs_refresh") }}
-          </n-button>
-          <n-button size="small" :loading="openingOutputsDir" @click="openOutputsDirectory">
-            {{ t("main.settings.outputs_open") }}
-          </n-button>
-          <n-button
-            size="small"
-            type="error"
-            :loading="clearingOutputs"
-            @click="confirmClearOutputs"
-          >
-            {{ t("main.settings.outputs_clear") }}
-          </n-button>
-        </div>
-      </n-space>
-    </n-card>
+    <StorageDirectoryCard
+      :title="t('main.settings.demo_title')"
+      :primary-value="demoStats.demo_count"
+      :primary-label="t('main.settings.demo_count')"
+      :total-size="formatBytes(demoStats.total_size_bytes)"
+      :total-size-label="t('main.settings.outputs_total_size')"
+      :path-label="t('main.settings.outputs_dir')"
+      :path="demoStats.demo_dir"
+      :refresh-label="t('main.settings.outputs_refresh')"
+      :open-label="t('main.settings.outputs_open')"
+      :clear-label="t('main.settings.outputs_clear')"
+      :loading="demoLoading"
+      :opening="openingDemoDir"
+      :clearing="clearingDemo"
+      @refresh="loadDemoStats"
+      @open="openDemoDirectory"
+      @clear="confirmClearDemo"
+    />
 
     <n-card v-if="debugEnabled" size="small" :bordered="true" class="section-card">
       <template #header>
@@ -138,7 +137,8 @@ import { useDialog, useMessage } from "naive-ui";
 import { t } from "@/shared/i18n";
 import { CLIP_SETTINGS_SAVED_EVENT } from "@/shared/events";
 import { useDebugSettings } from "@/shared/state/useDebugSettings";
-import type { ClipSettings, OutputsStorageStats } from "@/shared/types";
+import type { ClipSettings, DemoStorageStats, OutputsStorageStats } from "@/shared/types";
+import StorageDirectoryCard from "./StorageDirectoryCard.vue";
 
 const props = withDefaults(
   defineProps<{
@@ -152,8 +152,11 @@ const props = withDefaults(
 const AUTO_SAVE_DELAY_MS = 500;
 const saving = ref(false);
 const outputsLoading = ref(false);
+const demoLoading = ref(false);
 const openingOutputsDir = ref(false);
+const openingDemoDir = ref(false);
 const clearingOutputs = ref(false);
+const clearingDemo = ref(false);
 const errorMessage = ref("");
 const successMessage = ref("");
 const syncingSettings = ref(false);
@@ -182,6 +185,11 @@ const outputsStats = reactive<OutputsStorageStats>({
   video_count: 0,
   total_size_bytes: 0,
 });
+const demoStats = reactive<DemoStorageStats>({
+  demo_dir: "",
+  demo_count: 0,
+  total_size_bytes: 0,
+});
 const presetOptions = computed(() => [
   { label: t("main.settings.video_preset_auto"), value: "auto" },
   { label: t("main.settings.video_preset_c1"), value: "c1" },
@@ -208,6 +216,7 @@ watch(
     }
     void loadSettings();
     void loadOutputsStats();
+    void loadDemoStats();
   },
   { immediate: true },
 );
@@ -259,6 +268,22 @@ async function loadOutputsStats() {
   }
 }
 
+async function loadDemoStats() {
+  if (!props.active || demoLoading.value) {
+    return;
+  }
+  demoLoading.value = true;
+  errorMessage.value = "";
+  try {
+    const next = await callBackend<DemoStorageStats>("GetDemoStorageStats");
+    Object.assign(demoStats, next);
+  } catch (err: unknown) {
+    errorMessage.value = err instanceof Error ? err.message : String(err);
+  } finally {
+    demoLoading.value = false;
+  }
+}
+
 async function openOutputsDirectory() {
   if (openingOutputsDir.value) {
     return;
@@ -274,6 +299,21 @@ async function openOutputsDirectory() {
   }
 }
 
+async function openDemoDirectory() {
+  if (openingDemoDir.value) {
+    return;
+  }
+  openingDemoDir.value = true;
+  errorMessage.value = "";
+  try {
+    await callBackend<void>("OpenDemoDirectory");
+  } catch (err: unknown) {
+    errorMessage.value = err instanceof Error ? err.message : String(err);
+  } finally {
+    openingDemoDir.value = false;
+  }
+}
+
 function confirmClearOutputs() {
   dialog.warning({
     title: t("main.settings.outputs_clear_confirm_title"),
@@ -285,6 +325,21 @@ function confirmClearOutputs() {
     negativeText: t("main.settings.outputs_clear_confirm_negative"),
     onPositiveClick: () => {
       void clearOutputsDirectory();
+    },
+  });
+}
+
+function confirmClearDemo() {
+  dialog.warning({
+    title: t("main.settings.demo_clear_confirm_title"),
+    content: t("main.settings.demo_clear_confirm_content", {
+      count: demoStats.demo_count,
+      size: formatBytes(demoStats.total_size_bytes),
+    }),
+    positiveText: t("main.settings.outputs_clear_confirm_positive"),
+    negativeText: t("main.settings.outputs_clear_confirm_negative"),
+    onPositiveClick: () => {
+      void clearDemoDirectory();
     },
   });
 }
@@ -304,6 +359,24 @@ async function clearOutputsDirectory() {
     errorMessage.value = err instanceof Error ? err.message : String(err);
   } finally {
     clearingOutputs.value = false;
+  }
+}
+
+async function clearDemoDirectory() {
+  if (clearingDemo.value) {
+    return;
+  }
+  clearingDemo.value = true;
+  errorMessage.value = "";
+  successMessage.value = "";
+  try {
+    const next = await callBackend<DemoStorageStats>("ClearDemoDirectory");
+    Object.assign(demoStats, next);
+    message.success(t("main.settings.demo_clear_success"));
+  } catch (err: unknown) {
+    errorMessage.value = err instanceof Error ? err.message : String(err);
+  } finally {
+    clearingDemo.value = false;
   }
 }
 
@@ -403,49 +476,4 @@ function formatBytes(bytes: number): string {
   width: 220px;
 }
 
-.outputs-summary {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.outputs-stat {
-  background: #141715;
-  border: 1px solid #303732;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
-}
-
-.outputs-stat-value {
-  color: #edf1ee;
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.outputs-stat-label {
-  color: #8d9890;
-  font-size: 12px;
-}
-
-.output-dir-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.output-dir-path {
-  color: #8d9890;
-  font-size: 12px;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-
-.outputs-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
 </style>

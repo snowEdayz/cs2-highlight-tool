@@ -16,58 +16,125 @@ type OutputsStorageStats struct {
 	TotalSizeBytes int64  `json:"total_size_bytes"`
 }
 
+type DemoStorageStats struct {
+	DemoDir        string `json:"demo_dir"`
+	DemoCount      int    `json:"demo_count"`
+	TotalSizeBytes int64  `json:"total_size_bytes"`
+}
+
 func (a *App) GetOutputsStorageStats() (*OutputsStorageStats, error) {
 	return a.outputsStorageStats()
 }
 
 func (a *App) ClearOutputsDirectory() (*OutputsStorageStats, error) {
 	outputDir := a.fixedRecordOutputDir()
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return nil, fmt.Errorf("创建输出目录失败: %w", err)
-	}
-
-	entries, err := os.ReadDir(outputDir)
-	if err != nil {
-		return nil, fmt.Errorf("读取输出目录失败: %w", err)
-	}
-	for _, entry := range entries {
-		childPath := filepath.Join(outputDir, entry.Name())
-		if err := os.RemoveAll(childPath); err != nil {
-			return nil, fmt.Errorf("清理输出目录失败: %w", err)
-		}
+	if err := clearManagedDirectory(outputDir, "输出目录"); err != nil {
+		return nil, err
 	}
 	return a.outputsStorageStats()
 }
 
 func (a *App) OpenOutputsDirectory() error {
 	outputDir := a.fixedRecordOutputDir()
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return fmt.Errorf("创建输出目录失败: %w", err)
-	}
+	return openManagedDirectory(outputDir, "输出目录")
+}
 
-	var cmd *exec.Cmd
-	switch goruntime.GOOS {
-	case "windows":
-		cmd = exec.Command("explorer.exe", outputDir)
-	case "darwin":
-		cmd = exec.Command("open", outputDir)
-	default:
-		cmd = exec.Command("xdg-open", outputDir)
+func (a *App) GetDemoStorageStats() (*DemoStorageStats, error) {
+	return a.demoStorageStats()
+}
+
+func (a *App) ClearDemoDirectory() (*DemoStorageStats, error) {
+	demoDir := a.demoStorageDir()
+	if err := clearManagedDirectory(demoDir, "Dem 目录"); err != nil {
+		return nil, err
 	}
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("打开输出目录失败: %w", err)
-	}
-	return nil
+	return a.demoStorageStats()
+}
+
+func (a *App) OpenDemoDirectory() error {
+	demoDir := a.demoStorageDir()
+	return openManagedDirectory(demoDir, "Dem 目录")
 }
 
 func (a *App) outputsStorageStats() (*OutputsStorageStats, error) {
 	outputDir := a.fixedRecordOutputDir()
 	stats := &OutputsStorageStats{OutputDir: outputDir}
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return nil, fmt.Errorf("创建输出目录失败: %w", err)
+	if err := collectManagedDirectoryStats(outputDir, "输出目录", func(path string) {
+		if isOutputVideoFile(path) {
+			stats.VideoCount++
+		}
+	}, &stats.TotalSizeBytes); err != nil {
+		return nil, err
+	}
+	return stats, nil
+}
+
+func (a *App) demoStorageStats() (*DemoStorageStats, error) {
+	demoDir := a.demoStorageDir()
+	stats := &DemoStorageStats{DemoDir: demoDir}
+	if err := collectManagedDirectoryStats(demoDir, "Dem 目录", func(path string) {
+		if isDemoFile(path) {
+			stats.DemoCount++
+		}
+	}, &stats.TotalSizeBytes); err != nil {
+		return nil, err
+	}
+	return stats, nil
+}
+
+func (a *App) demoStorageDir() string {
+	return a.dataPath("demo")
+}
+
+func clearManagedDirectory(dir string, label string) error {
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("创建%s失败: %w", label, err)
 	}
 
-	err := filepath.WalkDir(outputDir, func(path string, entry fs.DirEntry, walkErr error) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return fmt.Errorf("读取%s失败: %w", label, err)
+	}
+	for _, entry := range entries {
+		childPath := filepath.Join(dir, entry.Name())
+		if err := os.RemoveAll(childPath); err != nil {
+			return fmt.Errorf("清理%s失败: %w", label, err)
+		}
+	}
+	return nil
+}
+
+func openManagedDirectory(dir string, label string) error {
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("创建%s失败: %w", label, err)
+	}
+
+	var cmd *exec.Cmd
+	switch goruntime.GOOS {
+	case "windows":
+		cmd = exec.Command("explorer.exe", dir)
+	case "darwin":
+		cmd = exec.Command("open", dir)
+	default:
+		cmd = exec.Command("xdg-open", dir)
+	}
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("打开%s失败: %w", label, err)
+	}
+	return nil
+}
+
+func collectManagedDirectoryStats(
+	dir string,
+	label string,
+	countFile func(path string),
+	totalSizeBytes *int64,
+) error {
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("创建%s失败: %w", label, err)
+	}
+
+	err := filepath.WalkDir(dir, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -78,16 +145,14 @@ func (a *App) outputsStorageStats() (*OutputsStorageStats, error) {
 		if err != nil {
 			return err
 		}
-		stats.TotalSizeBytes += info.Size()
-		if isOutputVideoFile(path) {
-			stats.VideoCount++
-		}
+		*totalSizeBytes += info.Size()
+		countFile(path)
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("统计输出目录失败: %w", err)
+		return fmt.Errorf("统计%s失败: %w", label, err)
 	}
-	return stats, nil
+	return nil
 }
 
 func isOutputVideoFile(path string) bool {
@@ -97,4 +162,8 @@ func isOutputVideoFile(path string) bool {
 	default:
 		return false
 	}
+}
+
+func isDemoFile(path string) bool {
+	return strings.EqualFold(filepath.Ext(path), ".dem")
 }

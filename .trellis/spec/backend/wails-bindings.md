@@ -81,6 +81,86 @@ for _, entry := range entries {
 
 This clears all managed children while preserving the stable directory path.
 
+## Scenario: Settings Demo Storage Management
+
+### 1. Scope / Trigger
+
+- Trigger: Settings needs to inspect and mutate app-managed Demo files under `<dataDir>/demo`.
+- Scope: Wails binding methods in `internal/app`; frontend consumes the JSON response shape through shared TypeScript types.
+- Boundary: Filesystem state -> Go binding response -> Vue Settings UI.
+
+### 2. Signatures
+
+```go
+func (a *App) GetDemoStorageStats() (*DemoStorageStats, error)
+func (a *App) OpenDemoDirectory() error
+func (a *App) ClearDemoDirectory() (*DemoStorageStats, error)
+
+type DemoStorageStats struct {
+    DemoDir        string `json:"demo_dir"`
+    DemoCount      int    `json:"demo_count"`
+    TotalSizeBytes int64  `json:"total_size_bytes"`
+}
+```
+
+### 3. Contracts
+
+- `demo_dir`: absolute managed Demo directory, resolved through `a.dataPath("demo")`.
+- `demo_count`: recursive count of `.dem` files under `demo_dir`, case-insensitive.
+- `total_size_bytes`: recursive sum of all regular file bytes under `demo_dir`, including non-Demo metadata or temporary files.
+- `GetDemoStorageStats` must create `demo_dir` if missing before scanning.
+- `OpenDemoDirectory` must create `demo_dir` if missing before opening it.
+- `ClearDemoDirectory` deletes every direct child under `demo_dir` and preserves `demo_dir` itself.
+- Clearing `demo_dir` is intentionally broad: it removes `raw`, `wanmei`, `5e`, and any other direct child owned by the managed Demo storage root.
+
+### 4. Validation & Error Matrix
+
+- Missing Demo directory -> create it and return zero stats.
+- Directory creation fails -> return `创建Dem 目录失败: %w`.
+- Directory scan/read fails -> return `统计Dem 目录失败: %w` or `读取Dem 目录失败: %w`.
+- Child deletion fails -> return `清理Dem 目录失败: %w`.
+- OS folder opener fails -> return `打开Dem 目录失败: %w`.
+
+### 5. Good/Base/Bad Cases
+
+- Good: nested `.dem/.DEM` files in `raw`, `wanmei`, and `5e` are counted as demos, and all files contribute to `total_size_bytes`.
+- Base: empty or missing `demo` returns `demo_count=0` and `total_size_bytes=0`.
+- Bad: cleanup must not remove `<dataDir>/demo` itself and must not target `<dataDir>/projects`, `<dataDir>/outputs`, or sibling directories.
+
+### 6. Tests Required
+
+- Filesystem test with nested Demo and non-Demo files:
+  - Assert `demo_dir` equals `<dataDir>/demo`.
+  - Assert Demo count is recursive and case-insensitive.
+  - Assert total size includes all files.
+- Cleanup test:
+  - Seed files and nested folders under demo.
+  - Call `ClearDemoDirectory`.
+  - Assert returned stats are zero, demo directory remains, and direct children are gone.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```go
+os.RemoveAll(a.dataPath("demo"))
+```
+
+This removes the managed root and makes later UI/open-folder behavior depend on implicit recreation while widening the destructive operation.
+
+#### Correct
+
+```go
+entries, err := os.ReadDir(demoDir)
+for _, entry := range entries {
+    if err := os.RemoveAll(filepath.Join(demoDir, entry.Name())); err != nil {
+        return nil, fmt.Errorf("清理Dem 目录失败: %w", err)
+    }
+}
+```
+
+This clears all managed Demo children while preserving the stable directory path.
+
 ## Scenario: 5E Recent Match Query Input Normalization
 
 ### 1. Scope / Trigger

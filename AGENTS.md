@@ -95,6 +95,9 @@
 - `GetOutputsStorageStats`（递归统计 `<dataDir>/outputs`，返回 `output_dir`、视频文件数量 `video_count`、所有文件总字节数 `total_size_bytes`）
 - `OpenOutputsDirectory`（确保 `<dataDir>/outputs` 存在并打开目录位置）
 - `ClearOutputsDirectory`（删除 `<dataDir>/outputs` 下所有直接子项，保留 outputs 目录本身，并返回清理后的统计）
+- `GetDemoStorageStats`（递归统计 `<dataDir>/demo`，返回 `demo_dir`、Demo 文件数量 `demo_count`、所有文件总字节数 `total_size_bytes`）
+- `OpenDemoDirectory`（确保 `<dataDir>/demo` 存在并打开目录位置）
+- `ClearDemoDirectory`（删除 `<dataDir>/demo` 下所有直接子项，保留 demo 目录本身，并返回清理后的统计）
 - `GetProduceHistorySnapshot` 返回的 `items[]` 新增可选字段：`history_type=produce_clip|edited_video`、`source_label`（用于区分录制片段与剪辑成片来源）
 - `config.json` 新增持久化字段：`fivee_player_name`（5E 导入页查询 ID 缓存，保存 5E domain ID）
 - `config.json` 新增持久化字段：`ffmpeg_detected_preset`、`ffmpeg_detected_encoders[]`、`ffmpeg_detected_at`（启动阶段 FFmpeg 能力探测缓存，供 `video_preset=auto` 与编码回退使用）

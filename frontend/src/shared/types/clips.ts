@@ -20,6 +20,12 @@ export interface OutputsStorageStats {
   total_size_bytes: number;
 }
 
+export interface DemoStorageStats {
+  demo_dir: string;
+  demo_count: number;
+  total_size_bytes: number;
+}
+
 export interface ClipParameterOverrides {
   killer_pre_seconds?: number;
   killer_post_seconds?: number;

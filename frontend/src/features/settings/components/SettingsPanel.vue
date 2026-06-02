@@ -48,6 +48,10 @@
           <n-input-number v-model:value="settings.record_fps" :min="1" :max="240" :step="1" :precision="0" />
         </div>
         <div class="setting-row">
+          <span class="setting-label">{{ t("main.settings.record_quality") }}</span>
+          <n-select v-model:value="settings.record_quality" :options="recordQualityOptions" class="preset-select" />
+        </div>
+        <div class="setting-row">
           <span class="setting-label">{{ t("main.settings.video_preset") }}</span>
           <n-select v-model:value="settings.video_preset" :options="presetOptions" class="preset-select" />
         </div>
@@ -173,6 +177,7 @@ const settings = reactive<ClipSettings>({
   auto_add_victim_view: true,
   enable_voice: true,
   record_fps: 60,
+  record_quality: "high",
   edit_fps: 60,
   edit_quality: "high",
   video_preset: "auto",
@@ -201,6 +206,11 @@ const resolutionOptions = computed(() => [
   { label: t("main.settings.resolution_16_9"), value: "16:9" },
   { label: t("main.settings.resolution_4_3"), value: "4:3" },
   { label: t("main.settings.resolution_4_3_1280x960"), value: "4:3_1280x960" },
+]);
+const recordQualityOptions = computed(() => [
+  { label: t("main.settings.edit_quality_standard"), value: "standard" },
+  { label: t("main.settings.edit_quality_high"), value: "high" },
+  { label: t("main.settings.edit_quality_ultra"), value: "ultra" },
 ]);
 const editQualityOptions = computed(() => [
   { label: t("main.settings.edit_quality_standard"), value: "standard" },

@@ -121,6 +121,9 @@ func TestApplyDefaultsFillsMissingValues(t *testing.T) {
 	if cfg.EditQuality != DefaultEditQuality {
 		t.Fatalf("default EditQuality not applied: %q", cfg.EditQuality)
 	}
+	if cfg.RecordQuality != DefaultRecordQuality {
+		t.Fatalf("default RecordQuality not applied: %q", cfg.RecordQuality)
+	}
 	if cfg.VideoPreset != DefaultVideoPreset {
 		t.Fatalf("default VideoPreset not applied: %q", cfg.VideoPreset)
 	}
@@ -172,8 +175,9 @@ func TestApplyDefaults_ForcesManagedRecordOutputDir(t *testing.T) {
 func TestApplyDefaults_ClampsEditSettings(t *testing.T) {
 	dir := t.TempDir()
 	cfg := &Config{
-		EditFPS:     10,
-		EditQuality: "invalid",
+		EditFPS:       10,
+		EditQuality:   "invalid",
+		RecordQuality: "invalid",
 	}
 
 	ApplyDefaults(cfg, dir)
@@ -183,15 +187,22 @@ func TestApplyDefaults_ClampsEditSettings(t *testing.T) {
 	if cfg.EditQuality != DefaultEditQuality {
 		t.Fatalf("EditQuality should fallback to default, got %q", cfg.EditQuality)
 	}
+	if cfg.RecordQuality != DefaultRecordQuality {
+		t.Fatalf("RecordQuality should fallback to default, got %q", cfg.RecordQuality)
+	}
 
 	cfg.EditFPS = 1000
 	cfg.EditQuality = "ultra"
+	cfg.RecordQuality = "standard"
 	ApplyDefaults(cfg, dir)
 	if cfg.EditFPS != MaxEditFPS {
 		t.Fatalf("EditFPS should clamp to max, got %d", cfg.EditFPS)
 	}
 	if cfg.EditQuality != "ultra" {
 		t.Fatalf("EditQuality should persist valid value, got %q", cfg.EditQuality)
+	}
+	if cfg.RecordQuality != "standard" {
+		t.Fatalf("RecordQuality should persist valid value, got %q", cfg.RecordQuality)
 	}
 }
 

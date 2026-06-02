@@ -483,6 +483,7 @@ func (a *App) generatePluginJSONInternal(
 			VoiceIndicesHValue:  0,
 		},
 		RecordFPS:                 clipSettings.RecordFPS,
+		RecordQuality:             clipSettings.RecordQuality,
 		VideoPreset:               plugingen.ResolvePluginVideoPreset(clipSettings.VideoPreset, cfg),
 		RecordOutputDir:           clipSettings.RecordOutputDir,
 		RecordBatchName:           recordBatchName,

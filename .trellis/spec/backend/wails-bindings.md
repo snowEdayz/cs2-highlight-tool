@@ -2,6 +2,93 @@
 
 Concrete contracts for Go methods exposed through `internal/app.App` and consumed by `window.go.app.App.*`.
 
+## Scenario: Clip Settings Recording Quality Contract
+
+### 1. Scope / Trigger
+
+- Trigger: Settings UI exposes recording quality through `GetClipSettings` / `SaveClipSettings`, and plugin JSON generation uses it to build HLAE recording ffmpeg params.
+- Scope: `internal/config` persistence validation, `internal/app` Wails binding, `internal/clipsjson` build options, `internal/ffmpegprofile` recording params, and frontend `ClipSettings` type/options.
+- Boundary: Settings UI selection -> Wails `SaveClipSettings` -> `config.json` -> plugin JSON bootstrap -> HLAE `mirv_streams settings add ffmpeg`.
+
+### 2. Signatures
+
+```go
+func (a *App) GetClipSettings() (*ClipSettings, error)
+func (a *App) SaveClipSettings(input ClipSettings) (*ClipSettings, error)
+
+type ClipSettings struct {
+    RecordQuality string `json:"record_quality"`
+}
+
+type Config struct {
+    RecordQuality string `json:"record_quality"`
+}
+
+func BuildRecordingEncodeArgs(profileID string, quality string) (string, error)
+```
+
+Frontend shared type:
+
+```ts
+record_quality: "standard" | "high" | "ultra";
+```
+
+### 3. Contracts
+
+- `record_quality` allowed values are `standard`, `high`, and `ultra`.
+- Default is `high`.
+- `high` must preserve the previous static HLAE recording params exactly.
+- Software encoding (`c1/libx264`) maps quality to `crf`.
+- Hardware encoding maps quality to encoder-specific QP parameters:
+  - NVENC/AMF use `qp`.
+  - QSV uses `q:v`.
+- H264 fallback profiles (`n1_h264`, `a1_h264`, `i1_h264`) must be covered even though they are not exposed as frontend user presets.
+- `auto` remains a user-facing preset only; resolve it to the selected concrete profile before applying recording quality.
+
+### 4. Validation & Error Matrix
+
+- Missing, empty, mixed-case, or unsupported `record_quality` -> normalize through `ffmpegprofile.NormalizeEditQuality` semantics and fall back to `high`.
+- Unsupported recording profile -> return `不支持的 video_preset: <profile>`.
+- `record_quality` changes must not alter record FPS, output directory, voice/xray commands, pixel format, GOP, or preset selection.
+
+### 5. Good/Base/Bad Cases
+
+- Good: selecting `ultra` with `n1` generates `-qp 10` in the plugin JSON bootstrap.
+- Good: selecting `standard` with `i1_h264` generates `-q:v 22`.
+- Base: missing `record_quality` in an existing config loads as `high` and emits the same HLAE params as before.
+- Bad: only changing `c1`/CPU encoding and leaving hardware accelerated presets at fixed static values.
+- Bad: applying edit-composition C1 CRF values (`18/16/14`) to recording; recording C1 keeps `high=-crf 4`.
+
+### 6. Tests Required
+
+- `internal/ffmpegprofile`: table-driven coverage for every recording profile and every quality level, including H264 fallback profiles.
+- `internal/ffmpegprofile`: `high` output equals existing `profileCatalog.HLAEParams`.
+- `internal/config`: defaults, valid preservation, and invalid fallback for `record_quality`.
+- `internal/app`: `GetClipSettings` / `SaveClipSettings` round-trip and fallback behavior.
+- `internal/clipsjson`: `BuildOptions.RecordQuality` changes the bootstrap ffmpeg command for a hardware preset.
+- Frontend: `cd frontend && npm run build` must pass so the shared TypeScript union and settings select stay aligned.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```go
+if profileID == ffmpegprofile.UserPresetC1 {
+    return buildCRFParams(quality)
+}
+return profile.HLAEParams
+```
+
+This makes the UI option work only for CPU/software encoding and silently ignores hardware accelerated recording.
+
+#### Correct
+
+```go
+params, err := ffmpegprofile.BuildRecordingEncodeArgs(resolvedProfileID, settings.RecordQuality)
+```
+
+The resolved concrete profile determines whether quality is expressed as `crf`, `qp`, or `q:v`.
+
 ## Scenario: Clip Settings Launch Resolution Contract
 
 ### 1. Scope / Trigger

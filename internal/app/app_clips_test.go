@@ -687,6 +687,9 @@ func TestClipSettings_GetAndSave(t *testing.T) {
 	if initial.EditQuality != config.DefaultEditQuality {
 		t.Fatalf("default edit_quality mismatch: %+v", initial)
 	}
+	if initial.RecordQuality != config.DefaultRecordQuality {
+		t.Fatalf("default record_quality mismatch: %+v", initial)
+	}
 	if initial.LaunchResolution != "4:3" {
 		t.Fatalf("default launch_resolution mismatch: %+v", initial)
 	}
@@ -703,6 +706,7 @@ func TestClipSettings_GetAndSave(t *testing.T) {
 		EnableVoice:       false,
 		EditFPS:           300,
 		EditQuality:       "ultra",
+		RecordQuality:     "standard",
 		VideoPreset:       "n1",
 		LaunchResolution:  "16:9",
 	})
@@ -724,6 +728,9 @@ func TestClipSettings_GetAndSave(t *testing.T) {
 	if saved.EditFPS != config.MaxEditFPS || saved.EditQuality != "ultra" {
 		t.Fatalf("edit settings should clamp/persist valid values: %+v", saved)
 	}
+	if saved.RecordQuality != "standard" {
+		t.Fatalf("record_quality should persist valid value: %+v", saved)
+	}
 	if saved.RecordOutputDir != filepath.Join(exeDir, "outputs") {
 		t.Fatalf("record_output_dir should be fixed under exeDir: %+v", saved)
 	}
@@ -743,6 +750,9 @@ func TestClipSettings_GetAndSave(t *testing.T) {
 	}
 	if loaded.EditFPS != config.MaxEditFPS || loaded.EditQuality != "ultra" {
 		t.Fatalf("saved edit settings mismatch: %+v", loaded)
+	}
+	if loaded.RecordQuality != "standard" {
+		t.Fatalf("saved record_quality mismatch: %+v", loaded)
 	}
 	if loaded.RecordOutputDir != filepath.Join(exeDir, "outputs") {
 		t.Fatalf("loaded record_output_dir should be fixed under exeDir: %+v", loaded)
@@ -776,6 +786,7 @@ func TestClipSettings_GetAndSave(t *testing.T) {
 	fallback, err := app.SaveClipSettings(ClipSettings{
 		EditFPS:          1,
 		EditQuality:      "invalid",
+		RecordQuality:    "invalid",
 		VideoPreset:      "invalid",
 		LaunchResolution: "invalid",
 	})
@@ -793,6 +804,9 @@ func TestClipSettings_GetAndSave(t *testing.T) {
 	}
 	if fallback.EditQuality != config.DefaultEditQuality {
 		t.Fatalf("invalid edit_quality should fall back to default: %+v", fallback)
+	}
+	if fallback.RecordQuality != config.DefaultRecordQuality {
+		t.Fatalf("invalid record_quality should fall back to default: %+v", fallback)
 	}
 }
 

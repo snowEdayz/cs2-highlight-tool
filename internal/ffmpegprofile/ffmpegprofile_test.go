@@ -92,6 +92,76 @@ func TestBuildEditEncodeArgs(t *testing.T) {
 	}
 }
 
+func TestBuildRecordingEncodeArgs_MapsQualityForSoftwareAndHardwareProfiles(t *testing.T) {
+	tests := []struct {
+		name      string
+		profileID string
+		quality   string
+		want      string
+	}{
+		{name: "c1 standard", profileID: UserPresetC1, quality: EditQualityStandard, want: "-crf 10"},
+		{name: "c1 high keeps existing default", profileID: UserPresetC1, quality: EditQualityHigh, want: "-crf 4"},
+		{name: "c1 ultra", profileID: UserPresetC1, quality: EditQualityUltra, want: "-crf 2"},
+		{name: "n1 standard", profileID: UserPresetN1, quality: EditQualityStandard, want: "-qp 20"},
+		{name: "n1 high keeps existing default", profileID: UserPresetN1, quality: EditQualityHigh, want: "-qp 14"},
+		{name: "n1 ultra", profileID: UserPresetN1, quality: EditQualityUltra, want: "-qp 10"},
+		{name: "a1 standard", profileID: UserPresetA1, quality: EditQualityStandard, want: "-qp 20"},
+		{name: "a1 high keeps existing default", profileID: UserPresetA1, quality: EditQualityHigh, want: "-qp 12"},
+		{name: "a1 ultra", profileID: UserPresetA1, quality: EditQualityUltra, want: "-qp 8"},
+		{name: "i1 standard", profileID: UserPresetI1, quality: EditQualityStandard, want: "-q:v 20"},
+		{name: "i1 high keeps existing default", profileID: UserPresetI1, quality: EditQualityHigh, want: "-q:v 12"},
+		{name: "i1 ultra", profileID: UserPresetI1, quality: EditQualityUltra, want: "-q:v 8"},
+		{name: "n1 h264 standard", profileID: internalPresetN1H264, quality: EditQualityStandard, want: "-qp 22"},
+		{name: "n1 h264 high keeps existing default", profileID: internalPresetN1H264, quality: EditQualityHigh, want: "-qp 16"},
+		{name: "n1 h264 ultra", profileID: internalPresetN1H264, quality: EditQualityUltra, want: "-qp 12"},
+		{name: "a1 h264 standard", profileID: internalPresetA1H264, quality: EditQualityStandard, want: "-qp 22"},
+		{name: "a1 h264 high keeps existing default", profileID: internalPresetA1H264, quality: EditQualityHigh, want: "-qp 14"},
+		{name: "a1 h264 ultra", profileID: internalPresetA1H264, quality: EditQualityUltra, want: "-qp 10"},
+		{name: "i1 h264 standard", profileID: internalPresetI1H264, quality: EditQualityStandard, want: "-q:v 22"},
+		{name: "i1 h264 high keeps existing default", profileID: internalPresetI1H264, quality: EditQualityHigh, want: "-q:v 14"},
+		{name: "i1 h264 ultra", profileID: internalPresetI1H264, quality: EditQualityUltra, want: "-q:v 10"},
+		{name: "invalid quality falls back to high", profileID: UserPresetN1, quality: "bad", want: "-qp 14"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := BuildRecordingEncodeArgs(tt.profileID, tt.quality)
+			if err != nil {
+				t.Fatalf("BuildRecordingEncodeArgs: %v", err)
+			}
+			if !strings.Contains(got, tt.want) {
+				t.Fatalf("recording args should contain %q, got %q", tt.want, got)
+			}
+		})
+	}
+}
+
+func TestBuildRecordingEncodeArgs_HighMatchesExistingHLAEParams(t *testing.T) {
+	for _, profileID := range []string{
+		UserPresetC1,
+		UserPresetN1,
+		UserPresetA1,
+		UserPresetI1,
+		internalPresetN1H264,
+		internalPresetA1H264,
+		internalPresetI1H264,
+	} {
+		t.Run(profileID, func(t *testing.T) {
+			profile, ok := ProfileByID(profileID)
+			if !ok {
+				t.Fatalf("missing profile %q", profileID)
+			}
+			got, err := BuildRecordingEncodeArgs(profileID, EditQualityHigh)
+			if err != nil {
+				t.Fatalf("BuildRecordingEncodeArgs: %v", err)
+			}
+			if got != profile.HLAEParams {
+				t.Fatalf("high recording args mismatch:\n got: %q\nwant: %q", got, profile.HLAEParams)
+			}
+		})
+	}
+}
+
 func TestDetectCapabilities_UsesProbeResults(t *testing.T) {
 	dir := t.TempDir()
 	exe := filepath.Join(dir, "ffmpeg.exe")

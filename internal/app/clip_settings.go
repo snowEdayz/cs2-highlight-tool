@@ -19,6 +19,7 @@ type ClipSettings struct {
 	AutoAddVictimView  bool    `json:"auto_add_victim_view"`
 	EnableVoice        bool    `json:"enable_voice"`
 	RecordFPS          int     `json:"record_fps"`
+	RecordQuality      string  `json:"record_quality"`
 	EditFPS            int     `json:"edit_fps"`
 	EditQuality        string  `json:"edit_quality"`
 	VideoPreset        string  `json:"video_preset"`
@@ -63,6 +64,7 @@ func (a *App) GetClipSettings() (*ClipSettings, error) {
 		VictimPostSeconds:  cfg.VictimPostSeconds,
 		AutoAddVictimView:  cfg.AutoAddVictimView,
 		RecordFPS:          cfg.RecordFPS,
+		RecordQuality:      cfg.RecordQuality,
 		EditFPS:            cfg.EditFPS,
 		EditQuality:        cfg.EditQuality,
 		VideoPreset:        cfg.VideoPreset,
@@ -89,6 +91,7 @@ func (a *App) SaveClipSettings(input ClipSettings) (*ClipSettings, error) {
 	cfg.VictimPostSeconds = settings.VictimPostSeconds
 	cfg.AutoAddVictimView = settings.AutoAddVictimView
 	cfg.RecordFPS = settings.RecordFPS
+	cfg.RecordQuality = settings.RecordQuality
 	cfg.EditFPS = settings.EditFPS
 	cfg.EditQuality = settings.EditQuality
 	cfg.VideoPreset = settings.VideoPreset
@@ -179,6 +182,7 @@ func normalizeClipSettings(input ClipSettings) ClipSettings {
 	if settings.RecordFPS > 240 {
 		settings.RecordFPS = 240
 	}
+	settings.RecordQuality = ffmpegprofile.NormalizeEditQuality(settings.RecordQuality)
 	if settings.EditFPS <= 0 {
 		settings.EditFPS = config.DefaultEditFPS
 	}

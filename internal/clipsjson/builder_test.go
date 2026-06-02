@@ -384,6 +384,27 @@ func TestBuild_SupportsAMDPreset(t *testing.T) {
 	assertHasPrefixAction(t, bootstrap, "mirv_streams settings add ffmpeg a1 ")
 }
 
+func TestBuild_AppliesRecordQualityToHardwarePreset(t *testing.T) {
+	result, err := Build([]Item{{
+		Kill: demo.ClipKill{ID: "k1", Tick: 200, KillerSlot: 7},
+	}}, BuildOptions{
+		TickRate:          64,
+		KillerPreSeconds:  1,
+		KillerPostSeconds: 1,
+		RecordFPS:         60,
+		VideoPreset:       "n1",
+		RecordQuality:     "ultra",
+		RecordOutputDir:   `D:/clips/output`,
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	bootstrap := result.Sequences[0].Actions
+	assertHasPrefixAction(t, bootstrap, "mirv_streams settings add ffmpeg n1 ")
+	assertHasActionContaining(t, bootstrap, "-c:v hevc_nvenc")
+	assertHasActionContaining(t, bootstrap, "-qp 10")
+}
+
 func assertHasAction(t *testing.T, actions []Action, cmd string) {
 	t.Helper()
 	for _, action := range actions {
@@ -411,6 +432,16 @@ func assertHasPrefixAction(t *testing.T, actions []Action, prefix string) {
 		}
 	}
 	t.Fatalf("action prefix %q not found in %#v", prefix, actions)
+}
+
+func assertHasActionContaining(t *testing.T, actions []Action, needle string) {
+	t.Helper()
+	for _, action := range actions {
+		if strings.Contains(action.Cmd, needle) {
+			return
+		}
+	}
+	t.Fatalf("action containing %q not found in %#v", needle, actions)
 }
 
 func takeName(index int) string {

@@ -27,6 +27,7 @@ type Config struct {
 	VictimPostSeconds      float64             `json:"victim_post_seconds"`
 	AutoAddVictimView      bool                `json:"auto_add_victim_view"`
 	RecordFPS              int                 `json:"record_fps"`
+	RecordQuality          string              `json:"record_quality"`
 	EditFPS                int                 `json:"edit_fps"`
 	EditQuality            string              `json:"edit_quality"`
 	VideoPreset            string              `json:"video_preset"`
@@ -52,6 +53,7 @@ const (
 	DefaultVictimPreSeconds  = 2.0
 	DefaultVictimPostSeconds = 2.0
 	DefaultRecordFPS         = 60
+	DefaultRecordQuality     = "high"
 	DefaultEditFPS           = 60
 	MinEditFPS               = 24
 	MaxEditFPS               = 240
@@ -75,6 +77,7 @@ func Default(dataDir string) *Config {
 		VictimPostSeconds:  DefaultVictimPostSeconds,
 		AutoAddVictimView:  true,
 		RecordFPS:          DefaultRecordFPS,
+		RecordQuality:      DefaultRecordQuality,
 		EditFPS:            DefaultEditFPS,
 		EditQuality:        DefaultEditQuality,
 		VideoPreset:        DefaultVideoPreset,
@@ -147,6 +150,10 @@ func ApplyDefaults(cfg *Config, dataDir string) {
 	}
 	if cfg.RecordFPS <= 0 {
 		cfg.RecordFPS = DefaultRecordFPS
+	}
+	cfg.RecordQuality = strings.ToLower(strings.TrimSpace(cfg.RecordQuality))
+	if !isSupportedEditQuality(cfg.RecordQuality) {
+		cfg.RecordQuality = DefaultRecordQuality
 	}
 	if cfg.EditFPS <= 0 {
 		cfg.EditFPS = DefaultEditFPS

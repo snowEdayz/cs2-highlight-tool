@@ -6,6 +6,7 @@ export interface ClipSettings {
   auto_add_victim_view: boolean;
   enable_voice: boolean;
   record_fps: number;
+  record_quality: "standard" | "high" | "ultra";
   edit_fps: number;
   edit_quality: "standard" | "high" | "ultra";
   video_preset: "auto" | "c1" | "n1" | "a1" | "i1";

@@ -275,6 +275,7 @@
       "auto_add_victim": "自动添加被害者视角",
       "enable_voice": "启用队伍语音",
       "record_fps": "录制 FPS",
+      "record_quality": "录制质量",
       "edit_fps": "剪辑 FPS",
       "edit_quality": "剪辑质量",
       "edit_quality_standard": "标准",

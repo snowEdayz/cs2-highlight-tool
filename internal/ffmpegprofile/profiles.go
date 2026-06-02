@@ -197,6 +197,79 @@ func BuildEditEncodeArgs(profileID string, quality string) ([]string, error) {
 	}
 }
 
+func BuildRecordingEncodeArgs(profileID string, quality string) (string, error) {
+	profileID = strings.ToLower(strings.TrimSpace(profileID))
+	quality = NormalizeEditQuality(quality)
+
+	switch profileID {
+	case UserPresetC1:
+		crf := "4"
+		switch quality {
+		case EditQualityStandard:
+			crf = "10"
+		case EditQualityUltra:
+			crf = "2"
+		}
+		return "-c:v libx264 -preset 1 -crf " + crf + " -qmax 20 -g 120 -keyint_min 1 -pix_fmt yuv420p -x264-params ref=3:me=hex:subme=3:merange=12:b-adapt=1:aq-mode=2:aq-strength=0.9:no-fast-pskip=1", nil
+	case UserPresetN1:
+		qp := "14"
+		switch quality {
+		case EditQualityStandard:
+			qp = "20"
+		case EditQualityUltra:
+			qp = "10"
+		}
+		return "-c:v hevc_nvenc -g 120 -preset medium -tune hq -rc constqp -qp " + qp + " -pix_fmt yuv420p", nil
+	case UserPresetA1:
+		qp := "12"
+		switch quality {
+		case EditQualityStandard:
+			qp = "20"
+		case EditQualityUltra:
+			qp = "8"
+		}
+		return "-c:v hevc_amf -usage 0 -quality 0 -rc cqp -qp " + qp + " -pix_fmt yuv420p", nil
+	case UserPresetI1:
+		qv := "12"
+		switch quality {
+		case EditQualityStandard:
+			qv = "20"
+		case EditQualityUltra:
+			qv = "8"
+		}
+		return "-c:v hevc_qsv -q:v " + qv + " -preset veryfast -g 120 -pix_fmt nv12", nil
+	case internalPresetN1H264:
+		qp := "16"
+		switch quality {
+		case EditQualityStandard:
+			qp = "22"
+		case EditQualityUltra:
+			qp = "12"
+		}
+		return "-c:v h264_nvenc -g 120 -preset medium -tune hq -rc constqp -qp " + qp + " -pix_fmt yuv420p", nil
+	case internalPresetA1H264:
+		qp := "14"
+		switch quality {
+		case EditQualityStandard:
+			qp = "22"
+		case EditQualityUltra:
+			qp = "10"
+		}
+		return "-c:v h264_amf -usage 0 -quality 0 -rc cqp -qp " + qp + " -pix_fmt yuv420p", nil
+	case internalPresetI1H264:
+		qv := "14"
+		switch quality {
+		case EditQualityStandard:
+			qv = "22"
+		case EditQualityUltra:
+			qv = "10"
+		}
+		return "-c:v h264_qsv -q:v " + qv + " -preset veryfast -g 120 -pix_fmt nv12", nil
+	default:
+		return "", fmt.Errorf("不支持的 video_preset: %s", profileID)
+	}
+}
+
 func KnownEncoders() []string {
 	out := make([]string, 0, len(profileCatalog))
 	seen := make(map[string]struct{}, len(profileCatalog))

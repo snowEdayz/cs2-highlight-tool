@@ -68,6 +68,7 @@ type BuildOptions struct {
 	ExtraCommands             []string
 	ActionSettings            ActionSettings
 	RecordFPS                 int
+	RecordQuality             string
 	VideoPreset               string
 	RecordOutputDir           string
 	RecordBatchName           string
@@ -172,7 +173,7 @@ func Build(items []Item, opts BuildOptions) (*BuildResult, error) {
 	if recordFPS <= 0 {
 		recordFPS = 60
 	}
-	videoPreset, ffmpegParams, err := buildFFmpegParams(opts.VideoPreset)
+	videoPreset, ffmpegParams, err := buildFFmpegParams(opts.VideoPreset, opts.RecordQuality)
 	if err != nil {
 		return nil, err
 	}
@@ -631,8 +632,16 @@ func xrayCommandValue(enableSpecShowXray bool) int {
 	return -1
 }
 
-func buildFFmpegParams(preset string) (string, string, error) {
-	return ffmpegprofile.HLAEProfileByID(preset)
+func buildFFmpegParams(preset string, quality string) (string, string, error) {
+	videoPreset, _, err := ffmpegprofile.HLAEProfileByID(preset)
+	if err != nil {
+		return "", "", err
+	}
+	params, err := ffmpegprofile.BuildRecordingEncodeArgs(videoPreset, quality)
+	if err != nil {
+		return "", "", err
+	}
+	return videoPreset, params, nil
 }
 
 func normalizePathForCommand(path string) string {

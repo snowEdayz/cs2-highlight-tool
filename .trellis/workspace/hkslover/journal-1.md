@@ -602,3 +602,36 @@ Moved app-managed runtime data from executable directory to LocalAppData-backed 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 19: 工作目录初始化与重置：HKCU 注册表 + 强制选目录 + 重置流程
+
+**Date**: 2026-06-02
+**Task**: 工作目录初始化与重置：HKCU 注册表 + 强制选目录 + 重置流程
+**Branch**: `main`
+
+### Summary
+
+新增以 HKCU\Software\CS2HighlightTool\DataDir 为唯一应用数据根目录的初始化与重置流程，彻底放弃 LOCALAPPDATA 避免中文用户名问题。Phase 1 后端：appdata 包加注册表读写/路径校验/旧数据清理 + App 生命周期重构 (service==nil 门控) + 6 个新 Wails 方法 (GetWorkspaceState/PickWorkspaceDir/ValidateWorkspaceDir/SetWorkspaceDir/ResetWorkspace/ExitApp) + envsetup mode 常量化。Phase 2 前端：新增 features/workspace-init 模块 + 不可关闭 modal + AppShell 三态分支 + StartupWizard 重置按钮 (n-dialog 二次确认) + zh-CN 文案。trellis-check 全套通过 (10 项 spec PASS + 12 项 AC 全满足)。drive-by 同时把 FFmpeg 下载源切到 Gitee 镜像。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3e87249` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

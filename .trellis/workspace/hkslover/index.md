@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 18
-- **Last Active**: 2026-05-27
+- **Total Sessions**: 19
+- **Last Active**: 2026-06-02
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~604 | Active |
+| `journal-1.md` | ~637 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 19 | 2026-06-02 | 工作目录初始化与重置：HKCU 注册表 + 强制选目录 + 重置流程 | `3e87249` | `main` |
 | 18 | 2026-05-27 | Move runtime data to LocalAppData | `502e47f` | `main` |
 | 17 | 2026-05-27 | 剪辑页可用片段按 DEM+回合折叠分组 | `3a1a2b1` | `main` |
 | 16 | 2026-05-26 | envsetup: 国内 IP 优先使用 mirror_url 下载源 | `55b64d6` | `main` |

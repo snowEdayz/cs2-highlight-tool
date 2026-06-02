@@ -627,6 +627,23 @@ export namespace app {
 		}
 	}
 	
+	
+	export class WorkspaceState {
+	    initialized: boolean;
+	    data_dir: string;
+	    error: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new WorkspaceState(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.initialized = source["initialized"];
+	        this.data_dir = source["data_dir"];
+	        this.error = source["error"];
+	    }
+	}
 
 }
 

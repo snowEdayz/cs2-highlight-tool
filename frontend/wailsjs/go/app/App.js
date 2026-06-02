@@ -22,6 +22,10 @@ export function EnterMainApp() {
   return window['go']['app']['App']['EnterMainApp']();
 }
 
+export function ExitApp() {
+  return window['go']['app']['App']['ExitApp']();
+}
+
 export function ExportProduceHistoryVideos() {
   return window['go']['app']['App']['ExportProduceHistoryVideos']();
 }
@@ -82,6 +86,10 @@ export function GetStartupState() {
   return window['go']['app']['App']['GetStartupState']();
 }
 
+export function GetWorkspaceState() {
+  return window['go']['app']['App']['GetWorkspaceState']();
+}
+
 export function ImportFiveEMatch(arg1) {
   return window['go']['app']['App']['ImportFiveEMatch'](arg1);
 }
@@ -134,6 +142,10 @@ export function PickRecordOutputDir() {
   return window['go']['app']['App']['PickRecordOutputDir']();
 }
 
+export function PickWorkspaceDir() {
+  return window['go']['app']['App']['PickWorkspaceDir']();
+}
+
 export function ProbeClipDuration(arg1) {
   return window['go']['app']['App']['ProbeClipDuration'](arg1);
 }
@@ -144,6 +156,10 @@ export function ReinstallStartupComponent(arg1) {
 
 export function RequestClosePlatformClient(arg1) {
   return window['go']['app']['App']['RequestClosePlatformClient'](arg1);
+}
+
+export function ResetWorkspace() {
+  return window['go']['app']['App']['ResetWorkspace']();
 }
 
 export function RetryStartupComponent(arg1) {
@@ -160,4 +176,12 @@ export function SaveClipActionSettings(arg1) {
 
 export function SaveClipSettings(arg1) {
   return window['go']['app']['App']['SaveClipSettings'](arg1);
+}
+
+export function SetWorkspaceDir(arg1) {
+  return window['go']['app']['App']['SetWorkspaceDir'](arg1);
+}
+
+export function ValidateWorkspaceDir(arg1) {
+  return window['go']['app']['App']['ValidateWorkspaceDir'](arg1);
 }

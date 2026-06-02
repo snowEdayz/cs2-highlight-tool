@@ -17,6 +17,8 @@ export function ConcatEditClips(arg1:app.EditConcatRequest):Promise<string>;
 
 export function EnterMainApp():Promise<void>;
 
+export function ExitApp():Promise<void>;
+
 export function ExportProduceHistoryVideos():Promise<app.ExportProduceHistoryResult>;
 
 export function ExportStartupLogs():Promise<string>;
@@ -47,6 +49,8 @@ export function GetProduceWSState():Promise<producews.WSState>;
 
 export function GetStartupState():Promise<envsetup.StartupState>;
 
+export function GetWorkspaceState():Promise<app.WorkspaceState>;
+
 export function ImportFiveEMatch(arg1:string):Promise<Array<string>>;
 
 export function ImportManualDownload(arg1:string):Promise<envsetup.StartupState>;
@@ -73,11 +77,15 @@ export function PickDemoFiles():Promise<Array<string>>;
 
 export function PickRecordOutputDir():Promise<string>;
 
+export function PickWorkspaceDir():Promise<string>;
+
 export function ProbeClipDuration(arg1:string):Promise<number>;
 
 export function ReinstallStartupComponent(arg1:string):Promise<envsetup.StartupState>;
 
 export function RequestClosePlatformClient(arg1:string):Promise<app.PlatformClientCloseResult>;
+
+export function ResetWorkspace():Promise<void>;
 
 export function RetryStartupComponent(arg1:string):Promise<envsetup.StartupState>;
 
@@ -86,3 +94,7 @@ export function RunStartupChecks():Promise<envsetup.StartupState>;
 export function SaveClipActionSettings(arg1:app.ClipActionSettings):Promise<app.ClipActionSettings>;
 
 export function SaveClipSettings(arg1:app.ClipSettings):Promise<app.ClipSettings>;
+
+export function SetWorkspaceDir(arg1:string):Promise<void>;
+
+export function ValidateWorkspaceDir(arg1:string):Promise<boolean|string>;

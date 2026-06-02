@@ -9,7 +9,7 @@ export interface ClipSettings {
   edit_fps: number;
   edit_quality: "standard" | "high" | "ultra";
   video_preset: "auto" | "c1" | "n1" | "a1" | "i1";
-  launch_resolution: "16:9" | "4:3";
+  launch_resolution: "16:9" | "4:3" | "4:3_1280x960";
   record_output_dir: string;
   enable_spec_show_xray_zero: boolean;
 }

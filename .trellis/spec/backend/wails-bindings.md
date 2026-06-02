@@ -2,6 +2,83 @@
 
 Concrete contracts for Go methods exposed through `internal/app.App` and consumed by `window.go.app.App.*`.
 
+## Scenario: Clip Settings Launch Resolution Contract
+
+### 1. Scope / Trigger
+
+- Trigger: Settings UI exposes CS2 launch resolution choices through `GetClipSettings` / `SaveClipSettings`, and HLAE launch consumes the persisted value.
+- Scope: `internal/app` Wails binding, `internal/config` persistence validation, frontend `ClipSettings` type/options, and HLAE command-line generation.
+- Boundary: Settings UI selection -> Wails `SaveClipSettings` -> `config.json` -> HLAE `-cmdLine`.
+
+### 2. Signatures
+
+```go
+func (a *App) GetClipSettings() (*ClipSettings, error)
+func (a *App) SaveClipSettings(input ClipSettings) (*ClipSettings, error)
+
+type ClipSettings struct {
+    LaunchResolution string `json:"launch_resolution"`
+}
+```
+
+Frontend shared type:
+
+```ts
+launch_resolution: "16:9" | "4:3" | "4:3_1280x960";
+```
+
+### 3. Contracts
+
+- `launch_resolution` allowed values:
+  - `16:9`: launch without explicit 4:3 width/height override.
+  - `4:3`: launch with `-w 1440 -h 1080`.
+  - `4:3_1280x960`: launch with `-w 1280 -h 960`.
+- Default is `4:3`.
+- Existing `4:3` config values must continue to mean `1440x1080`; do not repurpose this value for lower 4:3 resolutions.
+- Frontend option labels are i18n keys under `main.settings.*`; per frontend rules, new labels are added to `zh-CN.json` only.
+
+### 4. Validation & Error Matrix
+
+- Missing, empty, or unsupported `launch_resolution` -> normalize to `config.DefaultLaunchResolution`.
+- Supported value with surrounding whitespace -> trim and preserve the supported value.
+- HLAE command generation should ignore unsupported values and omit resolution override rather than inventing dimensions.
+
+### 5. Good/Base/Bad Cases
+
+- Good: selecting `4:3_1280x960` persists that exact value and launches with `-w 1280 -h 960`.
+- Base: selecting `4:3` preserves backward-compatible `-w 1440 -h 1080` behavior.
+- Bad: changing the meaning of `4:3` to `1280x960`, which silently alters existing user configs.
+
+### 6. Tests Required
+
+- `internal/config`: `ApplyDefaults` preserves every supported `launch_resolution` value.
+- `internal/app`: `SaveClipSettings` and `GetClipSettings` round-trip each supported launch resolution value.
+- `internal/app`: `buildHLAECommandLine` maps `4:3` to `1440x1080`, maps `4:3_1280x960` to `1280x960`, and leaves `16:9` without 4:3 dimensions.
+- Frontend: `cd frontend && npm run build` must pass so the shared TypeScript union and settings options stay aligned.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```go
+if launchResolution == "4:3" {
+    cmdLine += " -w 1280 -h 960"
+}
+```
+
+This breaks existing persisted `4:3` settings that already mean `1440x1080`.
+
+#### Correct
+
+```go
+switch launchResolution {
+case config.LaunchResolution4x3:
+    cmdLine += " -w 1440 -h 1080"
+case config.LaunchResolution4x3Low:
+    cmdLine += " -w 1280 -h 960"
+}
+```
+
 ## Scenario: Settings Outputs Storage Management
 
 ### 1. Scope / Trigger

@@ -748,6 +748,23 @@ func TestClipSettings_GetAndSave(t *testing.T) {
 		t.Fatalf("loaded record_output_dir should be fixed under exeDir: %+v", loaded)
 	}
 
+	saved1280, err := app.SaveClipSettings(ClipSettings{
+		LaunchResolution: "4:3_1280x960",
+	})
+	if err != nil {
+		t.Fatalf("SaveClipSettings with 1280x960 launch resolution: %v", err)
+	}
+	if saved1280.LaunchResolution != "4:3_1280x960" {
+		t.Fatalf("1280x960 launch_resolution should persist valid value: %+v", saved1280)
+	}
+	loaded1280, err := app.GetClipSettings()
+	if err != nil {
+		t.Fatalf("GetClipSettings after 1280x960 save: %v", err)
+	}
+	if loaded1280.LaunchResolution != "4:3_1280x960" {
+		t.Fatalf("loaded 1280x960 launch_resolution mismatch: %+v", loaded1280)
+	}
+
 	actionSettings, err := app.GetClipActionSettings()
 	if err != nil {
 		t.Fatalf("GetClipActionSettings: %v", err)
@@ -783,6 +800,14 @@ func TestBuildHLAECommandLine(t *testing.T) {
 	line43 := buildHLAECommandLine("4:3")
 	if !strings.Contains(line43, "-w 1440 -h 1080") {
 		t.Fatalf("4:3 command line should include 1440x1080 args: %q", line43)
+	}
+
+	line43Low := buildHLAECommandLine("4:3_1280x960")
+	if !strings.Contains(line43Low, "-w 1280 -h 960") {
+		t.Fatalf("4:3 1280x960 command line should include 1280x960 args: %q", line43Low)
+	}
+	if strings.Contains(line43Low, "-w 1440 -h 1080") {
+		t.Fatalf("4:3 1280x960 command line should not include 1440x1080 args: %q", line43Low)
 	}
 
 	line169 := buildHLAECommandLine("16:9")

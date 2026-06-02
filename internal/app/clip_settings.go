@@ -194,7 +194,7 @@ func normalizeClipSettings(input ClipSettings) ClipSettings {
 	}
 	settings.VideoPreset = ffmpegprofile.NormalizeUserPreset(settings.VideoPreset)
 	settings.LaunchResolution = strings.TrimSpace(settings.LaunchResolution)
-	if settings.LaunchResolution != "4:3" && settings.LaunchResolution != "16:9" {
+	if !config.IsSupportedLaunchResolution(settings.LaunchResolution) {
 		settings.LaunchResolution = config.DefaultLaunchResolution
 	}
 	settings.RecordOutputDir = config.CleanPath(settings.RecordOutputDir)

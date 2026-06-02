@@ -79,6 +79,7 @@
 - `SaveClipSettings`
 - `GetClipSettings` / `SaveClipSettings` 字段约定新增：`edit_fps`（范围 `24..240`，默认 `60`）与 `edit_quality`（`standard|high|ultra`，默认 `high`）
 - `GetClipSettings` / `SaveClipSettings` 字段约定更新：`video_preset` 取值 `auto|c1|n1|a1|i1`（默认 `auto`；`auto` 表示按 FFmpeg 探测能力自动选择）
+- `GetClipSettings` / `SaveClipSettings` 字段约定更新：`launch_resolution` 取值 `16:9|4:3|4:3_1280x960`（默认 `4:3`；`4:3` 表示 `1440x1080`，`4:3_1280x960` 表示 `1280x960`）
 - `GeneratePluginJSON`
 - `GeneratePluginJSON` 支持可选参数 `record_victim_view`（开启后按片段生成“击杀者视角 -> 被害者视角”连续序列）
 - `GeneratePluginJSON` 支持可选参数 `victim_view_mode`：`batch`（先击杀者后逐个被害者）/`interleaved`（击杀者与被害者交替）

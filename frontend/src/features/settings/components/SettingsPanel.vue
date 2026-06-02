@@ -200,6 +200,7 @@ const presetOptions = computed(() => [
 const resolutionOptions = computed(() => [
   { label: t("main.settings.resolution_16_9"), value: "16:9" },
   { label: t("main.settings.resolution_4_3"), value: "4:3" },
+  { label: t("main.settings.resolution_4_3_1280x960"), value: "4:3_1280x960" },
 ]);
 const editQualityOptions = computed(() => [
   { label: t("main.settings.edit_quality_standard"), value: "standard" },

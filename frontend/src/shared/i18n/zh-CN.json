@@ -289,6 +289,7 @@
       "launch_resolution": "启动分辨率",
       "resolution_16_9": "16:9",
       "resolution_4_3": "4:3 (1440x1080)",
+      "resolution_4_3_1280x960": "4:3 (1280x960)",
       "record_output_dir": "录制输出目录(英文绝对路径)",
       "record_output_dir_placeholder": "例如: D:/cs2/outputs",
       "enable_spec_show_xray_zero": "关闭 X 光",

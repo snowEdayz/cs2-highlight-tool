@@ -75,8 +75,11 @@ func (a *App) launchHLAEGame() (int, error) {
 
 func buildHLAECommandLine(launchResolution string) string {
 	cmdLine := "-insecure -novid -low -high +sv_lan 1 -coop_fullscreen -worldwide -console"
-	if strings.TrimSpace(launchResolution) == "4:3" {
+	switch strings.TrimSpace(launchResolution) {
+	case config.LaunchResolution4x3:
 		cmdLine += " -w 1440 -h 1080"
+	case config.LaunchResolution4x3Low:
+		cmdLine += " -w 1280 -h 960"
 	}
 	return cmdLine
 }

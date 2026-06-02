@@ -135,6 +135,27 @@ func TestApplyDefaultsFillsMissingValues(t *testing.T) {
 	}
 }
 
+func TestApplyDefaultsPreservesSupportedLaunchResolutions(t *testing.T) {
+	dir := t.TempDir()
+	tests := []string{
+		"16:9",
+		"4:3",
+		"4:3_1280x960",
+	}
+
+	for _, launchResolution := range tests {
+		t.Run(launchResolution, func(t *testing.T) {
+			cfg := &Config{LaunchResolution: launchResolution}
+
+			ApplyDefaults(cfg, dir)
+
+			if cfg.LaunchResolution != launchResolution {
+				t.Fatalf("LaunchResolution = %q, want %q", cfg.LaunchResolution, launchResolution)
+			}
+		})
+	}
+}
+
 func TestApplyDefaults_ForcesManagedRecordOutputDir(t *testing.T) {
 	dir := t.TempDir()
 	cfg := &Config{

@@ -58,6 +58,9 @@ const (
 	DefaultEditQuality       = "high"
 	DefaultVideoPreset       = "auto"
 	DefaultLaunchResolution  = "4:3"
+	LaunchResolution16x9     = "16:9"
+	LaunchResolution4x3      = "4:3"
+	LaunchResolution4x3Low   = "4:3_1280x960"
 )
 
 func Default(dataDir string) *Config {
@@ -169,7 +172,7 @@ func ApplyDefaults(cfg *Config, dataDir string) {
 	cfg.FFmpegDetectedEncoders = normalizeEncoderList(cfg.FFmpegDetectedEncoders)
 	cfg.FFmpegDetectedAt = strings.TrimSpace(cfg.FFmpegDetectedAt)
 	cfg.LaunchResolution = strings.TrimSpace(cfg.LaunchResolution)
-	if cfg.LaunchResolution != "4:3" && cfg.LaunchResolution != "16:9" {
+	if !IsSupportedLaunchResolution(cfg.LaunchResolution) {
 		cfg.LaunchResolution = DefaultLaunchResolution
 	}
 	cfg.RecordOutputDir = base.RecordOutputDir
@@ -229,6 +232,15 @@ func isSupportedDownloadSource(source string) bool {
 func isSupportedEditQuality(quality string) bool {
 	switch strings.ToLower(strings.TrimSpace(quality)) {
 	case "standard", "high", "ultra":
+		return true
+	default:
+		return false
+	}
+}
+
+func IsSupportedLaunchResolution(launchResolution string) bool {
+	switch strings.TrimSpace(launchResolution) {
+	case LaunchResolution16x9, LaunchResolution4x3, LaunchResolution4x3Low:
 		return true
 	default:
 		return false

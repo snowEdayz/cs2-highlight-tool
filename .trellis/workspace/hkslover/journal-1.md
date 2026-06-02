@@ -19,7 +19,11 @@ Populated 5 backend development guideline files under .trellis/spec/backend/ wit
 
 ### Main Changes
 
-(Add details)
+- Added `hide_all_ui` to persisted config and `ClipSettings`.
+- Added Settings UI switch and zh-CN label.
+- Passed `hide_all_ui` into plugin JSON generation and only emits `cl_draw_only_deathnotices 1` when enabled.
+- Added backend tests for default value, save/load round-trip, and bootstrap command behavior.
+- Updated AGENTS and backend Wails binding spec for the new cross-layer contract.
 
 ### Git Commits
 
@@ -29,7 +33,8 @@ Populated 5 backend development guideline files under .trellis/spec/backend/ wit
 
 ### Testing
 
-- [OK] (Add test results)
+- [OK] `go test ./...`
+- [OK] `cd frontend && npm run build`
 
 ### Status
 
@@ -888,6 +893,39 @@ Synced en-US translations with the user's zh-CN i18n updates, including 5E Playe
 | Hash | Message |
 |------|---------|
 | `4be9bd3` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 28: 隐藏 UI 录制配置
+
+**Date**: 2026-06-02
+**Task**: 隐藏 UI 录制配置
+**Branch**: `main`
+
+### Summary
+
+新增 hide_all_ui 录制配置，开启时在插件 JSON bootstrap 写入 cl_draw_only_deathnotices 1，关闭时不写入该命令；同步前后端类型、设置 UI、契约文档与测试。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7a309a7` | (see git log) |
 
 ### Testing
 

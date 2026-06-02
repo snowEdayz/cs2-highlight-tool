@@ -867,3 +867,36 @@ Synced en-US translations with the user's zh-CN i18n updates, including 5E Playe
 ### Next Steps
 
 - None - task complete
+
+
+## Session 27: 新增录制质量配置
+
+**Date**: 2026-06-02
+**Task**: 新增录制质量配置
+**Branch**: `main`
+
+### Summary
+
+新增录制质量设置，贯通 config、Wails ClipSettings、前端设置面板与 plugin JSON 生成；软件编码使用 CRF，NVENC/AMF/QSV 及 H264 fallback 使用 QP/q:v，并补充测试和契约文档。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4be9bd3` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

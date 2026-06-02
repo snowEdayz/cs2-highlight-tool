@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 26
+- **Total Sessions**: 27
 - **Last Active**: 2026-06-02
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~869 | Active |
+| `journal-1.md` | ~902 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 27 | 2026-06-02 | 新增录制质量配置 | `4be9bd3` | `main` |
 | 26 | 2026-06-02 | 增加 1280x960 启动分辨率 | `897f737` | `main` |
 | 25 | 2026-06-02 | 实现单例运行 | `db8031e`, `0e65217` | `main` |
 | 24 | 2026-06-02 | 添加 Dem 目录存储管理 | `b8ce909` | `main` |

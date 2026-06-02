@@ -26,10 +26,17 @@ func main() {
 		return
 	}
 
+	// 单例检查：如果已有实例在运行，静默退出
+	cleanup, err := application.EnsureSingleInstance()
+	if err != nil {
+		os.Exit(0)
+	}
+	defer cleanup()
+
 	backend := application.New(wailsConfigData)
 
 	// Create application with options
-	err := wails.Run(&options.App{
+	err = wails.Run(&options.App{
 		Title:     "CS2 Highlight Tool",
 		Width:     920,
 		Height:    720,

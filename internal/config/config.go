@@ -37,6 +37,7 @@ type Config struct {
 	LaunchResolution       string              `json:"launch_resolution"`
 	RecordOutputDir        string              `json:"record_output_dir"`
 	EnableSpecShowXray     bool                `json:"enable_spec_show_xray_zero"`
+	HideAllUI              bool                `json:"hide_all_ui"`
 	ClipActionSettings     *ClipActionSettings `json:"clip_action_settings,omitempty"`
 }
 
@@ -84,6 +85,7 @@ func Default(dataDir string) *Config {
 		LaunchResolution:   DefaultLaunchResolution,
 		RecordOutputDir:    filepath.Join(dataDir, "outputs"),
 		EnableSpecShowXray: true,
+		HideAllUI:          false,
 		ClipActionSettings: Ptr(DefaultClipActionSettings()),
 	}
 }

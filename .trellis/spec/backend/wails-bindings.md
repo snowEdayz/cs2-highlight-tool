@@ -166,6 +166,86 @@ case config.LaunchResolution4x3Low:
 }
 ```
 
+## Scenario: Clip Settings Hide All UI Contract
+
+### 1. Scope / Trigger
+
+- Trigger: Settings UI exposes a hide-all-UI switch through `GetClipSettings` / `SaveClipSettings`, and plugin JSON generation consumes the persisted value.
+- Scope: `internal/config` persistence, `internal/app` Wails binding, `internal/clipsjson` bootstrap generation, frontend `ClipSettings` type, and Settings UI.
+- Boundary: Settings UI toggle -> Wails `SaveClipSettings` -> `config.json` -> plugin JSON bootstrap command list.
+
+### 2. Signatures
+
+```go
+func (a *App) GetClipSettings() (*ClipSettings, error)
+func (a *App) SaveClipSettings(input ClipSettings) (*ClipSettings, error)
+
+type ClipSettings struct {
+    HideAllUI bool `json:"hide_all_ui"`
+}
+
+type Config struct {
+    HideAllUI bool `json:"hide_all_ui"`
+}
+
+type BuildOptions struct {
+    HideAllUI bool
+}
+```
+
+Frontend shared type:
+
+```ts
+hide_all_ui: boolean;
+```
+
+### 3. Contracts
+
+- `hide_all_ui` default is `false`.
+- `hide_all_ui=true` writes `cl_draw_only_deathnotices 1` into the plugin JSON bootstrap sequence.
+- `hide_all_ui=false` must not write any `cl_draw_only_deathnotices` command.
+- This is a global clip setting only; it is not part of per-clip `clip_overrides`.
+- Frontend option labels are i18n keys under `main.settings.*`; per frontend rules, add new labels to `zh-CN.json` only.
+
+### 4. Validation & Error Matrix
+
+- Missing `hide_all_ui` in an existing config -> load as `false` and save back with `hide_all_ui:false`.
+- Unsupported JSON type for `hide_all_ui` -> standard JSON unmarshal failure, surfaced from `config.LoadOrCreate`.
+- Disabled setting -> no reset command is emitted; do not emit `cl_draw_only_deathnotices 0`.
+
+### 5. Good/Base/Bad Cases
+
+- Good: user enables the switch, saves settings, and generated bootstrap contains `cl_draw_only_deathnotices 1`.
+- Base: legacy config without `hide_all_ui` loads with the switch off and generated bootstrap contains no `cl_draw_only_deathnotices` command.
+- Bad: always writing `cl_draw_only_deathnotices 0` when disabled, because it changes generated command output even when the user did not opt in.
+
+### 6. Tests Required
+
+- `internal/config`: legacy config loads with `HideAllUI=false` and saved config contains `hide_all_ui`.
+- `internal/app`: `GetClipSettings` default is false; `SaveClipSettings` round-trips true.
+- `internal/clipsjson`: bootstrap contains `cl_draw_only_deathnotices 1` only when `BuildOptions.HideAllUI=true`, and contains no command with that prefix when false.
+- Frontend: `cd frontend && npm run build` must pass so the shared TypeScript type and settings UI stay aligned.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```go
+actions = append(actions, Action{Cmd: "cl_draw_only_deathnotices 0", Tick: actionTick})
+```
+
+This writes a command even when the user did not enable hide-all-UI.
+
+#### Correct
+
+```go
+if opts.HideAllUI {
+    actions = append(actions, Action{Cmd: "cl_draw_only_deathnotices 1", Tick: actionTick})
+}
+```
+
+The generated command appears only for the opt-in behavior.
+
 ## Scenario: Settings Outputs Storage Management
 
 ### 1. Scope / Trigger

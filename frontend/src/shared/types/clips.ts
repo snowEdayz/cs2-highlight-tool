@@ -13,6 +13,7 @@ export interface ClipSettings {
   launch_resolution: "16:9" | "4:3" | "4:3_1280x960";
   record_output_dir: string;
   enable_spec_show_xray_zero: boolean;
+  hide_all_ui: boolean;
 }
 
 export interface OutputsStorageStats {

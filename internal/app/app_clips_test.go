@@ -693,6 +693,9 @@ func TestClipSettings_GetAndSave(t *testing.T) {
 	if initial.LaunchResolution != "4:3" {
 		t.Fatalf("default launch_resolution mismatch: %+v", initial)
 	}
+	if initial.HideAllUI {
+		t.Fatalf("hide_all_ui should default to false: %+v", initial)
+	}
 	if initial.RecordOutputDir != filepath.Join(exeDir, "outputs") {
 		t.Fatalf("default record_output_dir mismatch: %+v", initial)
 	}
@@ -709,6 +712,7 @@ func TestClipSettings_GetAndSave(t *testing.T) {
 		RecordQuality:     "standard",
 		VideoPreset:       "n1",
 		LaunchResolution:  "16:9",
+		HideAllUI:         true,
 	})
 	if err != nil {
 		t.Fatalf("SaveClipSettings: %v", err)
@@ -730,6 +734,9 @@ func TestClipSettings_GetAndSave(t *testing.T) {
 	}
 	if saved.RecordQuality != "standard" {
 		t.Fatalf("record_quality should persist valid value: %+v", saved)
+	}
+	if !saved.HideAllUI {
+		t.Fatalf("hide_all_ui should persist true: %+v", saved)
 	}
 	if saved.RecordOutputDir != filepath.Join(exeDir, "outputs") {
 		t.Fatalf("record_output_dir should be fixed under exeDir: %+v", saved)
@@ -753,6 +760,9 @@ func TestClipSettings_GetAndSave(t *testing.T) {
 	}
 	if loaded.RecordQuality != "standard" {
 		t.Fatalf("saved record_quality mismatch: %+v", loaded)
+	}
+	if !loaded.HideAllUI {
+		t.Fatalf("saved hide_all_ui mismatch: %+v", loaded)
 	}
 	if loaded.RecordOutputDir != filepath.Join(exeDir, "outputs") {
 		t.Fatalf("loaded record_output_dir should be fixed under exeDir: %+v", loaded)

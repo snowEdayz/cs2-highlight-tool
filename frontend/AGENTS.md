@@ -30,6 +30,7 @@
 - Must：`ClipSettings.video_preset` 需与后端保持一致，允许值 `auto|c1|n1|a1|i1`（`auto` 代表使用后端探测到的 FFmpeg 能力自动选择编码）。
 - Must：`ClipSettings.record_quality` 需与后端保持一致，允许值 `standard|high|ultra`（默认 `high`；软件编码映射到 CRF，硬件编码映射到 QP / `q:v`）。
 - Must：`ClipSettings.launch_resolution` 需与后端保持一致，允许值 `16:9|4:3|4:3_1280x960`（`4:3` 代表 `1440x1080`，`4:3_1280x960` 代表 `1280x960`）。
+- Must：`ClipSettings.hide_all_ui` 需与后端保持一致，默认 `false`；开启时生成插件 JSON bootstrap 写入 `cl_draw_only_deathnotices 1`，关闭时不写入该命令。
 - Must：调用 `GeneratePluginJSONBatchAndLaunchHLAE` 时允许传递可选 `debug.keep_intermediate_files`，用于控制是否保留录制中间产物（仅会话级生效）。
 - Must Not：在前端新增与后端冲突的“本地自定义状态枚举”替代后端状态。
 

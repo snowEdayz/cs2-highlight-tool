@@ -319,6 +319,7 @@ const clipSettings = ref<ClipSettings>({
   launch_resolution: "4:3",
   record_output_dir: "",
   enable_spec_show_xray_zero: true,
+  hide_all_ui: false,
 });
 
 type ClipOverrideNumberKey =

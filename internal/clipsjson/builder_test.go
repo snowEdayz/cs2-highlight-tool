@@ -76,6 +76,42 @@ func TestBuild_SpecShowXrayCanBeDisabled(t *testing.T) {
 	assertNoAction(t, result.Sequences[0].Actions, "spec_show_xray 0")
 }
 
+func TestBuild_DrawOnlyDeathnoticesOnlyWhenHideAllUIEnabled(t *testing.T) {
+	enabled, err := Build([]Item{{
+		Kill:          demo.ClipKill{ID: "k1", Tick: 200, KillerSlot: 7},
+		IncludeVictim: false,
+	}}, BuildOptions{
+		TickRate:          64,
+		KillerPreSeconds:  1,
+		KillerPostSeconds: 1,
+		RecordFPS:         60,
+		VideoPreset:       "n1",
+		RecordOutputDir:   `D:/clips/output`,
+		HideAllUI:         true,
+	})
+	if err != nil {
+		t.Fatalf("Build enabled hide_all_ui: %v", err)
+	}
+	assertHasAction(t, enabled.Sequences[0].Actions, "cl_draw_only_deathnotices 1")
+
+	disabled, err := Build([]Item{{
+		Kill:          demo.ClipKill{ID: "k1", Tick: 200, KillerSlot: 7},
+		IncludeVictim: false,
+	}}, BuildOptions{
+		TickRate:          64,
+		KillerPreSeconds:  1,
+		KillerPostSeconds: 1,
+		RecordFPS:         60,
+		VideoPreset:       "n1",
+		RecordOutputDir:   `D:/clips/output`,
+		HideAllUI:         false,
+	})
+	if err != nil {
+		t.Fatalf("Build disabled hide_all_ui: %v", err)
+	}
+	assertNoPrefixAction(t, disabled.Sequences[0].Actions, "cl_draw_only_deathnotices")
+}
+
 func TestBuild_VoiceIndicesValueFollowsEnableSwitch(t *testing.T) {
 	enabled, err := Build([]Item{{
 		Kill:          demo.ClipKill{ID: "k1", Tick: 200, KillerSlot: 7},
@@ -432,6 +468,15 @@ func assertHasPrefixAction(t *testing.T, actions []Action, prefix string) {
 		}
 	}
 	t.Fatalf("action prefix %q not found in %#v", prefix, actions)
+}
+
+func assertNoPrefixAction(t *testing.T, actions []Action, prefix string) {
+	t.Helper()
+	for _, action := range actions {
+		if strings.HasPrefix(action.Cmd, prefix) {
+			t.Fatalf("unexpected action prefix %q in %#v", prefix, actions)
+		}
+	}
 }
 
 func assertHasActionContaining(t *testing.T, actions []Action, needle string) {

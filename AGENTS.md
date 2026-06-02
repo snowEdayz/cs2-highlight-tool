@@ -81,6 +81,7 @@
 - `GetClipSettings` / `SaveClipSettings` 字段约定新增：`record_quality`（`standard|high|ultra`，默认 `high`；软件编码映射到 `crf`，硬件编码映射到 `qp` / `q:v`）
 - `GetClipSettings` / `SaveClipSettings` 字段约定更新：`video_preset` 取值 `auto|c1|n1|a1|i1`（默认 `auto`；`auto` 表示按 FFmpeg 探测能力自动选择）
 - `GetClipSettings` / `SaveClipSettings` 字段约定更新：`launch_resolution` 取值 `16:9|4:3|4:3_1280x960`（默认 `4:3`；`4:3` 表示 `1440x1080`，`4:3_1280x960` 表示 `1280x960`）
+- `GetClipSettings` / `SaveClipSettings` 字段约定新增：`hide_all_ui`（默认 `false`；开启时生成插件 JSON bootstrap 写入 `cl_draw_only_deathnotices 1`，关闭时不写入该命令）
 - `GeneratePluginJSON`
 - `GeneratePluginJSON` 支持可选参数 `record_victim_view`（开启后按片段生成“击杀者视角 -> 被害者视角”连续序列）
 - `GeneratePluginJSON` 支持可选参数 `victim_view_mode`：`batch`（先击杀者后逐个被害者）/`interleaved`（击杀者与被害者交替）
@@ -104,6 +105,7 @@
 - `config.json` 新增持久化字段：`fivee_player_name`（5E 导入页查询 ID 缓存，保存 5E domain ID）
 - `config.json` 新增持久化字段：`record_quality`（录制质量，取值 `standard|high|ultra`，默认 `high`）
 - `config.json` 新增持久化字段：`ffmpeg_detected_preset`、`ffmpeg_detected_encoders[]`、`ffmpeg_detected_at`（启动阶段 FFmpeg 能力探测缓存，供 `video_preset=auto` 与编码回退使用）
+- `config.json` 新增持久化字段：`hide_all_ui`（隐藏所有 UI，默认 `false`）
 - 应用数据根目录约定：Windows 默认 `<dataDir>=%LOCALAPPDATA%/CS2 Highlight Tool`；`config.json`、组件目录、demo、projects、outputs、temp、updates、logs 均位于 `<dataDir>`。`<exeDir>` 仅用于定位当前程序本体与自更新替换目标。
 - 关键事件名（前后端协作契约）：
 - `startup_state_changed`

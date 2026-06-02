@@ -327,6 +327,9 @@ func TestLoadOrCreate_FillsClipActionSettingsForLegacyConfig(t *testing.T) {
 	if !cfg.EnableSpecShowXray {
 		t.Fatalf("enable_spec_show_xray_zero default not applied")
 	}
+	if cfg.HideAllUI {
+		t.Fatalf("hide_all_ui should default to false")
+	}
 
 	saved, err := os.ReadFile(path)
 	if err != nil {
@@ -343,6 +346,9 @@ func TestLoadOrCreate_FillsClipActionSettingsForLegacyConfig(t *testing.T) {
 	}
 	if !strings.Contains(string(saved), "launch_resolution") {
 		t.Fatalf("saved config should contain launch_resolution, got: %s", string(saved))
+	}
+	if !strings.Contains(string(saved), "hide_all_ui") {
+		t.Fatalf("saved config should contain hide_all_ui, got: %s", string(saved))
 	}
 }
 

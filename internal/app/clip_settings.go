@@ -26,6 +26,7 @@ type ClipSettings struct {
 	LaunchResolution   string  `json:"launch_resolution"`
 	RecordOutputDir    string  `json:"record_output_dir"`
 	EnableSpecShowXray bool    `json:"enable_spec_show_xray_zero"`
+	HideAllUI          bool    `json:"hide_all_ui"`
 }
 
 type ClipActionSettings struct {
@@ -71,6 +72,7 @@ func (a *App) GetClipSettings() (*ClipSettings, error) {
 		LaunchResolution:   cfg.LaunchResolution,
 		RecordOutputDir:    a.fixedRecordOutputDir(),
 		EnableSpecShowXray: cfg.EnableSpecShowXray,
+		HideAllUI:          cfg.HideAllUI,
 	})
 	actionSettings := config.ResolveClipActionSettings(cfg)
 	settings.EnableVoice = actionSettings.EnableVoiceIndices && actionSettings.EnableVoiceIndicesH
@@ -98,6 +100,7 @@ func (a *App) SaveClipSettings(input ClipSettings) (*ClipSettings, error) {
 	cfg.LaunchResolution = settings.LaunchResolution
 	cfg.RecordOutputDir = settings.RecordOutputDir
 	cfg.EnableSpecShowXray = settings.EnableSpecShowXray
+	cfg.HideAllUI = settings.HideAllUI
 	actionSettings := config.ResolveClipActionSettings(cfg)
 	actionSettings.EnableVoiceIndices = settings.EnableVoice
 	actionSettings.EnableVoiceIndicesH = settings.EnableVoice

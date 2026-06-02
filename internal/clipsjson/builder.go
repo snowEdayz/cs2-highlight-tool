@@ -73,6 +73,7 @@ type BuildOptions struct {
 	RecordOutputDir           string
 	RecordBatchName           string
 	EnableSpecShowXray        bool
+	HideAllUI                 bool
 	ForcePerPassVoiceCommands bool
 	ForcePerPassXrayCommands  bool
 }
@@ -118,6 +119,7 @@ type bootstrapOptions struct {
 	ActionSettings     ActionSettings
 	ExtraCommands      []string
 	EnableSpecShowXray bool
+	HideAllUI          bool
 	RecordFPS          int
 	VideoPreset        string
 	FFmpegParams       string
@@ -198,6 +200,7 @@ func Build(items []Item, opts BuildOptions) (*BuildResult, error) {
 		ActionSettings:     opts.ActionSettings,
 		ExtraCommands:      opts.ExtraCommands,
 		EnableSpecShowXray: opts.EnableSpecShowXray,
+		HideAllUI:          opts.HideAllUI,
 		RecordFPS:          recordFPS,
 		VideoPreset:        videoPreset,
 		FFmpegParams:       ffmpegParams,
@@ -495,6 +498,9 @@ func buildBootstrapSequence(opts bootstrapOptions) Sequence {
 	actions = append(actions, Action{Cmd: "engine_no_focus_sleep 0", Tick: actionTick})
 	actions = append(actions, Action{Cmd: "cl_demo_predict 0", Tick: actionTick})
 	actions = append(actions, Action{Cmd: fmt.Sprintf("spec_show_xray %d", xrayCommandValue(opts.EnableSpecShowXray)), Tick: actionTick})
+	if opts.HideAllUI {
+		actions = append(actions, Action{Cmd: "cl_draw_only_deathnotices 1", Tick: actionTick})
+	}
 	actions = append(actions, Action{Cmd: fmt.Sprintf("tv_listen_voice_indices %d", voiceValue), Tick: actionTick})
 	actions = append(actions, Action{Cmd: fmt.Sprintf("tv_listen_voice_indices_h %d", voiceValue), Tick: actionTick})
 	actions = append(actions, Action{Cmd: "mirv_streams record screen enabled 1", Tick: actionTick})

@@ -428,6 +428,7 @@ func (a *App) generatePluginJSONInternal(
 		VideoPreset:        cfg.VideoPreset,
 		RecordOutputDir:    a.fixedRecordOutputDir(),
 		EnableSpecShowXray: cfg.EnableSpecShowXray,
+		HideAllUI:          cfg.HideAllUI,
 	})
 
 	var items []clipsjson.Item
@@ -488,6 +489,7 @@ func (a *App) generatePluginJSONInternal(
 		RecordOutputDir:           clipSettings.RecordOutputDir,
 		RecordBatchName:           recordBatchName,
 		EnableSpecShowXray:        clipSettings.EnableSpecShowXray,
+		HideAllUI:                 clipSettings.HideAllUI,
 		ForcePerPassVoiceCommands: hasVoiceOverride,
 		ForcePerPassXrayCommands:  hasSpecShowXrayOverride,
 	})

@@ -34,6 +34,10 @@
           <span class="setting-label">{{ t("main.settings.enable_spec_show_xray_zero") }}</span>
           <n-switch v-model:value="settings.enable_spec_show_xray_zero" />
         </div>
+        <div class="setting-row">
+          <span class="setting-label">{{ t("main.settings.hide_all_ui") }}</span>
+          <n-switch v-model:value="settings.hide_all_ui" />
+        </div>
       </n-space>
     </n-card>
 
@@ -184,6 +188,7 @@ const settings = reactive<ClipSettings>({
   launch_resolution: "4:3",
   record_output_dir: "",
   enable_spec_show_xray_zero: true,
+  hide_all_ui: false,
 });
 const outputsStats = reactive<OutputsStorageStats>({
   output_dir: "",

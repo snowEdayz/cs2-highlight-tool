@@ -140,18 +140,18 @@ func TestValidateWorkspaceDir_Wrapper(t *testing.T) {
 	}
 
 	// 失败用例：含空格
-	ok, msg := a.ValidateWorkspaceDir(`C:\Program Files\App`)
-	if ok {
-		t.Fatalf("expected validation to fail for path with space, ok=%v msg=%q", ok, msg)
+	res := a.ValidateWorkspaceDir(`C:\Program Files\App`)
+	if res.OK {
+		t.Fatalf("expected validation to fail for path with space, result=%+v", res)
 	}
-	if !strings.Contains(msg, "空格") {
-		t.Fatalf("error msg = %q, want contain '空格'", msg)
+	if !strings.Contains(res.ErrorMessage, "空格") {
+		t.Fatalf("ErrorMessage = %q, want contain '空格'", res.ErrorMessage)
 	}
 
 	// 失败用例：磁盘根
-	ok, msg = a.ValidateWorkspaceDir(`/`)
-	if ok {
-		t.Fatalf("expected validation to fail for disk root, ok=%v msg=%q", ok, msg)
+	res = a.ValidateWorkspaceDir(`/`)
+	if res.OK {
+		t.Fatalf("expected validation to fail for disk root, result=%+v", res)
 	}
 }
 

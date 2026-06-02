@@ -24,6 +24,14 @@ func appendAppSubdir(parent string) string {
 	return filepath.Join(parent, appSubDir)
 }
 
+// WorkspaceValidateResult 是 ValidateWorkspaceDir 的返回结构。
+// 使用 struct 代替 (bool, string) 双返回值，确保 Wails v2 绑定层
+// 正确序列化两个字段（双返回值会生成 Promise<boolean|string> 联合类型导致 string 丢失）。
+type WorkspaceValidateResult struct {
+	OK           bool   `json:"ok"`
+	ErrorMessage string `json:"errorMessage"`
+}
+
 // WorkspaceState 描述当前工作目录初始化状态。
 // 前端用于决定是否显示 WorkspaceInitModal。
 type WorkspaceState struct {
@@ -62,13 +70,12 @@ func (a *App) PickWorkspaceDir() (string, error) {
 	return appendAppSubdir(selected), nil
 }
 
-// ValidateWorkspaceDir 实时校验用户选择的目录，
-// 返回 (ok, errorMessage)；errorMessage 为中文分类提示。
-func (a *App) ValidateWorkspaceDir(path string) (bool, string) {
+// ValidateWorkspaceDir 实时校验用户选择的目录，返回 WorkspaceValidateResult。
+func (a *App) ValidateWorkspaceDir(path string) WorkspaceValidateResult {
 	if err := appdata.ValidateDataDir(path); err != nil {
-		return false, err.Error()
+		return WorkspaceValidateResult{OK: false, ErrorMessage: err.Error()}
 	}
-	return true, ""
+	return WorkspaceValidateResult{OK: true}
 }
 
 // SetWorkspaceDir 接受用户最终选择，写注册表，

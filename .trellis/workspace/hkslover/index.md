@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 24
+- **Total Sessions**: 25
 - **Last Active**: 2026-06-02
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~802 | Active |
+| `journal-1.md` | ~836 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 25 | 2026-06-02 | 实现单例运行 | `db8031e`, `0e65217` | `main` |
 | 24 | 2026-06-02 | 添加 Dem 目录存储管理 | `b8ce909` | `main` |
 | 23 | 2026-06-02 | 支持 5E 分享链接查询战绩 | `32a4602` | `main` |
 | 22 | 2026-06-02 | Sync English i18n | `781f724` | `main` |

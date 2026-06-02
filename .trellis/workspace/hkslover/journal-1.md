@@ -800,3 +800,37 @@ Synced en-US translations with the user's zh-CN i18n updates, including 5E Playe
 ### Next Steps
 
 - None - task complete
+
+
+## Session 25: 实现单例运行
+
+**Date**: 2026-06-02
+**Task**: 实现单例运行
+**Branch**: `main`
+
+### Summary
+
+实现 Windows Named Mutex 单例运行功能，创建 internal/app/single_instance_*.go，修改 main.go 加入互斥检查。自更新流程兼容性已验证。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `db8031e` | (see git log) |
+| `0e65217` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

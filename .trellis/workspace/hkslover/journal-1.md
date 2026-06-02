@@ -635,3 +635,36 @@ Moved app-managed runtime data from executable directory to LocalAppData-backed 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 20: 放宽工作目录校验 + 自动追加 cs2HighLightTool 子目录
+
+**Date**: 2026-06-02
+**Task**: 放宽工作目录校验 + 自动追加 cs2HighLightTool 子目录
+**Branch**: `main`
+
+### Summary
+
+移除目录非空约束，长度上限 100→200；PickWorkspaceDir 自动拼接 cs2HighLightTool 子目录（幂等）；更新 Modal 描述文字
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a6832a9` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

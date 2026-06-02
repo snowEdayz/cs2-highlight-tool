@@ -767,3 +767,36 @@ Synced en-US translations with the user's zh-CN i18n updates, including 5E Playe
 ### Next Steps
 
 - None - task complete
+
+
+## Session 24: 添加 Dem 目录存储管理
+
+**Date**: 2026-06-02
+**Task**: 添加 Dem 目录存储管理
+**Branch**: `main`
+
+### Summary
+
+设置页新增 Dem 目录统计、打开和清理能力；后端新增 DEM 存储 Wails 接口并补充测试，同步稳定契约与 Trellis 规范。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b8ce909` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

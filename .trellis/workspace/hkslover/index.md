@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 22
+- **Total Sessions**: 23
 - **Last Active**: 2026-06-02
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~736 | Active |
+| `journal-1.md` | ~769 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 23 | 2026-06-02 | 支持 5E 分享链接查询战绩 | `32a4602` | `main` |
 | 22 | 2026-06-02 | Sync English i18n | `781f724` | `main` |
 | 21 | 2026-06-02 | 修复 ValidateWorkspaceDir 错误原因丢失 | `7bde703` | `main` |
 | 20 | 2026-06-02 | 放宽工作目录校验 + 自动追加 cs2HighLightTool 子目录 | `a6832a9` | `main` |

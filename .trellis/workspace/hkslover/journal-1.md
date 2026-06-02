@@ -734,3 +734,36 @@ Synced en-US translations with the user's zh-CN i18n updates, including 5E Playe
 ### Next Steps
 
 - None - task complete
+
+
+## Session 23: 支持 5E 分享链接查询战绩
+
+**Date**: 2026-06-02
+**Task**: 支持 5E 分享链接查询战绩
+**Branch**: `main`
+
+### Summary
+
+扩展 5E 导入查询输入，支持从客户端个人主页分享链接提取 domain ID 并用于最近战绩查询；补充后端回归测试、中文提示和契约文档。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `32a4602` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

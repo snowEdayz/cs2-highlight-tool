@@ -23,7 +23,7 @@ func (a *App) GetFiveEPlayerName() string {
 }
 
 func (a *App) ListFiveERecentMatches(playerName string, page int) (*fivee.FiveEMatchListResult, error) {
-	playerName = strings.TrimSpace(playerName)
+	playerName = fivee.NormalizePlayerDomainInput(playerName)
 	if err := a.saveFiveEPlayerName(playerName); err != nil {
 		return nil, err
 	}

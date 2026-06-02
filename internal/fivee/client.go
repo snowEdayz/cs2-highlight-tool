@@ -34,7 +34,7 @@ type FiveEMatchItem struct {
 }
 
 type FiveEMatchListResult struct {
-	PlayerName string          `json:"player_name"`
+	PlayerName string           `json:"player_name"`
 	Matches    []FiveEMatchItem `json:"matches"`
 }
 
@@ -83,6 +83,7 @@ var (
 	FindFirstByExtFn = download.FindFirstByExt
 	CopyFileFn       = download.CopyFile
 	matchIDPattern   = regexp.MustCompile(`(?i)g\d+(?:-[a-z0-9]+)+`)
+	playerDomainRE   = regexp.MustCompile(`(?i)(?:[?&]|^)domain=([^&#\s]+)`)
 	ErrDemoExpired   = errors.New("5E DEM 已过期，无法下载")
 )
 
@@ -102,6 +103,26 @@ func ListRecentMatches(playerName string, page int) ([]FiveEMatchItem, error) {
 		page = 1
 	}
 	return fetchRecentMatches(playerName, page)
+}
+
+// NormalizePlayerDomainInput extracts the 5E profile domain from share links.
+func NormalizePlayerDomainInput(raw string) string {
+	original := strings.TrimSpace(raw)
+	if original == "" {
+		return ""
+	}
+
+	matched := playerDomainRE.FindStringSubmatch(original)
+	if len(matched) >= 2 {
+		domain, err := url.QueryUnescape(strings.TrimSpace(matched[1]))
+		if err == nil {
+			domain = strings.TrimSpace(domain)
+			if domain != "" {
+				return domain
+			}
+		}
+	}
+	return original
 }
 
 // FetchDemoURL resolves the download URL for a 5E match demo.

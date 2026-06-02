@@ -189,6 +189,43 @@ func TestListRecentMatches_NormalizesPageBelowOne(t *testing.T) {
 	}
 }
 
+func TestNormalizePlayerDomainInput(t *testing.T) {
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "raw domain id",
+			input: "  12139xi22eza  ",
+			want:  "12139xi22eza",
+		},
+		{
+			name:  "share text with profile url",
+			input: "【5E对战平台：被窝以外皆他乡OVO的个人主页】https://csgo.5eplay.com/app/share_loding_type7?domain=12139xi22eza&tab=77&uuid=338955c1-d7bb-11f0-a93a-0c42a164bc3c",
+			want:  "12139xi22eza",
+		},
+		{
+			name:  "query string only",
+			input: "domain=12139xi22eza&tab=77",
+			want:  "12139xi22eza",
+		},
+		{
+			name:  "empty",
+			input: "   ",
+			want:  "",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := NormalizePlayerDomainInput(tc.input); got != tc.want {
+				t.Fatalf("NormalizePlayerDomainInput(%q) = %q, want %q", tc.input, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestImportDemo_ExpiredDemoURL(t *testing.T) {
 	oldReq := HTTPRequestFn
 	oldDownload := DownloadFileFn
@@ -325,4 +362,3 @@ func stubFiveEGzipResponse(statusCode int, body string) (*http.Response, error) 
 		Body:       io.NopCloser(bytes.NewReader(buf.Bytes())),
 	}, nil
 }
-

@@ -61,6 +61,40 @@ func TestListFiveERecentMatches_PersistsPlayerName(t *testing.T) {
 	}
 }
 
+func TestListFiveERecentMatches_ExtractsDomainFromShareLinkAndPersists(t *testing.T) {
+	oldReq := fivee.HTTPRequestFn
+	fivee.HTTPRequestFn = func(req *http.Request, timeout time.Duration) (*http.Response, error) {
+		if got := req.URL.Query().Get("domain"); got != "12139xi22eza" {
+			t.Fatalf("domain query = %q, want %q", got, "12139xi22eza")
+		}
+		return stubFiveETestResponse(http.StatusOK, `{
+			"success": true,
+			"errcode": 0,
+			"message": "",
+			"data": {"match_list": []}
+		}`), nil
+	}
+	t.Cleanup(func() { fivee.HTTPRequestFn = oldReq })
+
+	app := &App{exeDir: t.TempDir()}
+	input := "【5E对战平台：被窝以外皆他乡OVO的个人主页】https://csgo.5eplay.com/app/share_loding_type7?domain=12139xi22eza&tab=77&uuid=338955c1-d7bb-11f0-a93a-0c42a164bc3c"
+	result, err := app.ListFiveERecentMatches(input, 1)
+	if err != nil {
+		t.Fatalf("ListFiveERecentMatches() error: %v", err)
+	}
+	if result.PlayerName != "12139xi22eza" {
+		t.Fatalf("player_name = %q, want %q", result.PlayerName, "12139xi22eza")
+	}
+
+	cfg, err := config.LoadOrCreate(filepath.Join(app.exeDir, "config.json"), app.exeDir)
+	if err != nil {
+		t.Fatalf("LoadOrCreate config failed: %v", err)
+	}
+	if cfg.FiveEPlayerName != "12139xi22eza" {
+		t.Fatalf("fivee_player_name = %q, want %q", cfg.FiveEPlayerName, "12139xi22eza")
+	}
+}
+
 func TestListFiveERecentMatches_EmptyPlayerNameSkipsRemoteCall(t *testing.T) {
 	oldReq := fivee.HTTPRequestFn
 	calls := 0

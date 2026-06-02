@@ -80,3 +80,72 @@ for _, entry := range entries {
 ```
 
 This clears all managed children while preserving the stable directory path.
+
+## Scenario: 5E Recent Match Query Input Normalization
+
+### 1. Scope / Trigger
+
+- Trigger: 5E import needs to accept both a raw 5E domain ID and the profile share text/link copied from the 5E client.
+- Scope: `internal/app.App.ListFiveERecentMatches` Wails binding normalizes the input before config persistence and `internal/fivee` API calls.
+- Boundary: UI text input -> Wails binding -> config cache -> 5E match-list HTTP query.
+
+### 2. Signatures
+
+```go
+func (a *App) GetFiveEPlayerName() string
+func (a *App) ListFiveERecentMatches(playerName string, page int) (*fivee.FiveEMatchListResult, error)
+func NormalizePlayerDomainInput(raw string) string
+```
+
+### 3. Contracts
+
+- `playerName`: accepts either a raw 5E domain ID such as `12139xi22eza`, a URL/query string containing `domain=12139xi22eza`, or a full client share text containing that URL.
+- `ListFiveERecentMatches` must call `fivee.NormalizePlayerDomainInput` before saving `fivee_player_name` and before issuing the remote request.
+- `fivee_player_name`: stores the normalized domain ID when extraction succeeds, not the full pasted share text.
+- Empty or whitespace-only input remains empty, saves empty, skips remote calls, and returns an empty match list.
+- Non-link input with no `domain=` parameter remains trim-normalized and is passed through unchanged for backward compatibility.
+
+### 4. Validation & Error Matrix
+
+- Whitespace-only input -> no error; return `{player_name:"", matches:[]}` and do not call the 5E API.
+- Share text/link with non-empty `domain` -> use extracted domain ID for persistence and query.
+- Input without `domain` -> use trimmed input as-is.
+- 5E API HTTP/JSON/business error -> return the existing wrapped Chinese error from `internal/fivee`.
+
+### 5. Good/Base/Bad Cases
+
+- Good: `【5E对战平台：...】https://csgo.5eplay.com/app/share_loding_type7?domain=12139xi22eza&tab=77` queries with `domain=12139xi22eza` and caches `12139xi22eza`.
+- Base: `12139xi22eza` queries and caches `12139xi22eza`.
+- Bad: caching the whole share text causes subsequent app startup auto-refresh to send an invalid `domain` query.
+
+### 6. Tests Required
+
+- App-layer regression test:
+  - Call `ListFiveERecentMatches` with a full 5E share text.
+  - Assert outbound HTTP query `domain` equals the extracted ID.
+  - Assert returned `player_name` and cached `fivee_player_name` equal the extracted ID.
+- Leaf helper test:
+  - Assert raw ID, full share text, query-string-only, and empty input normalize as expected.
+- Existing empty-input test must continue to assert no remote call.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```go
+playerName = strings.TrimSpace(playerName)
+cfg.FiveEPlayerName = playerName
+matches, err := fivee.ListRecentMatches(playerName, page)
+```
+
+This stores and queries the entire pasted share text.
+
+#### Correct
+
+```go
+playerName = fivee.NormalizePlayerDomainInput(playerName)
+cfg.FiveEPlayerName = playerName
+matches, err := fivee.ListRecentMatches(playerName, page)
+```
+
+This keeps all callers on the same normalized 5E domain ID contract.

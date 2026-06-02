@@ -67,9 +67,9 @@
 - `ImportWanmeiMatch`
 - `ImportWanmeiMatch` 返回值语义：输入 `matchID`（支持 `PVP@...`），下载并解压后返回位于 `<dataDir>/demo/wanmei/<matchID>/<matchID>.dem` 的受管控 Demo 路径
 - `GetFiveEPlayerName`
-- `GetFiveEPlayerName` 返回值语义：返回 `config.json` 中持久化的 5E 玩家名称（`fivee_player_name`，无值时返回空字符串）
+- `GetFiveEPlayerName` 返回值语义：返回 `config.json` 中持久化的 5E 查询 ID（`fivee_player_name`，无值时返回空字符串）
 - `ListFiveERecentMatches(playerName, page)`
-- `ListFiveERecentMatches(playerName, page)` 返回值语义：输入玩家名与分页参数，`page<1` 自动按 `1` 处理；先持久化 `fivee_player_name`，再返回该玩家最近 5E 战绩列表（含 `match_id/download_match_id/rating`）
+- `ListFiveERecentMatches(playerName, page)` 返回值语义：输入玩家 ID 或包含 `domain=<id>` 的 5E 个人主页分享链接与分页参数，`page<1` 自动按 `1` 处理；先规范化并持久化 `fivee_player_name`（保存提取后的 domain ID），再返回该玩家最近 5E 战绩列表（含 `match_id/download_match_id/rating`）
 - `ImportFiveEMatch`
 - `ImportFiveEMatch` 返回值语义：输入 `matchID`（支持原始 ID/URL/zip 名），通过 5E match 接口解析 `demo_url` 下载并解压，返回位于 `<dataDir>/demo/5e/<matchID>/<matchID>.dem` 的受管控 Demo 路径
 - `ParseDemoFile`
@@ -96,7 +96,7 @@
 - `OpenOutputsDirectory`（确保 `<dataDir>/outputs` 存在并打开目录位置）
 - `ClearOutputsDirectory`（删除 `<dataDir>/outputs` 下所有直接子项，保留 outputs 目录本身，并返回清理后的统计）
 - `GetProduceHistorySnapshot` 返回的 `items[]` 新增可选字段：`history_type=produce_clip|edited_video`、`source_label`（用于区分录制片段与剪辑成片来源）
-- `config.json` 新增持久化字段：`fivee_player_name`（5E 导入页玩家名缓存）
+- `config.json` 新增持久化字段：`fivee_player_name`（5E 导入页查询 ID 缓存，保存 5E domain ID）
 - `config.json` 新增持久化字段：`ffmpeg_detected_preset`、`ffmpeg_detected_encoders[]`、`ffmpeg_detected_at`（启动阶段 FFmpeg 能力探测缓存，供 `video_preset=auto` 与编码回退使用）
 - 应用数据根目录约定：Windows 默认 `<dataDir>=%LOCALAPPDATA%/CS2 Highlight Tool`；`config.json`、组件目录、demo、projects、outputs、temp、updates、logs 均位于 `<dataDir>`。`<exeDir>` 仅用于定位当前程序本体与自更新替换目标。
 - 关键事件名（前后端协作契约）：

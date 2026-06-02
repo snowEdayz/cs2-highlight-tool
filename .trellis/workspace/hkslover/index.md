@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 20
+- **Total Sessions**: 21
 - **Last Active**: 2026-06-02
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~670 | Active |
+| `journal-1.md` | ~703 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 21 | 2026-06-02 | 修复 ValidateWorkspaceDir 错误原因丢失 | `7bde703` | `main` |
 | 20 | 2026-06-02 | 放宽工作目录校验 + 自动追加 cs2HighLightTool 子目录 | `a6832a9` | `main` |
 | 19 | 2026-06-02 | 工作目录初始化与重置：HKCU 注册表 + 强制选目录 + 重置流程 | `3e87249` | `main` |
 | 18 | 2026-05-27 | Move runtime data to LocalAppData | `502e47f` | `main` |

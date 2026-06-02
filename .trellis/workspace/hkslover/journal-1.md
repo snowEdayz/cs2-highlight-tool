@@ -668,3 +668,36 @@ Moved app-managed runtime data from executable directory to LocalAppData-backed 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 21: 修复 ValidateWorkspaceDir 错误原因丢失
+
+**Date**: 2026-06-02
+**Task**: 修复 ValidateWorkspaceDir 错误原因丢失
+**Branch**: `main`
+
+### Summary
+
+Wails v2 (bool,string) 双返回值生成联合类型导致 string 丢失；改为 struct 返回修复
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7bde703` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

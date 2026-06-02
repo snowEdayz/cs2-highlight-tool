@@ -100,15 +100,15 @@ func TestValidateDataDir_ContainsIllegalSymbol(t *testing.T) {
 }
 
 func TestValidateDataDir_TooLong(t *testing.T) {
-	// 构造 > 100 字符的合法字符路径
-	long := `C:\` + strings.Repeat("a", 120)
+	// 构造 > 200 字符的合法字符路径
+	long := `C:\` + strings.Repeat("a", 220)
 	err := ValidateDataDir(long)
 	if err == nil || !strings.Contains(err.Error(), "长度") {
 		t.Fatalf("long path = %v, want 'length' error", err)
 	}
 }
 
-func TestValidateDataDir_NonEmptyDirRejected(t *testing.T) {
+func TestValidateDataDir_NonEmptyDirAllowed(t *testing.T) {
 	tmp := shortTempDir(t)
 	dataDir := filepath.Join(tmp, "data")
 	if err := os.MkdirAll(dataDir, 0o755); err != nil {
@@ -118,9 +118,9 @@ func TestValidateDataDir_NonEmptyDirRejected(t *testing.T) {
 		t.Fatalf("write existing file: %v", err)
 	}
 
-	err := ValidateDataDir(dataDir)
-	if err == nil || !strings.Contains(err.Error(), "非空") {
-		t.Fatalf("non-empty dir = %v, want 'non-empty' error", err)
+	// 非空目录应允许通过（只要可写、无中文/空格/特殊字符）
+	if err := ValidateDataDir(dataDir); err != nil {
+		t.Fatalf("non-empty dir should be allowed, got: %v", err)
 	}
 }
 

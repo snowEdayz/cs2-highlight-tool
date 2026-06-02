@@ -9,6 +9,31 @@ import (
 	"cs2-highlight-tool-v2/internal/producews"
 )
 
+
+// TestAppendAppSubdir 验证自动追加 cs2HighLightTool 的幂等逻辑。
+// 使用 filepath.Join 构造期望值，确保跨平台路径分隔符一致。
+func TestAppendAppSubdir(t *testing.T) {
+	cases := []struct {
+		input string
+		want  string
+	}{
+		{
+			filepath.Join("/home", "user", "data"),
+			filepath.Join("/home", "user", "data", "cs2HighLightTool"),
+		},
+		{
+			filepath.Join("/home", "user", "data", "cs2HighLightTool"),
+			filepath.Join("/home", "user", "data", "cs2HighLightTool"),
+		},
+	}
+	for _, c := range cases {
+		got := appendAppSubdir(c.input)
+		if got != c.want {
+			t.Errorf("appendAppSubdir(%q) = %q, want %q", c.input, got, c.want)
+		}
+	}
+}
+
 // TestGetWorkspaceState_Uninitialized 验证未注册 dataDir 时返回 Initialized=false。
 func TestGetWorkspaceState_Uninitialized(t *testing.T) {
 	a := &App{

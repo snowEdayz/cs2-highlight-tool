@@ -363,7 +363,7 @@
   "workspace": {
     "init": {
       "title": "设置工作目录",
-      "description": "由于 CS2 / HLAE 无法识别中文或含空格的路径，请选择一个英文、无空格、当前为空（或不存在）的目录作为本程序的数据根目录。该目录将用于存放 HLAE、插件、FFmpeg、配置以及录制输出。",
+      "description": "请选择一个父目录（英文、无空格），程序将在其中自动创建 cs2HighLightTool 子目录作为数据根目录，用于存放 HLAE、插件、FFmpeg、配置以及录制输出。",
       "browse_button": "浏览…",
       "path_placeholder": "未选择目录",
       "confirm_button": "使用此目录",
@@ -374,8 +374,7 @@
       "invalid_space": "路径不能包含空格",
       "invalid_symbol": "路径包含非法字符",
       "invalid_root": "不能选择磁盘根目录",
-      "invalid_length": "路径长度超过 100 字符",
-      "invalid_nonempty": "目录已存在但非空，请选择空目录或不存在的路径",
+      "invalid_length": "路径长度超过 200 字符",
       "invalid_unwritable": "无法在该位置写入文件，请检查权限",
       "generic": "路径无效"
     },

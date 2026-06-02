@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 
 	"cs2-highlight-tool-v2/internal/appdata"
@@ -10,6 +11,18 @@ import (
 
 	wruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
+
+// appSubDir 是应用在用户选择的父目录下自动创建的子目录名。
+const appSubDir = "cs2HighLightTool"
+
+// appendAppSubdir 在 parent 末尾追加 appSubDir。
+// 若路径末段已是 appSubDir，直接返回原值（幂等）。
+func appendAppSubdir(parent string) string {
+	if filepath.Base(parent) == appSubDir {
+		return parent
+	}
+	return filepath.Join(parent, appSubDir)
+}
 
 // WorkspaceState 描述当前工作目录初始化状态。
 // 前端用于决定是否显示 WorkspaceInitModal。
@@ -30,20 +43,23 @@ func (a *App) GetWorkspaceState() WorkspaceState {
 	return ws
 }
 
-// PickWorkspaceDir 打开系统目录选择对话框，让用户选择工作目录。
-// 用户取消返回 ("", nil)。
+// PickWorkspaceDir 打开系统目录选择对话框，让用户选择父目录。
+// 返回路径已自动追加 cs2HighLightTool 子目录；用户取消返回 ("", nil)。
 func (a *App) PickWorkspaceDir() (string, error) {
 	if a.ctx == nil {
 		return "", fmt.Errorf("应用尚未启动")
 	}
 	selected, err := wruntime.OpenDirectoryDialog(a.ctx, wruntime.OpenDialogOptions{
-		Title:                "选择工作目录",
+		Title:                "选择父目录（程序将自动创建 cs2HighLightTool 子目录）",
 		CanCreateDirectories: true,
 	})
 	if err != nil {
 		return "", fmt.Errorf("打开目录对话框失败: %w", err)
 	}
-	return selected, nil
+	if selected == "" {
+		return "", nil
+	}
+	return appendAppSubdir(selected), nil
 }
 
 // ValidateWorkspaceDir 实时校验用户选择的目录，

@@ -12,7 +12,7 @@ import (
 
 const (
 	// MaxDataDirLength 数据目录路径最大长度（字符）。
-	MaxDataDirLength = 100
+	MaxDataDirLength = 200
 
 	// probeFileName 可写探针文件名。
 	probeFileName = ".cs2ht_init_probe"
@@ -52,16 +52,7 @@ func ValidateDataDir(path string) error {
 		return fmt.Errorf("无法创建目录: %w", err)
 	}
 
-	// 6. 若目录已存在则必须为空
-	entries, err := os.ReadDir(path)
-	if err != nil {
-		return fmt.Errorf("无法读取目录: %w", err)
-	}
-	if len(entries) > 0 {
-		return errors.New("目录已存在但非空")
-	}
-
-	// 7. 可读写删测试
+	// 6. 可读写删测试
 	if err := probeReadWriteDelete(path); err != nil {
 		return err
 	}

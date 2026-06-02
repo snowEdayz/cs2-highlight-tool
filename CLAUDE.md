@@ -83,6 +83,7 @@ Import alias: Use `@/` for `frontend/src/**` imports.
 
 ## Stable Wails Public Methods (on `internal/app.App`)
 
+Workspace: `GetWorkspaceState`, `PickWorkspaceDir`, `ValidateWorkspaceDir`, `SetWorkspaceDir`, `ResetWorkspace`, `ExitApp`
 Startup: `GetStartupState`, `RunStartupChecks`, `RetryStartupComponent`, `ReinstallStartupComponent`, `OpenManualDownload`, `ImportManualDownload`, `PickCS2Path`, `EnterMainApp`, `ApplySelfUpdate`, `ExportStartupLogs`
 Demo: `PickDemoFiles`, `ParseDemoFile`
 Clips: `GetClipSettings`, `SaveClipSettings`, `GeneratePluginJSON`, `GeneratePluginJSONBatch`, `GeneratePluginJSONBatchAndLaunchHLAE`

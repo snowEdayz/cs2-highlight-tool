@@ -359,5 +359,34 @@
       "logs_exported": "日志已导出: {path}",
       "export_logs_failed": "导出日志失败: {error}"
     }
+  },
+  "workspace": {
+    "init": {
+      "title": "设置工作目录",
+      "description": "由于 CS2 / HLAE 无法识别中文或含空格的路径，请选择一个英文、无空格、当前为空（或不存在）的目录作为本程序的数据根目录。该目录将用于存放 HLAE、插件、FFmpeg、配置以及录制输出。",
+      "browse_button": "浏览…",
+      "path_placeholder": "未选择目录",
+      "confirm_button": "使用此目录",
+      "exit_button": "退出应用"
+    },
+    "validate": {
+      "invalid_chinese": "路径不能包含中文或非 ASCII 字符",
+      "invalid_space": "路径不能包含空格",
+      "invalid_symbol": "路径包含非法字符",
+      "invalid_root": "不能选择磁盘根目录",
+      "invalid_length": "路径长度超过 100 字符",
+      "invalid_nonempty": "目录已存在但非空，请选择空目录或不存在的路径",
+      "invalid_unwritable": "无法在该位置写入文件，请检查权限",
+      "generic": "路径无效"
+    },
+    "reset": {
+      "button": "重置工作目录",
+      "confirm_title": "⚠️ 确认重置工作目录",
+      "confirm_content": "将清除 {dataDir} 下的所有应用数据，操作不可撤销。",
+      "confirm_yes": "确认重置",
+      "confirm_no": "取消",
+      "success": "已重置工作目录",
+      "failure": "重置失败：{error}"
+    }
   }
 }

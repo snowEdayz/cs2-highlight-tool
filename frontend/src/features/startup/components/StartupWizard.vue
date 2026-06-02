@@ -16,9 +16,19 @@
           <span class="tasks-head-title">{{ t("startup.tasks_title") }}</span>
         </template>
         <template #header-extra>
-          <n-button size="small" :disabled="busy" @click="exportLogs">
-            {{ t("startup.export_logs") }}
-          </n-button>
+          <n-space :size="8" :wrap="false">
+            <n-button size="small" :disabled="busy" @click="exportLogs">
+              {{ t("startup.export_logs") }}
+            </n-button>
+            <n-button
+              size="small"
+              type="error"
+              :disabled="!canReset"
+              @click="confirmReset"
+            >
+              {{ t("workspace.reset.button") }}
+            </n-button>
+          </n-space>
         </template>
 
         <n-list class="task-list" bordered :show-divider="false">
@@ -185,6 +195,7 @@ const props = defineProps<{
 const {
   t,
   busy,
+  canReset,
   tasks,
   statusText,
   statusTagType,
@@ -208,6 +219,7 @@ const {
   applySelfUpdate,
   enterMain,
   exportLogs,
+  confirmReset,
 } = useStartupWizard(props);
 </script>
 

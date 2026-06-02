@@ -29,7 +29,7 @@ func (s *Service) RunStartupChecks() StartupState {
 	}
 	s.state.Running = true
 	s.state.CanEnterMain = false
-	s.state.Mode = "startup"
+	s.state.Mode = ModeStartup
 	s.state.Phase = phaseDetectingSource
 	s.state.FatalError = ""
 	if s.state.SourceStep.Source == "" {

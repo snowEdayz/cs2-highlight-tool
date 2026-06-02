@@ -1,47 +1,122 @@
 package app
 
-import "cs2-highlight-tool-v2/internal/envsetup"
+import (
+	"fmt"
+
+	"cs2-highlight-tool-v2/internal/envsetup"
+)
+
+// workspaceNotInitializedErr 工作目录未初始化时的统一错误信息。
+func workspaceNotInitializedErr() error {
+	return fmt.Errorf("请先完成工作目录初始化")
+}
 
 func (a *App) GetStartupState() envsetup.StartupState {
-	return a.service.GetStartupState()
+	a.serviceMu.Lock()
+	svc := a.service
+	a.serviceMu.Unlock()
+	if svc == nil {
+		return envsetup.StartupState{Mode: envsetup.ModeWorkspaceInit}
+	}
+	return svc.GetStartupState()
 }
 
 func (a *App) RunStartupChecks() envsetup.StartupState {
-	return a.service.RunStartupChecks()
+	a.serviceMu.Lock()
+	svc := a.service
+	a.serviceMu.Unlock()
+	if svc == nil {
+		return envsetup.StartupState{Mode: envsetup.ModeWorkspaceInit}
+	}
+	return svc.RunStartupChecks()
 }
 
 func (a *App) RetryStartupComponent(componentID string) envsetup.StartupState {
-	return a.service.RetryStartupComponent(componentID)
+	a.serviceMu.Lock()
+	svc := a.service
+	a.serviceMu.Unlock()
+	if svc == nil {
+		return envsetup.StartupState{Mode: envsetup.ModeWorkspaceInit}
+	}
+	return svc.RetryStartupComponent(componentID)
 }
 
 func (a *App) OpenManualDownload(componentID string) error {
-	return a.service.OpenManualDownload(componentID)
+	a.serviceMu.Lock()
+	svc := a.service
+	a.serviceMu.Unlock()
+	if svc == nil {
+		return workspaceNotInitializedErr()
+	}
+	return svc.OpenManualDownload(componentID)
 }
 
 func (a *App) OpenExternalURL(rawURL string) error {
-	return a.service.OpenExternalURL(rawURL)
+	a.serviceMu.Lock()
+	svc := a.service
+	a.serviceMu.Unlock()
+	if svc == nil {
+		return workspaceNotInitializedErr()
+	}
+	return svc.OpenExternalURL(rawURL)
 }
 
 func (a *App) ImportManualDownload(componentID string) envsetup.StartupState {
-	return a.service.ImportManualDownload(componentID)
+	a.serviceMu.Lock()
+	svc := a.service
+	a.serviceMu.Unlock()
+	if svc == nil {
+		return envsetup.StartupState{Mode: envsetup.ModeWorkspaceInit}
+	}
+	return svc.ImportManualDownload(componentID)
 }
 
 func (a *App) PickCS2Path() envsetup.StartupState {
-	return a.service.PickCS2Path()
+	a.serviceMu.Lock()
+	svc := a.service
+	a.serviceMu.Unlock()
+	if svc == nil {
+		return envsetup.StartupState{Mode: envsetup.ModeWorkspaceInit}
+	}
+	return svc.PickCS2Path()
 }
 
 func (a *App) EnterMainApp() error {
-	return a.service.EnterMainApp()
+	a.serviceMu.Lock()
+	svc := a.service
+	a.serviceMu.Unlock()
+	if svc == nil {
+		return workspaceNotInitializedErr()
+	}
+	return svc.EnterMainApp()
 }
 
 func (a *App) ApplySelfUpdate() envsetup.StartupState {
-	return a.service.ApplySelfUpdate()
+	a.serviceMu.Lock()
+	svc := a.service
+	a.serviceMu.Unlock()
+	if svc == nil {
+		return envsetup.StartupState{Mode: envsetup.ModeWorkspaceInit}
+	}
+	return svc.ApplySelfUpdate()
 }
 
 func (a *App) ReinstallStartupComponent(componentID string) (envsetup.StartupState, error) {
-	return a.service.ReinstallStartupComponent(componentID)
+	a.serviceMu.Lock()
+	svc := a.service
+	a.serviceMu.Unlock()
+	if svc == nil {
+		return envsetup.StartupState{Mode: envsetup.ModeWorkspaceInit}, workspaceNotInitializedErr()
+	}
+	return svc.ReinstallStartupComponent(componentID)
 }
 
 func (a *App) ExportStartupLogs() (string, error) {
-	return a.service.ExportStartupLogs()
+	a.serviceMu.Lock()
+	svc := a.service
+	a.serviceMu.Unlock()
+	if svc == nil {
+		return "", workspaceNotInitializedErr()
+	}
+	return svc.ExportStartupLogs()
 }

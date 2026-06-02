@@ -24,6 +24,12 @@ const (
 	phaseWaitingSource   = "waiting_source"
 	phaseRunningTasks    = "running_tasks"
 	phaseReady           = "ready"
+
+	// ModeWorkspaceInit 表示当前未完成工作目录初始化，前端应展示初始化 modal。
+	// StartupState.Mode 合法取值：{ModeWorkspaceInit, "startup", "main"}。
+	ModeWorkspaceInit = "workspace_init"
+	ModeStartup       = "startup"
+	ModeMain          = "main"
 )
 
 type DownloadSource string
@@ -119,7 +125,7 @@ func newStartupState(cfg *config.Config, currentVersion string) StartupState {
 		source = string(defaultDownloadSource())
 	}
 	return StartupState{
-		Mode:    "startup",
+		Mode:    ModeStartup,
 		Phase:   phaseDetectingSource,
 		Running: false,
 		SourceStep: SourceStepState{

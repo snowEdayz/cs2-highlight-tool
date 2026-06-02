@@ -1,7 +1,12 @@
 import { computed } from "vue";
 import { useDialog, useMessage } from "naive-ui";
 import { t } from "@/shared/i18n";
-import type { ComponentStatus, ProgressMessage, StartupState } from "@/shared/types";
+import type {
+  ComponentStatus,
+  ProgressMessage,
+  StartupState,
+  WorkspaceState,
+} from "@/shared/types";
 import {
   normalizeSelfUpdateStatus,
   showProgress,
@@ -39,6 +44,13 @@ export function useStartupWizard(props: {
       props.state.running ||
       props.state.self_update.status === "downloading" ||
       props.state.self_update.status === "installing",
+  );
+
+  const canReset = computed(
+    () =>
+      !props.state.running &&
+      props.state.self_update.status !== "downloading" &&
+      props.state.self_update.status !== "installing",
   );
 
   const tasks = computed<TaskItem[]>(() => {
@@ -139,9 +151,36 @@ export function useStartupWizard(props: {
     }
   }
 
+  async function confirmReset() {
+    let dataDir = "";
+    try {
+      const ws = (await callBackend("GetWorkspaceState")) as WorkspaceState | undefined;
+      dataDir = (ws?.data_dir ?? "").trim();
+    } catch {
+      dataDir = "";
+    }
+
+    dialog.warning({
+      title: t("workspace.reset.confirm_title"),
+      content: t("workspace.reset.confirm_content", { dataDir }),
+      positiveText: t("workspace.reset.confirm_yes"),
+      negativeText: t("workspace.reset.confirm_no"),
+      positiveButtonProps: { type: "error" },
+      onPositiveClick: async () => {
+        try {
+          await callBackend("ResetWorkspace");
+          message.success(t("workspace.reset.success"));
+        } catch (err) {
+          message.error(t("workspace.reset.failure", { error: String(err) }));
+        }
+      },
+    });
+  }
+
   return {
     t,
     busy,
+    canReset,
     tasks,
     statusText,
     statusTagType,
@@ -166,5 +205,6 @@ export function useStartupWizard(props: {
     applySelfUpdate,
     enterMain,
     exportLogs,
+    confirmReset,
   };
 }

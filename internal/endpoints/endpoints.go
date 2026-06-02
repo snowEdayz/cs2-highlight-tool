@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	FFmpegFixedDownloadURL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.7z"
-	ffmpegManualURL        = "https://ffmpeg.org/download.html"
+	FFmpegFixedDownloadURL = "https://gitee.com/hkslover/ffmpeg_release/releases/download/v8.0.1/ffmpeg-8.0.1-essentials_build.7z"
+	ffmpegManualURL        = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.7z"
 	defaultReleaseAPIURL   = "https://updates.snowblog.xyz/cs2-highlight-tool-v2.json"
 	defaultGHProxyDomain   = "gh-proxy.org"
 	ipSBGeoIPURL           = "https://api.ip.sb/geoip"

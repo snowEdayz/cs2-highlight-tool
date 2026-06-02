@@ -235,7 +235,7 @@ func (s *Service) EnterMainApp() error {
 	s.mu.Lock()
 	canEnter := s.state.CanEnterMain
 	if canEnter {
-		s.state.Mode = "main"
+		s.state.Mode = ModeMain
 	}
 	s.mu.Unlock()
 	if !canEnter {

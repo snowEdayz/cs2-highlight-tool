@@ -1,10 +1,12 @@
 export type {
   StartupState,
+  StartupMode,
   StartupAd,
   SourceStepState,
   SelfUpdateState,
   ComponentStatus,
   ProgressMessage,
+  WorkspaceState,
 } from "./startup";
 
 export type {

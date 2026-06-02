@@ -6,12 +6,13 @@
           <div class="app-shell">
             <TopBar />
             <div class="app-content" :class="{ 'main-mode': state.mode === 'main' }">
-              <StartupWizard
-                v-if="state.mode !== 'main'"
-                :state="state"
-                :progress-map="progressMap"
-              />
-              <MainApp v-else :ads="state.ads" />
+              <template v-if="state.mode === 'main'">
+                <MainApp :ads="state.ads" />
+              </template>
+              <template v-else>
+                <StartupWizard :state="state" :progress-map="progressMap" />
+                <WorkspaceInitModal v-if="state.mode === 'workspace_init'" />
+              </template>
             </div>
           </div>
         </n-notification-provider>
@@ -27,6 +28,7 @@ import { EventsOn } from "../../wailsjs/runtime/runtime";
 import MainApp from "@/app/components/MainApp.vue";
 import TopBar from "@/app/components/TopBar.vue";
 import StartupWizard from "@/features/startup/components/StartupWizard.vue";
+import WorkspaceInitModal from "@/features/workspace-init/components/WorkspaceInitModal.vue";
 import { useI18n } from "@/shared/i18n";
 import type { ProgressMessage, StartupState } from "@/shared/types";
 
@@ -154,8 +156,14 @@ onMounted(async () => {
   });
 
   try {
-    applyState((await callBackend("GetStartupState")) as StartupState);
-    await callBackend("RunStartupChecks");
+    const initial = (await callBackend("GetStartupState")) as StartupState;
+    applyState(initial);
+    // Skip RunStartupChecks while user is still initializing the workspace directory.
+    // SetWorkspaceDir on the backend will trigger startup checks itself; we just react
+    // to the resulting startup_state_changed events.
+    if (state.mode !== "workspace_init") {
+      await callBackend("RunStartupChecks");
+    }
   } catch {
     // startup errors are surfaced through backend state/log events
   }

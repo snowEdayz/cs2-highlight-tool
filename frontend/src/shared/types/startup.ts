@@ -1,4 +1,13 @@
+/**
+ * Mode of the startup state machine. One of:
+ * - "workspace_init": user has not initialized the working directory (registry value missing/invalid)
+ * - "startup": startup wizard running through environment checks
+ * - "main": environment ready, main app shown
+ */
+export type StartupMode = "workspace_init" | "startup" | "main";
+
 export interface StartupState {
+  /** See {@link StartupMode}. Backend may emit other values; treat unknown as "startup". */
   mode: string;
   phase: string;
   running: boolean;
@@ -10,6 +19,12 @@ export interface StartupState {
   steps: ComponentStatus[];
   can_enter_main: boolean;
   config: Record<string, unknown>;
+}
+
+export interface WorkspaceState {
+  initialized: boolean;
+  data_dir: string;
+  error: string;
 }
 
 export interface StartupAd {

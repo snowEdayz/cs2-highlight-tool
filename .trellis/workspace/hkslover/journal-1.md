@@ -834,3 +834,36 @@ Synced en-US translations with the user's zh-CN i18n updates, including 5E Playe
 ### Next Steps
 
 - None - task complete
+
+
+## Session 26: 增加 1280x960 启动分辨率
+
+**Date**: 2026-06-02
+**Task**: 增加 1280x960 启动分辨率
+**Branch**: `main`
+
+### Summary
+
+新增工具设置启动分辨率 4:3 (1280x960)，同步前后端 launch_resolution 契约、HLAE 启动参数、测试与规范文档。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `897f737` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

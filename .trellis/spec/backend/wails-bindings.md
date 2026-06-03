@@ -2,6 +2,75 @@
 
 Concrete contracts for Go methods exposed through `internal/app.App` and consumed by `window.go.app.App.*`.
 
+## Scenario: Startup FFmpeg Reinstall Probe Cancellation Contract
+
+### 1. Scope / Trigger
+
+- Trigger: User clicks FFmpeg “重新安装” while the startup FFmpeg capability detector may still be running.
+- Scope: `internal/app` Wails `ReinstallStartupComponent`, `internal/envsetup` FFmpeg reinstall flow, and `internal/ffmpegprofile` capability probing.
+- Boundary: UI reinstall button -> `ReinstallStartupComponent("ffmpeg")` -> `Service.reinstallFFmpeg()` -> cancel/wait active detector -> remove `<dataDir>/ffmpeg`.
+
+### 2. Signatures
+
+```go
+func (a *App) ReinstallStartupComponent(componentID string) (envsetup.StartupState, error)
+func (s *Service) reinstallFFmpeg() error
+func (s *Service) stopFFmpegCapabilityDetection()
+func DetectCapabilities(ctx context.Context, ffmpegExe string, cmdFactory CommandContextFunc) (Capabilities, error)
+```
+
+### 3. Contracts
+
+- FFmpeg reinstall must stop any active FFmpeg capability detection before deleting `<dataDir>/ffmpeg`.
+- Stopping detection must cancel the detector context and wait for the detector goroutine to exit.
+- Canceled detection must not persist `ffmpeg_detected_preset`, `ffmpeg_detected_encoders`, or `ffmpeg_detected_at`.
+- `DetectCapabilities` must return promptly with `context.Canceled` when its context is canceled between or during probes.
+- HLAE / Plugin reinstall behavior is unchanged.
+
+### 4. Validation & Error Matrix
+
+- No active detector -> `stopFFmpegCapabilityDetection` returns immediately.
+- Active detector -> cancel context, wait for `ffmpegDetectWG`, then continue reinstall.
+- Detector canceled -> log probe completion with `canceled=true`, do not emit failure state, do not write detection cache.
+- Directory removal still fails after detector stopped -> return `删除 ffmpeg 目录失败: %w`; remaining causes are external locks or filesystem errors.
+
+### 5. Good/Base/Bad Cases
+
+- Good: reinstall immediately after startup cancels the in-flight `ffmpeg.exe` probe before `os.RemoveAll`.
+- Base: normal startup still schedules FFmpeg capability detection asynchronously and `ensureFFmpeg` returns without waiting for slow probes.
+- Bad: calling `os.RemoveAll(<dataDir>/ffmpeg)` while `ffmpeg.exe` probe is still running.
+- Bad: canceling detection but still persisting fallback encoder cache from a canceled probe run.
+
+### 6. Tests Required
+
+- `internal/envsetup`: slow detector can be canceled by `stopFFmpegCapabilityDetection` in under one second and writes no cache.
+- `internal/envsetup`: existing async/single-flight detector tests remain green.
+- `internal/ffmpegprofile`: package tests pass after adding context-cancel short-circuit behavior.
+- `go test ./...` must pass.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```go
+func (s *Service) reinstallFFmpeg() error {
+    return os.RemoveAll(filepath.Join(s.dataDir, "ffmpeg"))
+}
+```
+
+This can fail on Windows because the app’s own background detector may still be executing `ffmpeg.exe`.
+
+#### Correct
+
+```go
+func (s *Service) reinstallFFmpeg() error {
+    s.stopFFmpegCapabilityDetection()
+    return os.RemoveAll(filepath.Join(s.dataDir, "ffmpeg"))
+}
+```
+
+Cancel and wait first, then delete the directory.
+
 ## Scenario: Startup Component Download Cancellation Contract
 
 ### 1. Scope / Trigger

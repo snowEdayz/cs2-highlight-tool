@@ -33,6 +33,7 @@ type Service struct {
 
 	ffmpegDetectMu      sync.Mutex
 	ffmpegDetectRunning bool
+	ffmpegDetectCancel  context.CancelFunc
 	ffmpegDetectWG      sync.WaitGroup
 }
 

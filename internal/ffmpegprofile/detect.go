@@ -89,11 +89,17 @@ func DetectCapabilities(ctx context.Context, ffmpegExe string, cmdFactory Comman
 	probeOrder := []string{"hevc_nvenc", "hevc_amf", "hevc_qsv", "h264_nvenc", "h264_amf", "h264_qsv", "libx264"}
 
 	for _, encoder := range probeOrder {
+		if err := ctx.Err(); err != nil {
+			return Capabilities{}, err
+		}
 		normalized := strings.ToLower(strings.TrimSpace(encoder))
 		if normalized == "" {
 			continue
 		}
 		available, err := probeEncoder(ctx, cmdFactory, exe, normalized)
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return Capabilities{}, ctxErr
+		}
 		caps.Encoders[normalized] = available
 		if err != nil {
 			caps.Errors[normalized] = err.Error()

@@ -2,6 +2,7 @@ package envsetup
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -173,7 +174,9 @@ func (s *Service) scheduleFFmpegCapabilityDetection(ffmpegExe string) {
 		})
 		return
 	}
+	detectCtx, cancel := context.WithCancel(context.Background())
 	s.ffmpegDetectRunning = true
+	s.ffmpegDetectCancel = cancel
 	s.ffmpegDetectWG.Add(1)
 	s.ffmpegDetectMu.Unlock()
 
@@ -181,18 +184,45 @@ func (s *Service) scheduleFFmpegCapabilityDetection(ffmpegExe string) {
 		defer func() {
 			s.ffmpegDetectMu.Lock()
 			s.ffmpegDetectRunning = false
+			s.ffmpegDetectCancel = nil
 			s.ffmpegDetectMu.Unlock()
 			s.ffmpegDetectWG.Done()
 		}()
-		s.detectAndCacheFFmpegCapabilities(ffmpegExe)
+		s.detectAndCacheFFmpegCapabilities(detectCtx, ffmpegExe)
 	})
 }
 
-func (s *Service) detectAndCacheFFmpegCapabilities(ffmpegExe string) {
+func (s *Service) stopFFmpegCapabilityDetection() {
+	s.ffmpegDetectMu.Lock()
+	cancel := s.ffmpegDetectCancel
+	running := s.ffmpegDetectRunning
+	s.ffmpegDetectMu.Unlock()
+	if !running || cancel == nil {
+		return
+	}
+	s.emitLogWithFields("info", "正在停止 ffmpeg 能力探测", logFields{
+		Component: componentFFmpeg,
+		Stage:     "detect_profile",
+		Action:    "cancel_probe",
+	})
+	cancel()
+	s.ffmpegDetectWG.Wait()
+}
+
+func (s *Service) detectAndCacheFFmpegCapabilities(ctx context.Context, ffmpegExe string) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	started := s.logStepStart(componentFFmpeg, "detect_profile", "probe_encoders", string(s.currentSource()), 0, map[string]string{
 		"ffmpeg_exe": ffmpegExe,
 	})
-	caps, err := ffmpegprofile.DetectCapabilities(context.Background(), ffmpegExe, ffmpegDetectCommandContext)
+	caps, err := ffmpegprofile.DetectCapabilities(ctx, ffmpegExe, ffmpegDetectCommandContext)
+	if errors.Is(err, context.Canceled) {
+		s.logStepDone(componentFFmpeg, "detect_profile", "probe_encoders", string(s.currentSource()), 0, started, map[string]string{
+			"canceled": "true",
+		})
+		return
+	}
 	if err != nil {
 		s.logStepFail(componentFFmpeg, "detect_profile", "probe_encoders", string(s.currentSource()), 0, started, err, map[string]string{
 			"ffmpeg_exe": ffmpegExe,

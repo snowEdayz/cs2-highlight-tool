@@ -250,6 +250,55 @@ func TestScheduleFFmpegCapabilityDetection_SingleFlight(t *testing.T) {
 	}
 }
 
+func TestStopFFmpegCapabilityDetectionCancelsRunningProbe(t *testing.T) {
+	exeDir := t.TempDir()
+	ffmpegDir := filepath.Join(exeDir, "ffmpeg", "bin")
+	ffmpegExe := filepath.Join(ffmpegDir, "ffmpeg.exe")
+	if err := os.MkdirAll(ffmpegDir, 0o755); err != nil {
+		t.Fatalf("mkdir ffmpeg dir: %v", err)
+	}
+	if err := os.WriteFile(ffmpegExe, []byte("stub"), 0o755); err != nil {
+		t.Fatalf("write ffmpeg exe: %v", err)
+	}
+
+	svc := New(exeDir, "1.0.0")
+	svc.Startup(nil)
+
+	probeStarted := make(chan struct{})
+	var probeCalls atomic.Int32
+	old := ffmpegDetectCommandContext
+	ffmpegDetectCommandContext = fakeDetectCommandContextWithOptions("libx264", 5*time.Second, func() {
+		if probeCalls.Add(1) == 1 {
+			close(probeStarted)
+		}
+	})
+	t.Cleanup(func() {
+		ffmpegDetectCommandContext = old
+	})
+
+	svc.scheduleFFmpegCapabilityDetection(ffmpegExe)
+	select {
+	case <-probeStarted:
+	case <-time.After(2 * time.Second):
+		t.Fatal("probe did not start")
+	}
+
+	start := time.Now()
+	svc.stopFFmpegCapabilityDetection()
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Fatalf("stopFFmpegCapabilityDetection elapsed=%s, want under 1s", elapsed)
+	}
+	waitFFmpegDetectDone(t, svc, 2*time.Second)
+
+	cfg, err := config.LoadOrCreate(filepath.Join(exeDir, "config.json"), exeDir)
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	if cfg.FFmpegDetectedPreset != "" {
+		t.Fatalf("detected preset = %q, want empty after canceled detect", cfg.FFmpegDetectedPreset)
+	}
+}
+
 func waitFFmpegDetectDone(t *testing.T, svc *Service, timeout time.Duration) {
 	t.Helper()
 	done := make(chan struct{})

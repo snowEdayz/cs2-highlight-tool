@@ -372,6 +372,7 @@ func (s *Service) reinstallPlugin() error {
 }
 
 func (s *Service) reinstallFFmpeg() error {
+	s.stopFFmpegCapabilityDetection()
 	targetDir := filepath.Join(s.dataDir, "ffmpeg")
 	if err := os.RemoveAll(targetDir); err != nil {
 		return fmt.Errorf("删除 ffmpeg 目录失败: %w", err)

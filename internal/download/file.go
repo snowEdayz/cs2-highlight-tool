@@ -20,12 +20,12 @@ func File(url, targetPath string, emitProgress ProgressFunc) error {
 		defer emitProgress(false, 0, false)
 	}
 
-	client := &http.Client{Timeout: 20 * time.Minute}
+	client := &http.Client{Timeout: 3 * time.Minute}
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return err
 	}
-	req.Header.Set("User-Agent", "CS2-Highlight-Tool-v2")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36")
 	resp, err := client.Do(req)
 	if err != nil {
 		return err

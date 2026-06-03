@@ -57,7 +57,11 @@ Populated 5 frontend development guideline files under .trellis/spec/frontend/ w
 
 ### Main Changes
 
-(Add details)
+- Added a startup-only cancel path for HLAE, Plugin, and FFmpeg downloads.
+- Kept `download.File` backward-compatible for 5E / Wanmei imports and introduced `FileWithContext` for cancellable startup downloads.
+- Replaced localized-string cancellation checks with `download.ErrCanceled` and `errors.Is`.
+- Added regression coverage for partial file cleanup, inactive/unsupported cancel requests, and stopping fallback URL attempts after cancel.
+- Updated backend specs for the cancellation sentinel and Wails binding contract.
 
 ### Git Commits
 
@@ -930,6 +934,41 @@ Synced en-US translations with the user's zh-CN i18n updates, including 5E Playe
 ### Testing
 
 - [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 29: Startup download cancellation
+
+**Date**: 2026-06-03
+**Task**: Startup download cancellation
+**Branch**: `main`
+
+### Summary
+
+Added startup component download cancellation with scoped download context support, cancellation tests, and updated backend specs.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cdd6d29` | feat: add startup download cancellation |
+
+### Testing
+
+- [OK] `go test ./...`
+- [OK] `cd frontend && npm run build`
+- [OK] `git diff --check`
 
 ### Status
 

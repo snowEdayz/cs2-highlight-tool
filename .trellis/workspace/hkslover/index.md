@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 28
-- **Last Active**: 2026-06-02
+- **Total Sessions**: 29
+- **Last Active**: 2026-06-03
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~935 | Active |
+| `journal-1.md` | ~973 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 29 | 2026-06-03 | Startup download cancellation | `cdd6d29` | `main` |
 | 28 | 2026-06-02 | 隐藏 UI 录制配置 | `7a309a7` | `main` |
 | 27 | 2026-06-02 | 新增录制质量配置 | `4be9bd3` | `main` |
 | 26 | 2026-06-02 | 增加 1280x960 启动分辨率 | `897f737` | `main` |

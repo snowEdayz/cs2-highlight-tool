@@ -94,7 +94,11 @@ Split 3 largest files in internal/app/ into 9 smaller files:\n- produce_session.
 
 ### Main Changes
 
-(Add details)
+- Added cancellation for the asynchronous FFmpeg capability detector.
+- Ensured FFmpeg reinstall cancels and waits for the detector before deleting `<dataDir>/ffmpeg`.
+- Updated `ffmpegprofile.DetectCapabilities` to exit promptly on context cancellation.
+- Added regression coverage for canceling an in-flight slow probe without persisting detection cache.
+- Documented the FFmpeg reinstall probe cancellation contract in backend specs.
 
 ### Git Commits
 
@@ -968,6 +972,41 @@ Added startup component download cancellation with scoped download context suppo
 
 - [OK] `go test ./...`
 - [OK] `cd frontend && npm run build`
+- [OK] `git diff --check`
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 30: FFmpeg reinstall probe cancellation
+
+**Date**: 2026-06-03
+**Task**: FFmpeg reinstall probe cancellation
+**Branch**: `main`
+
+### Summary
+
+Fixed FFmpeg reinstall failures by canceling and waiting for background capability detection before deleting the FFmpeg directory.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `404f1d6` | fix: stop ffmpeg detect before reinstall |
+
+### Testing
+
+- [OK] `go test ./internal/envsetup ./internal/ffmpegprofile`
+- [OK] `go test ./...`
 - [OK] `git diff --check`
 
 ### Status

@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 29
+- **Total Sessions**: 30
 - **Last Active**: 2026-06-03
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~973 | Active |
+| `journal-1.md` | ~1012 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 30 | 2026-06-03 | FFmpeg reinstall probe cancellation | `404f1d6` | `main` |
 | 29 | 2026-06-03 | Startup download cancellation | `cdd6d29` | `main` |
 | 28 | 2026-06-02 | 隐藏 UI 录制配置 | `7a309a7` | `main` |
 | 27 | 2026-06-02 | 新增录制质量配置 | `4be9bd3` | `main` |

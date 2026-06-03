@@ -88,9 +88,21 @@
                     {{ cs2ActionText(task.status) }}
                   </n-button>
                   <template
-                    v-if="task.component.id !== 'cs2' && canRetry(task)"
+                    v-if="
+                      task.component.id !== 'cs2' &&
+                      (task.status === 'downloading' || canRetry(task))
+                    "
                   >
                     <n-button
+                      v-if="task.status === 'downloading'"
+                      type="warning"
+                      size="small"
+                      @click="cancelDownload(task.component.id)"
+                    >
+                      {{ t("startup.actions.cancel_download") }}
+                    </n-button>
+                    <n-button
+                      v-else
                       type="primary"
                       size="small"
                       :disabled="busy"
@@ -214,6 +226,7 @@ const {
   retry,
   reinstall,
   openManual,
+  cancelDownload,
   importManual,
   pickCS2Path,
   applySelfUpdate,

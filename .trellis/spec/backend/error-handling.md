@@ -6,7 +6,7 @@
 
 ## Overview
 
-The project uses standard Go `error` interface with `fmt.Errorf` + `%w` for error wrapping. There are **no custom error types** or sentinel error variables. Errors flow up from low-level packages through the service layer to the Wails binding layer, which returns them as strings to the frontend.
+The project uses standard Go `error` interface with `fmt.Errorf` + `%w` for error wrapping. Custom error types are not used, and sentinel error variables should be avoided unless callers need stable machine-readable control flow across wrapping layers. Errors flow up from low-level packages through the service layer to the Wails binding layer, which returns them as strings to the frontend.
 
 ---
 
@@ -38,6 +38,22 @@ return fmt.Errorf("创建目录失败 %s: %w", dir, err)
 ```
 
 **Use `%w` (not `%v` or `%s`) for wrapping** so `errors.Is` / `errors.As` work up the call chain.
+
+### Cancellation Sentinel Exception
+
+Download cancellation is a deliberate control-flow case, not a generic failure. `internal/download.ErrCanceled` is the stable sentinel used by startup download code to stop URL fallback chains and local-version fallback without parsing Chinese error text.
+
+```go
+if errors.Is(err, download.ErrCanceled) {
+    return err
+}
+```
+
+Rules for this exception:
+- Keep the user-facing message as `"下载已取消"`.
+- Wrap cancellation with `%w` if adding context; never detect it with `strings.Contains(err.Error(), ...)`.
+- Limit `ErrCanceled` handling to code that must distinguish user cancellation from network/download failures.
+- On cancellation, remove partially written download targets before returning.
 
 **Do NOT wrap with fixed string concatenation** — always use `fmt.Errorf`:
 
@@ -177,6 +193,7 @@ func isSupportedEditQuality(quality string) bool {
 ## What Not to Do
 
 - ❌ **Do not define custom error types** — standard `error` + `fmt.Errorf` is sufficient
+- ❌ **Do not parse localized error text for control flow** — use `errors.Is` for the explicit cancellation sentinel
 - ❌ **Do not use `errors.New` with dynamic messages** — always use `fmt.Errorf`
 - ❌ **Do not log-and-return** — return the error to the caller; the Wails binding layer is the final handler
 - ❌ **Do not swallow errors silently** — even recoverable errors should surface via step state updates

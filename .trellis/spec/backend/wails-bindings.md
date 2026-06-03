@@ -2,6 +2,78 @@
 
 Concrete contracts for Go methods exposed through `internal/app.App` and consumed by `window.go.app.App.*`.
 
+## Scenario: Startup Component Download Cancellation Contract
+
+### 1. Scope / Trigger
+
+- Trigger: Startup wizard lets users cancel active HLAE / Plugin / FFmpeg component downloads.
+- Scope: `internal/app` Wails binding, `internal/envsetup` state machine, `internal/download` cancellation support, and frontend startup task actions.
+- Boundary: UI cancel button -> Wails `CancelStartupDownload(componentID)` -> envsetup active download cancel func -> `download.FileWithContext`.
+
+### 2. Signatures
+
+```go
+func (a *App) CancelStartupDownload(componentID string) envsetup.StartupState
+func (s *Service) CancelStartupDownload(componentID string) StartupState
+func FileWithContext(ctx context.Context, url, targetPath string, emitProgress ProgressFunc) error
+```
+
+Frontend call:
+
+```ts
+callBackend("CancelStartupDownload", componentID);
+```
+
+### 3. Contracts
+
+- `componentID` may cancel only `hlae`, `plugin`, or `ffmpeg`.
+- Self-update and `cs2` do not expose or honor cancel-download behavior.
+- Cancel only mutates state when the component has an active download registered in `Service.cancelMap`.
+- Successful cancel sets the component step to `failed`, sets `error` to `下载已取消`, stops progress, and keeps retry/manual import available through existing failed-state UI.
+- `download.File(url, targetPath, progress)` remains the compatibility API for non-startup download callers; startup cancellation uses `FileWithContext`.
+
+### 4. Validation & Error Matrix
+
+- Unsupported component ID -> return current state unchanged and log a warning.
+- Supported component with no active download -> return current state unchanged and log a warning.
+- Active download canceled -> return state with that component failed and propagate `download.ErrCanceled`.
+- `download.ErrCanceled` inside release URL fallback -> stop remaining URL attempts.
+- `download.ErrCanceled` inside HLAE / Plugin local fallback wrapper -> do not convert to local-version `warning`.
+
+### 5. Good/Base/Bad Cases
+
+- Good: canceling HLAE during `downloading` stops the HTTP request, removes the partial archive, and does not attempt the next mirror URL.
+- Base: 5E / Wanmei demo imports continue using `download.File` without context parameters.
+- Bad: changing `download.File` signature and forcing unrelated import modules to pass `context.Background()`.
+- Bad: detecting cancellation with `strings.Contains(err.Error(), "下载已取消")`.
+
+### 6. Tests Required
+
+- `internal/download`: canceling `FileWithContext` returns `errors.Is(err, download.ErrCanceled)` and removes the partial target.
+- `internal/envsetup`: canceling with no active download or unsupported component leaves step status unchanged.
+- `internal/envsetup`: canceling during `downloadAndInstallWithFallback` stops remaining candidates.
+- `go test ./...` and `cd frontend && npm run build` must pass after adding the Wails method and frontend call.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```go
+func File(ctx context.Context, url string, targetPath string, progress ProgressFunc) error
+```
+
+This leaks startup-specific cancellation into unrelated demo import callers.
+
+#### Correct
+
+```go
+func File(url, targetPath string, progress ProgressFunc) error {
+    return FileWithContext(context.Background(), url, targetPath, progress)
+}
+```
+
+Only startup download code opts into `FileWithContext` and cancellation tracking.
+
 ## Scenario: Clip Settings Recording Quality Contract
 
 ### 1. Scope / Trigger

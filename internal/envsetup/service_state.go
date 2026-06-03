@@ -1,6 +1,7 @@
 package envsetup
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -285,13 +286,33 @@ func (s *Service) updatePhaseByReadiness() {
 }
 
 func (s *Service) downloadFile(componentID string, url string, targetPath string) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	active := &activeDownloadCancel{cancel: cancel}
+
+	s.cancelMu.Lock()
+	if oldCancel, exists := s.cancelMap[componentID]; exists {
+		if oldCancel != nil && oldCancel.cancel != nil {
+			oldCancel.cancel()
+		}
+	}
+	s.cancelMap[componentID] = active
+	s.cancelMu.Unlock()
+
 	started := s.logStepStart(componentID, "download", "download_asset", string(s.currentSource()), 0, map[string]string{
 		"url":    url,
 		"target": targetPath,
 	})
-	err := download.File(url, targetPath, func(active bool, percent float64, indeterminate bool) {
+	err := download.FileWithContext(ctx, url, targetPath, func(active bool, percent float64, indeterminate bool) {
 		s.emitProgress(componentID, active, percent, indeterminate)
 	})
+
+	s.cancelMu.Lock()
+	if s.cancelMap[componentID] == active {
+		delete(s.cancelMap, componentID)
+	}
+	s.cancelMu.Unlock()
+	cancel()
+
 	if err != nil {
 		s.logStepFail(componentID, "download", "download_asset", string(s.currentSource()), 0, started, err, map[string]string{
 			"url":    url,

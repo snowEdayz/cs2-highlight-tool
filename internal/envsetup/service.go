@@ -28,9 +28,16 @@ type Service struct {
 	logs            []LogMessage
 	releaseSnapshot *release.UnifiedLatest
 
+	cancelMap map[string]*activeDownloadCancel
+	cancelMu  sync.Mutex
+
 	ffmpegDetectMu      sync.Mutex
 	ffmpegDetectRunning bool
 	ffmpegDetectWG      sync.WaitGroup
+}
+
+type activeDownloadCancel struct {
+	cancel context.CancelFunc
 }
 
 func New(exeDir string, version string) *Service {
@@ -49,6 +56,7 @@ func NewWithDataDir(exeDir string, dataDir string, version string) *Service {
 		config:     cfg,
 		version:    version,
 		state:      newStartupState(cfg, version),
+		cancelMap:  make(map[string]*activeDownloadCancel),
 	}
 	s.logger = logging.NewSlogAdapter(logging.Options{
 		Sink: s.appendLogEntry,

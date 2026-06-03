@@ -103,6 +103,10 @@ export function useStartupWizard(props: {
     callBackend("OpenManualDownload", componentID);
   }
 
+  function cancelDownload(componentID: string) {
+    callBackend("CancelStartupDownload", componentID);
+  }
+
   function importManual(componentID: string) {
     callBackend("ImportManualDownload", componentID);
   }
@@ -200,6 +204,7 @@ export function useStartupWizard(props: {
     retry,
     reinstall,
     openManual,
+    cancelDownload,
     importManual,
     pickCS2Path,
     applySelfUpdate,

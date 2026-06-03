@@ -58,6 +58,7 @@
 - `ImportManualDownload`
 - `PickCS2Path`
 - `EnterMainApp`
+- `CancelStartupDownload(componentID string)` StartupState
 - `ApplySelfUpdate`
 - `ExportStartupLogs`
 - `PickDemoFiles`

@@ -1,11 +1,13 @@
 package envsetup
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"path/filepath"
 	"strings"
 
+	"cs2-highlight-tool-v2/internal/download"
 	"cs2-highlight-tool-v2/internal/endpoints"
 	"cs2-highlight-tool-v2/internal/release"
 )
@@ -120,6 +122,9 @@ func (s *Service) downloadAndInstallWithFallback(componentID string, latest stri
 		})
 		targetPath := tempAssetPath(s.dataDir, componentID, latest, candidate.Asset)
 		if err := s.downloadFile(componentID, candidate.AssetURL, targetPath); err != nil {
+			if errors.Is(err, download.ErrCanceled) {
+				return err
+			}
 			failures = append(failures, fmt.Sprintf("%d/%s(%s) 下载失败: %v", attempt, strings.ToUpper(string(candidate.Source)), candidate.URLKind, err))
 			continue
 		}

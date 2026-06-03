@@ -41,6 +41,16 @@ func (a *App) RetryStartupComponent(componentID string) envsetup.StartupState {
 	return svc.RetryStartupComponent(componentID)
 }
 
+func (a *App) CancelStartupDownload(componentID string) envsetup.StartupState {
+	a.serviceMu.Lock()
+	svc := a.service
+	a.serviceMu.Unlock()
+	if svc == nil {
+		return envsetup.StartupState{Mode: envsetup.ModeWorkspaceInit}
+	}
+	return svc.CancelStartupDownload(componentID)
+}
+
 func (a *App) OpenManualDownload(componentID string) error {
 	a.serviceMu.Lock()
 	svc := a.service

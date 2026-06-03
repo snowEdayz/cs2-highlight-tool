@@ -30,6 +30,8 @@ const (
 	ModeWorkspaceInit = "workspace_init"
 	ModeStartup       = "startup"
 	ModeMain          = "main"
+
+	downloadCanceledMessage = "下载已取消"
 )
 
 type DownloadSource string

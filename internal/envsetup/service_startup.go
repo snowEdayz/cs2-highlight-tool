@@ -1,6 +1,7 @@
 package envsetup
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,6 +9,7 @@ import (
 	"sync"
 
 	"cs2-highlight-tool-v2/internal/config"
+	"cs2-highlight-tool-v2/internal/download"
 	"cs2-highlight-tool-v2/internal/endpoints"
 )
 
@@ -230,6 +232,9 @@ func (s *Service) ensureHLAEWithFallback() error {
 		s.logStepDone(componentHLAE, "release_source", "load_unified", string(source), 0, stageStarted, nil)
 		return nil
 	}
+	if errors.Is(err, download.ErrCanceled) {
+		return err
+	}
 	s.logStepFail(componentHLAE, "release_source", "load_unified", string(source), 0, stageStarted, err, nil)
 	cfg := s.currentConfig()
 	localVersion, localErr := resolveInstalledHLAEVersion(cfg.HLAEExe)
@@ -260,6 +265,9 @@ func (s *Service) ensurePluginWithFallback() error {
 	if err == nil {
 		s.logStepDone(componentPlugin, "release_source", "load_unified", string(source), 0, stageStarted, nil)
 		return nil
+	}
+	if errors.Is(err, download.ErrCanceled) {
+		return err
 	}
 	s.logStepFail(componentPlugin, "release_source", "load_unified", string(source), 0, stageStarted, err, nil)
 	cfg := s.currentConfig()

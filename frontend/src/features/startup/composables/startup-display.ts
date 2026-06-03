@@ -132,6 +132,7 @@ export function showActions(task: TaskItem, canEnterMain: boolean): boolean {
     showReinstall(task.component, canEnterMain) ||
     task.status === "failed" ||
     task.status === "needs_action" ||
+    task.status === "downloading" ||
     canRetry(task)
   );
 }

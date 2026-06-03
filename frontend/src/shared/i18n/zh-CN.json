@@ -337,6 +337,7 @@
       "pick_cs2": "选择 CS2 目录",
       "reset_cs2": "重新设置",
       "retry": "重试",
+      "cancel_download": "取消",
       "download_page": "下载页面",
       "import_file": "导入文件"
     },

@@ -90,6 +90,53 @@ func (s *Service) ReinstallStartupComponent(componentID string) (StartupState, e
 	return s.GetStartupState(), nil
 }
 
+func (s *Service) CancelStartupDownload(componentID string) StartupState {
+	componentID = strings.TrimSpace(componentID)
+	s.emitLogWithFields("info", "用户触发取消下载", logFields{
+		Component: componentID,
+		Action:    "cancel_download",
+	})
+
+	if !isCancelableDownloadComponent(componentID) {
+		s.emitLogWithFields("warning", "当前组件不支持取消下载", logFields{
+			Component: componentID,
+			Action:    "cancel_download",
+		})
+		return s.GetStartupState()
+	}
+
+	s.cancelMu.Lock()
+	active, exists := s.cancelMap[componentID]
+	s.cancelMu.Unlock()
+
+	if !exists || active == nil || active.cancel == nil {
+		s.emitLogWithFields("warning", "当前组件没有正在进行的下载", logFields{
+			Component: componentID,
+			Action:    "cancel_download",
+		})
+		return s.GetStartupState()
+	}
+
+	active.cancel()
+	s.updateStep(componentID, func(step *ComponentStatus) {
+		step.Status = statusFailed
+		step.Error = downloadCanceledMessage
+	})
+	s.emitProgress(componentID, false, 0, false)
+	s.refreshCanEnterMain()
+	s.updatePhaseByReadiness()
+	return s.GetStartupState()
+}
+
+func isCancelableDownloadComponent(componentID string) bool {
+	switch componentID {
+	case componentHLAE, componentPlugin, componentFFmpeg:
+		return true
+	default:
+		return false
+	}
+}
+
 func (s *Service) OpenManualDownload(componentID string) error {
 	s.emitLogWithFields("info", "用户打开手动下载页", logFields{
 		Component: componentID,

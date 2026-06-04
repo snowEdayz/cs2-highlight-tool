@@ -1016,3 +1016,37 @@ Fixed FFmpeg reinstall failures by canceling and waiting for background capabili
 ### Next Steps
 
 - None - task complete
+
+
+## Session 31: Gate startup self-update flow
+
+**Date**: 2026-06-04
+**Task**: Gate startup self-update flow
+**Branch**: `main`
+
+### Summary
+
+Changed startup checks so app self-update is evaluated before component setup, deferring HLAE/plugin/FFmpeg/CS2 checks when a newer app version is available; added regression coverage and documented the startup state-machine contract.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b3fe33f` | (see git log) |
+| `9073b17` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

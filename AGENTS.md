@@ -4,7 +4,7 @@
 
 ## 项目概览
 - 技术栈：`Wails v2 + Go + Vue 3 + TypeScript + Naive UI + vue-router@4`。
-- 目标：启动时完成环境准备（统一更新源检查、组件检查/安装、自更新检测），成功后进入主页面。
+- 目标：启动时完成环境准备（统一更新源检查、自更新检测、组件检查/安装），成功后进入主页面。
 - 目录分层：
 - 根级规则：本文件（全局规则）。
 - 子目录规则：`internal/AGENTS.md`、`frontend/AGENTS.md`（更具体，优先级更高）。
@@ -122,6 +122,9 @@
 - `steps[].local_version`（`id=plugin`）由安装目录 `changelog.xml` 的首个 `<version>` 解析，不以 `config.json` 持久化字段为准。
 - 统一更新源选择约定：
 - 启动时实时 GeoIP 获取 `country_code`；统一更新源固定为 `github`（地区结果不持久化）。
+- 自更新优先约定：
+- 启动时统一 Release 快照获取完成后，必须先检查软件自身版本；若 `self_update.available=true`，不得启动 HLAE、插件、FFmpeg、CS2 组件检查/安装流程，用户必须先完成软件更新。
+- 自更新检查失败不等同于发现新版本，保持非致命语义并继续后续组件检查。
 - 组件下载回退顺序：`country_code=CN` 时 `url -> mirror_url`；非 CN 时仅 `github_url`；GeoIP 检测失败或 `country_code` 为空时默认 `url -> mirror_url`；失败后直接报错（不再做 gh-proxy 终极兜底）。
 
 ## 变更前检查

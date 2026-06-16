@@ -132,7 +132,11 @@ Split 8 largest frontend files into 16 smaller files:\n- ProducePage.vue (1042â†
 
 ### Main Changes
 
-(Add details)
+- Added `GetGameInfoHealth` / `RepairGameInfo` Wails methods for stateless gameinfo.gi health detection and stale plugin search path repair.
+- Added line-level `producegame` helpers that detect/remove standalone `Game\tcsgo/plugin` / `Game csgo/plugin` entries without touching comments.
+- Added top bar wrench health UI with red/green/gray state dot and a local repair popover.
+- Preserved normal produce-session backup restore and documented the new cross-layer contract.
+- Added Chinese and English i18n entries for the repair UI.
 
 ### Git Commits
 
@@ -143,7 +147,8 @@ Split 8 largest frontend files into 16 smaller files:\n- ProducePage.vue (1042â†
 
 ### Testing
 
-- [OK] (Add test results)
+- [OK] `go test ./...`
+- [OK] `cd frontend && npm run build`
 
 ### Status
 
@@ -1038,6 +1043,40 @@ Changed startup checks so app self-update is evaluated before component setup, d
 |------|---------|
 | `b3fe33f` | (see git log) |
 | `9073b17` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 32: Gameinfo health repair
+
+**Date**: 2026-06-16
+**Task**: Gameinfo health repair
+**Branch**: `main`
+
+### Summary
+
+Added gameinfo.gi health detection and one-click repair, top bar status UI, tests, contract docs, and English translation updates.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `921d272` | (see git log) |
+| `0384408` | (see git log) |
 
 ### Testing
 

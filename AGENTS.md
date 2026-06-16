@@ -102,6 +102,8 @@
 - `GetDemoStorageStats`（递归统计 `<dataDir>/demo`，返回 `demo_dir`、Demo 文件数量 `demo_count`、所有文件总字节数 `total_size_bytes`）
 - `OpenDemoDirectory`（确保 `<dataDir>/demo` 存在并打开目录位置）
 - `ClearDemoDirectory`（删除 `<dataDir>/demo` 下所有直接子项，保留 demo 目录本身，并返回清理后的统计）
+- `GetGameInfoHealth`（检测 CS2 `gameinfo.gi` 是否残留 `Game\tcsgo/plugin`；返回 `status=ok|needs_repair|unknown`、`needs_repair`、`gameinfo_path`、`message`、`error`）
+- `RepairGameInfo`（不依赖会话备份，删除 `gameinfo.gi` 中独立成行的 `Game\tcsgo/plugin` / `Game csgo/plugin` 残留并返回最新健康状态）
 - `GetProduceHistorySnapshot` 返回的 `items[]` 新增可选字段：`history_type=produce_clip|edited_video`、`source_label`（用于区分录制片段与剪辑成片来源）
 - `config.json` 新增持久化字段：`fivee_player_name`（5E 导入页查询 ID 缓存，保存 5E domain ID）
 - `config.json` 新增持久化字段：`record_quality`（录制质量，取值 `standard|high|ultra`，默认 `high`）

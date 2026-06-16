@@ -2,6 +2,102 @@
 
 Concrete contracts for Go methods exposed through `internal/app.App` and consumed by `window.go.app.App.*`.
 
+## Scenario: Gameinfo Health Repair Contract
+
+### 1. Scope / Trigger
+
+- Trigger: The app must recover when a previous abnormal exit leaves `Game\tcsgo/plugin` in CS2's `gameinfo.gi`.
+- Scope: `internal/app` Wails methods, `internal/producegame` line-level gameinfo helpers, frontend top bar health UI, and shared TypeScript types.
+- Boundary: TopBar health button -> `GetGameInfoHealth` / `RepairGameInfo` -> CS2 `gameinfo.gi` file -> returned health state.
+
+### 2. Signatures
+
+```go
+func (a *App) GetGameInfoHealth() (*GameInfoHealth, error)
+func (a *App) RepairGameInfo() (*GameInfoHealth, error)
+
+type GameInfoHealth struct {
+    Status       string `json:"status"` // ok | needs_repair | unknown
+    NeedsRepair bool   `json:"needs_repair"`
+    GameInfoPath string `json:"gameinfo_path"`
+    Message      string `json:"message"`
+    Error        string `json:"error"`
+}
+```
+
+Frontend shared type:
+
+```ts
+export type GameInfoHealthStatus = "ok" | "needs_repair" | "unknown";
+
+export interface GameInfoHealth {
+  status: GameInfoHealthStatus;
+  needs_repair: boolean;
+  gameinfo_path: string;
+  message: string;
+  error: string;
+}
+```
+
+### 3. Contracts
+
+- `GetGameInfoHealth` must be safe to call from the top bar on startup.
+- If the workspace is not initialized, `GetGameInfoHealth` returns `status=unknown` and must not create `config.json`.
+- `status=ok` means `gameinfo.gi` was found/read and contains no standalone `Game\tcsgo/plugin` or `Game csgo/plugin` line.
+- `status=needs_repair` means at least one standalone plugin search path line exists and can be repaired by `RepairGameInfo`.
+- `status=unknown` means config, CS2 exe, `gameinfo.gi`, or file reading could not be resolved; details go in `error`.
+- `RepairGameInfo` removes only standalone plugin search path lines, then returns the latest health state.
+- The normal produce flow still uses backup-based restore; repair is a stateless crash-recovery fallback, not a replacement for session backups.
+
+### 4. Validation & Error Matrix
+
+- Workspace uninitialized -> return `unknown`, no config creation, no Go error.
+- Config load failure -> return `unknown` with `error`, no Go error.
+- CS2 exe/gameinfo missing -> return `unknown` with `error`, no Go error.
+- Read failure during health check -> return `unknown` with `error`, no Go error.
+- Read/write failure during repair after `needs_repair` -> return Go error with Chinese context.
+- Healthy file repaired -> no-op and return `ok`.
+
+### 5. Good/Base/Bad Cases
+
+- Good: Abnormal exit leaves `Game\tcsgo/plugin`; startup health returns `needs_repair`, user clicks repair, the line is removed and state becomes `ok`.
+- Base: Normal produce session still backs up `gameinfo.gi`, injects plugin search path, and restores from backup on session end.
+- Base: Workspace not initialized returns `unknown` without creating app data files.
+- Bad: Using `strings.Replace` globally can remove comments or unrelated text.
+- Bad: Replacing the normal backup restore path with line deletion loses exact restoration fidelity.
+
+### 6. Tests Required
+
+- `internal/producegame`: helper detects standalone tab/space plugin lines and ignores comments.
+- `internal/producegame`: helper removes only standalone plugin lines and leaves `Game\tcsgo` intact.
+- `internal/app`: `GetGameInfoHealth` reports `needs_repair` and `RepairGameInfo` repairs stale gameinfo without backup/session state.
+- `internal/app`: healthy repair is idempotent.
+- `internal/app`: uninitialized workspace health check returns `unknown` and does not create `config.json`.
+- Frontend: `cd frontend && npm run build` passes for shared type and top bar usage.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```go
+content = strings.ReplaceAll(content, "Game\tcsgo/plugin", "")
+```
+
+This can damage comments or non-search-path text and may leave malformed blank fragments.
+
+#### Correct
+
+```go
+for _, line := range strings.Split(content, "\n") {
+    if isPluginSearchPathLine(line) {
+        continue
+    }
+    next = append(next, line)
+}
+```
+
+Remove only standalone search path entries and preserve unrelated file content.
+
 ## Scenario: Startup FFmpeg Reinstall Probe Cancellation Contract
 
 ### 1. Scope / Trigger

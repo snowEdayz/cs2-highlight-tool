@@ -56,7 +56,7 @@ func ResolveGameInfoPath(cs2Exe string, cs2Dir string) (string, error) {
 // and true on success, or the original content and false if no injection point
 // could be found.
 func InjectPluginSearchPath(content string) (string, bool) {
-	if strings.Contains(content, "Game\tcsgo/plugin") {
+	if HasPluginSearchPath(content) {
 		return content, true
 	}
 	lines := strings.Split(content, "\n")
@@ -78,4 +78,39 @@ func InjectPluginSearchPath(content string) (string, bool) {
 		return replaced, true
 	}
 	return content, false
+}
+
+// HasPluginSearchPath reports whether gameinfo.gi content contains this tool's
+// plugin search path as a standalone SearchPaths entry.
+func HasPluginSearchPath(content string) bool {
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		if isPluginSearchPathLine(line) {
+			return true
+		}
+	}
+	return false
+}
+
+// RemovePluginSearchPath removes this tool's standalone plugin search path entries
+// from gameinfo.gi content. Comments and unrelated text are left unchanged.
+func RemovePluginSearchPath(content string) (string, bool) {
+	lines := strings.Split(content, "\n")
+	next := make([]string, 0, len(lines))
+	changed := false
+	for _, line := range lines {
+		if isPluginSearchPathLine(line) {
+			changed = true
+			continue
+		}
+		next = append(next, line)
+	}
+	if !changed {
+		return content, false
+	}
+	return strings.Join(next, "\n"), true
+}
+
+func isPluginSearchPathLine(line string) bool {
+	return strings.TrimSpace(line) == "Game\tcsgo/plugin" || strings.TrimSpace(line) == "Game csgo/plugin"
 }

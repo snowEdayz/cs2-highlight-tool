@@ -48,6 +48,75 @@ func TestInjectPluginSearchPath_ReturnsFalseWhenNoInjectionPoint(t *testing.T) {
 	}
 }
 
+func TestHasPluginSearchPathDetectsStandaloneLine(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    bool
+	}{
+		{
+			name:    "tab separated",
+			content: "FileSystem\n{\n\t\tGame\tcsgo/plugin\n\t\tGame\tcsgo\n}\n",
+			want:    true,
+		},
+		{
+			name:    "space separated",
+			content: "FileSystem\n{\n\t\tGame csgo/plugin\n\t\tGame\tcsgo\n}\n",
+			want:    true,
+		},
+		{
+			name:    "comment only",
+			content: "// Game\tcsgo/plugin\nGame\tcsgo\n",
+			want:    false,
+		},
+		{
+			name:    "healthy",
+			content: "Game\tcsgo\n",
+			want:    false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := HasPluginSearchPath(tt.content); got != tt.want {
+				t.Fatalf("HasPluginSearchPath() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRemovePluginSearchPathRemovesOnlyStandaloneInjectedLines(t *testing.T) {
+	content := "FileSystem\n{\n\tSearchPaths\n\t{\n\t\t// Game\tcsgo/plugin\n\t\tGame\tcsgo/plugin\n\t\tGame csgo/plugin\n\t\tGame\tcsgo\n\t}\n}\n"
+
+	result, changed := RemovePluginSearchPath(content)
+	if !changed {
+		t.Fatal("expected RemovePluginSearchPath to report changed=true")
+	}
+	if strings.Contains(result, "\t\tGame\tcsgo/plugin\n") {
+		t.Fatalf("tab injected line should be removed:\n%s", result)
+	}
+	if strings.Contains(result, "\t\tGame csgo/plugin\n") {
+		t.Fatalf("space injected line should be removed:\n%s", result)
+	}
+	if !strings.Contains(result, "// Game\tcsgo/plugin") {
+		t.Fatalf("comment should remain:\n%s", result)
+	}
+	if !strings.Contains(result, "Game\tcsgo") {
+		t.Fatalf("original csgo search path should remain:\n%s", result)
+	}
+}
+
+func TestRemovePluginSearchPathNoopWhenHealthy(t *testing.T) {
+	content := "FileSystem\n{\n\tSearchPaths\n\t{\n\t\tGame\tcsgo\n\t}\n}\n"
+
+	result, changed := RemovePluginSearchPath(content)
+	if changed {
+		t.Fatal("expected changed=false for healthy content")
+	}
+	if result != content {
+		t.Fatalf("healthy content should be unchanged, got:\n%s", result)
+	}
+}
+
 func TestResolveGameInfoPath_FindsFileRelativeToCS2Exe(t *testing.T) {
 	root := t.TempDir()
 	cs2Exe := filepath.Join(root, "game", "bin", "win64", "cs2.exe")

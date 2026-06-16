@@ -51,12 +51,28 @@ func ResolveGameInfoPath(cs2Exe string, cs2Dir string) (string, error) {
 	return "", fmt.Errorf("未找到 gameinfo.gi，请确认 CS2 路径配置")
 }
 
+// SearchPathPlugin is this tool's plugin search path injected into gameinfo.gi.
+const SearchPathPlugin = "csgo/plugin"
+
+// SearchPathPOV is the POV HUD (pov.vpk) search path injected into gameinfo.gi
+// when the user enables POV HUD mode for recording.
+const SearchPathPOV = "csgo/pov"
+
 // InjectPluginSearchPath inserts the "Game\tcsgo/plugin" search path line into
 // gameinfo.gi content if it is not already present. Returns the modified content
 // and true on success, or the original content and false if no injection point
 // could be found.
 func InjectPluginSearchPath(content string) (string, bool) {
-	if HasPluginSearchPath(content) {
+	return InjectSearchPath(content, SearchPathPlugin)
+}
+
+// InjectSearchPath inserts a "Game\t<searchPath>" line into gameinfo.gi content
+// if it is not already present. It mirrors InjectPluginSearchPath but accepts an
+// arbitrary search path (e.g. "csgo/plugin", "csgo/pov"). Returns the modified
+// content and true on success, or the original content and false if no injection
+// point could be found.
+func InjectSearchPath(content string, searchPath string) (string, bool) {
+	if HasSearchPath(content, searchPath) {
 		return content, true
 	}
 	lines := strings.Split(content, "\n")
@@ -66,14 +82,14 @@ func InjectPluginSearchPath(content string) (string, bool) {
 			continue
 		}
 		prefix := line[:len(line)-len(strings.TrimLeft(line, " \t"))]
-		insert := prefix + "Game\tcsgo/plugin"
+		insert := prefix + "Game\t" + searchPath
 		next := make([]string, 0, len(lines)+1)
 		next = append(next, lines[:i]...)
 		next = append(next, insert)
 		next = append(next, lines[i:]...)
 		return strings.Join(next, "\n"), true
 	}
-	replaced := strings.Replace(content, "Game\tcsgo", "Game\tcsgo/plugin\n\t\t\tGame\tcsgo", 1)
+	replaced := strings.Replace(content, "Game\tcsgo", "Game\t"+searchPath+"\n\t\t\tGame\tcsgo", 1)
 	if replaced != content {
 		return replaced, true
 	}
@@ -83,9 +99,16 @@ func InjectPluginSearchPath(content string) (string, bool) {
 // HasPluginSearchPath reports whether gameinfo.gi content contains this tool's
 // plugin search path as a standalone SearchPaths entry.
 func HasPluginSearchPath(content string) bool {
+	return HasSearchPath(content, SearchPathPlugin)
+}
+
+// HasSearchPath reports whether gameinfo.gi content contains the given search
+// path as a standalone SearchPaths entry (e.g. "csgo/plugin", "csgo/pov").
+// Comments and unrelated text are ignored.
+func HasSearchPath(content string, searchPath string) bool {
 	lines := strings.Split(content, "\n")
 	for _, line := range lines {
-		if isPluginSearchPathLine(line) {
+		if isSearchPathLine(line, searchPath) {
 			return true
 		}
 	}
@@ -95,11 +118,19 @@ func HasPluginSearchPath(content string) bool {
 // RemovePluginSearchPath removes this tool's standalone plugin search path entries
 // from gameinfo.gi content. Comments and unrelated text are left unchanged.
 func RemovePluginSearchPath(content string) (string, bool) {
+	return RemoveSearchPath(content, SearchPathPlugin)
+}
+
+// RemoveSearchPath removes all standalone entries for the given search path
+// (e.g. "csgo/plugin", "csgo/pov") from gameinfo.gi content. Comments and
+// unrelated text are left unchanged. Returns the modified content and true if any
+// line was removed.
+func RemoveSearchPath(content string, searchPath string) (string, bool) {
 	lines := strings.Split(content, "\n")
 	next := make([]string, 0, len(lines))
 	changed := false
 	for _, line := range lines {
-		if isPluginSearchPathLine(line) {
+		if isSearchPathLine(line, searchPath) {
 			changed = true
 			continue
 		}
@@ -111,6 +142,6 @@ func RemovePluginSearchPath(content string) (string, bool) {
 	return strings.Join(next, "\n"), true
 }
 
-func isPluginSearchPathLine(line string) bool {
-	return strings.TrimSpace(line) == "Game\tcsgo/plugin" || strings.TrimSpace(line) == "Game csgo/plugin"
+func isSearchPathLine(line string, searchPath string) bool {
+	return strings.TrimSpace(line) == "Game\t"+searchPath || strings.TrimSpace(line) == "Game "+searchPath
 }

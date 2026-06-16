@@ -42,6 +42,18 @@
           <span class="setting-label">{{ t("main.settings.pov_hud_enabled") }}</span>
           <n-switch v-model:value="settings.pov_hud_enabled" />
         </div>
+        <div class="setting-row">
+          <span class="setting-label">{{ t("main.settings.sky_blackout") }}</span>
+          <n-switch v-model:value="settings.sky_blackout" />
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">{{ t("main.settings.kill_feed_lifetime") }}</span>
+          <n-input-number v-model:value="settings.kill_feed_lifetime" :min="1" :max="10" :step="1" :precision="0" />
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">{{ t("main.settings.block_kill_feed") }}</span>
+          <n-switch v-model:value="settings.block_kill_feed" />
+        </div>
       </n-space>
     </n-card>
 
@@ -193,7 +205,10 @@ const settings = reactive<ClipSettings>({
   record_output_dir: "",
   enable_spec_show_xray_zero: true,
   hide_all_ui: false,
-  pov_hud_enabled: false,
+  pov_hud_enabled: true,
+  sky_blackout: true,
+  kill_feed_lifetime: 4,
+  block_kill_feed: false,
 });
 const outputsStats = reactive<OutputsStorageStats>({
   output_dir: "",

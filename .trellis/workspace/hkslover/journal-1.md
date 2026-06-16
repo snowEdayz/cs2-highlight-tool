@@ -1155,3 +1155,36 @@ Implemented POV HUD recording end-to-end: PovHudEnabled toggle through Config/Cl
 ### Next Steps
 
 - None - task complete
+
+
+## Session 35: 录制配置可控化（天空/击杀留存/屏蔽击杀） + POV HUD 默认开启
+
+**Date**: 2026-06-16
+**Task**: 录制配置可控化（天空/击杀留存/屏蔽击杀） + POV HUD 默认开启
+**Branch**: `main`
+
+### Summary
+
+把 builder.go bootstrap 中硬编码的 mirv_sky/r_drawskybox/mirv_deathmsg lifetime/mirv_deathmsg filter 改成可配置：新增 sky_blackout (默认 true)、kill_feed_lifetime (1-10，默认 4)、block_kill_feed (默认 false) 三项 ClipSettings，POV HUD 默认翻转为 true。沿用 enable_spec_show_xray_zero 的 'JSON 缺字段则回填默认' 迁移模式，老 config 的 pov_hud_enabled 不动。前端 SettingsPanel 增加三个控件，zh-CN.json 加三个 key。补 3 个 builder 单测与 3 个 config 回归测试，更新两个 produce 测试以匹配新默认。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4ad968b` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

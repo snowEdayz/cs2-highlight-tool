@@ -74,6 +74,9 @@ type BuildOptions struct {
 	RecordBatchName           string
 	EnableSpecShowXray        bool
 	HideAllUI                 bool
+	SkyBlackout               bool
+	KillFeedLifetime          int
+	BlockKillFeed             bool
 	ForcePerPassVoiceCommands bool
 	ForcePerPassXrayCommands  bool
 	LaunchResolution          string
@@ -121,6 +124,9 @@ type bootstrapOptions struct {
 	ExtraCommands      []string
 	EnableSpecShowXray bool
 	HideAllUI          bool
+	SkyBlackout        bool
+	KillFeedLifetime   int
+	BlockKillFeed      bool
 	RecordFPS          int
 	VideoPreset        string
 	FFmpegParams       string
@@ -202,6 +208,9 @@ func Build(items []Item, opts BuildOptions) (*BuildResult, error) {
 		ExtraCommands:      opts.ExtraCommands,
 		EnableSpecShowXray: opts.EnableSpecShowXray,
 		HideAllUI:          opts.HideAllUI,
+		SkyBlackout:        opts.SkyBlackout,
+		KillFeedLifetime:   opts.KillFeedLifetime,
+		BlockKillFeed:      opts.BlockKillFeed,
 		RecordFPS:          recordFPS,
 		VideoPreset:        videoPreset,
 		FFmpegParams:       ffmpegParams,
@@ -498,6 +507,20 @@ func buildBootstrapSequence(opts bootstrapOptions) Sequence {
 	actions = append(actions, Action{Cmd: "cl_trueview_show_status 0", Tick: actionTick})
 	actions = append(actions, Action{Cmd: "engine_no_focus_sleep 0", Tick: actionTick})
 	actions = append(actions, Action{Cmd: "cl_demo_predict 0", Tick: actionTick})
+	actions = append(actions, Action{Cmd: "cl_spec_show_bindings 0", Tick: actionTick})
+	if opts.SkyBlackout {
+		actions = append(actions, Action{Cmd: "mirv_sky clouds draw 0", Tick: actionTick})
+		actions = append(actions, Action{Cmd: "r_drawskybox 0", Tick: actionTick})
+	}
+	lifetime := opts.KillFeedLifetime
+	if lifetime <= 0 {
+		lifetime = 4
+	}
+	actions = append(actions, Action{Cmd: fmt.Sprintf("mirv_deathmsg lifetime %d", lifetime), Tick: actionTick})
+	if opts.BlockKillFeed {
+		actions = append(actions, Action{Cmd: "mirv_deathmsg filter add block 1", Tick: actionTick})
+	}
+
 	actions = append(actions, Action{Cmd: fmt.Sprintf("spec_show_xray %d", xrayCommandValue(opts.EnableSpecShowXray)), Tick: actionTick})
 	if opts.HideAllUI {
 		actions = append(actions, Action{Cmd: "cl_draw_only_deathnotices 1", Tick: actionTick})

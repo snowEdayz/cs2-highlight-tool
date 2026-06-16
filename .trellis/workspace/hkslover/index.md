@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 34
+- **Total Sessions**: 35
 - **Last Active**: 2026-06-16
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1157 | Active |
+| `journal-1.md` | ~1190 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 35 | 2026-06-16 | 录制配置可控化（天空/击杀留存/屏蔽击杀） + POV HUD 默认开启 | `4ad968b` | `main` |
 | 34 | 2026-06-16 | POV HUD recording MVP (embedded vpk + gameinfo 单出口) | `c802b1a` | `main` |
 | 33 | 2026-06-16 | POV gameinfo health refactor (PR1 scope) | `0957e39` | `main` |
 | 32 | 2026-06-16 | Gameinfo health repair | `921d272`, `0384408` | `main` |

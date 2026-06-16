@@ -279,37 +279,37 @@ func TestGetClipSettings_PovHudEnabledRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetClipSettings: %v", err)
 	}
-	if current.PovHudEnabled {
-		t.Fatalf("default PovHudEnabled should be false, got %v", current.PovHudEnabled)
+	if !current.PovHudEnabled {
+		t.Fatalf("default PovHudEnabled should be true, got %v", current.PovHudEnabled)
 	}
 
-	current.PovHudEnabled = true
+	current.PovHudEnabled = false
 	saved, err := app.SaveClipSettings(*current)
 	if err != nil {
 		t.Fatalf("SaveClipSettings: %v", err)
 	}
-	if !saved.PovHudEnabled {
-		t.Fatalf("SaveClipSettings should round-trip PovHudEnabled=true, got %v", saved.PovHudEnabled)
+	if saved.PovHudEnabled {
+		t.Fatalf("SaveClipSettings should round-trip PovHudEnabled=false, got %v", saved.PovHudEnabled)
 	}
 
 	reloaded, err := app.GetClipSettings()
 	if err != nil {
 		t.Fatalf("GetClipSettings (reload): %v", err)
 	}
-	if !reloaded.PovHudEnabled {
+	if reloaded.PovHudEnabled {
 		t.Fatalf("PovHudEnabled should persist across reload, got %v", reloaded.PovHudEnabled)
 	}
 
-	// Flip off again to verify both directions.
-	reloaded.PovHudEnabled = false
+	// Flip on again to verify both directions.
+	reloaded.PovHudEnabled = true
 	if _, err := app.SaveClipSettings(*reloaded); err != nil {
-		t.Fatalf("SaveClipSettings (off): %v", err)
+		t.Fatalf("SaveClipSettings (on): %v", err)
 	}
 	reloaded2, err := app.GetClipSettings()
 	if err != nil {
-		t.Fatalf("GetClipSettings (off reload): %v", err)
+		t.Fatalf("GetClipSettings (on reload): %v", err)
 	}
-	if reloaded2.PovHudEnabled {
-		t.Fatalf("PovHudEnabled should round-trip to false, got %v", reloaded2.PovHudEnabled)
+	if !reloaded2.PovHudEnabled {
+		t.Fatalf("PovHudEnabled should round-trip to true, got %v", reloaded2.PovHudEnabled)
 	}
 }

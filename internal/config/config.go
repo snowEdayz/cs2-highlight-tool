@@ -39,6 +39,9 @@ type Config struct {
 	EnableSpecShowXray     bool                `json:"enable_spec_show_xray_zero"`
 	HideAllUI              bool                `json:"hide_all_ui"`
 	PovHudEnabled          bool                `json:"pov_hud_enabled"`
+	SkyBlackout            bool                `json:"sky_blackout"`
+	KillFeedLifetime       int                 `json:"kill_feed_lifetime"`
+	BlockKillFeed          bool                `json:"block_kill_feed"`
 	ClipActionSettings     *ClipActionSettings `json:"clip_action_settings,omitempty"`
 }
 
@@ -65,6 +68,9 @@ const (
 	LaunchResolution16x9     = "16:9"
 	LaunchResolution4x3      = "4:3"
 	LaunchResolution4x3Low   = "4:3_1280x960"
+	DefaultKillFeedLifetime  = 4
+	MinKillFeedLifetime      = 1
+	MaxKillFeedLifetime      = 10
 )
 
 func Default(dataDir string) *Config {
@@ -87,7 +93,10 @@ func Default(dataDir string) *Config {
 		RecordOutputDir:    filepath.Join(dataDir, "outputs"),
 		EnableSpecShowXray: true,
 		HideAllUI:          false,
-		PovHudEnabled:      false,
+		PovHudEnabled:      true,
+		SkyBlackout:        true,
+		KillFeedLifetime:   DefaultKillFeedLifetime,
+		BlockKillFeed:      false,
 		ClipActionSettings: Ptr(DefaultClipActionSettings()),
 	}
 }
@@ -109,6 +118,12 @@ func LoadOrCreate(path, dataDir string) (*Config, error) {
 	}
 	if !strings.Contains(string(data), `"enable_spec_show_xray_zero"`) {
 		cfg.EnableSpecShowXray = true
+	}
+	if !strings.Contains(string(data), `"sky_blackout"`) {
+		cfg.SkyBlackout = true
+	}
+	if !strings.Contains(string(data), `"kill_feed_lifetime"`) {
+		cfg.KillFeedLifetime = DefaultKillFeedLifetime
 	}
 	ApplyDefaults(cfg, dataDir)
 	if err := Save(path, cfg); err != nil {
@@ -187,6 +202,12 @@ func ApplyDefaults(cfg *Config, dataDir string) {
 		cfg.LaunchResolution = DefaultLaunchResolution
 	}
 	cfg.RecordOutputDir = base.RecordOutputDir
+	if cfg.KillFeedLifetime < MinKillFeedLifetime {
+		cfg.KillFeedLifetime = MinKillFeedLifetime
+	}
+	if cfg.KillFeedLifetime > MaxKillFeedLifetime {
+		cfg.KillFeedLifetime = MaxKillFeedLifetime
+	}
 	if cfg.ClipActionSettings == nil {
 		cfg.ClipActionSettings = Ptr(DefaultClipActionSettings())
 	}

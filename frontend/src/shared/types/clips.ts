@@ -15,6 +15,9 @@ export interface ClipSettings {
   enable_spec_show_xray_zero: boolean;
   hide_all_ui: boolean;
   pov_hud_enabled: boolean;
+  sky_blackout: boolean;
+  kill_feed_lifetime: number;
+  block_kill_feed: boolean;
 }
 
 export interface OutputsStorageStats {

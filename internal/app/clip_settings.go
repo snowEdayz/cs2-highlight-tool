@@ -28,6 +28,9 @@ type ClipSettings struct {
 	EnableSpecShowXray bool    `json:"enable_spec_show_xray_zero"`
 	HideAllUI          bool    `json:"hide_all_ui"`
 	PovHudEnabled      bool    `json:"pov_hud_enabled"`
+	SkyBlackout        bool    `json:"sky_blackout"`
+	KillFeedLifetime   int     `json:"kill_feed_lifetime"`
+	BlockKillFeed      bool    `json:"block_kill_feed"`
 }
 
 type ClipActionSettings struct {
@@ -75,6 +78,9 @@ func (a *App) GetClipSettings() (*ClipSettings, error) {
 		EnableSpecShowXray: cfg.EnableSpecShowXray,
 		HideAllUI:          cfg.HideAllUI,
 		PovHudEnabled:      cfg.PovHudEnabled,
+		SkyBlackout:        cfg.SkyBlackout,
+		KillFeedLifetime:   cfg.KillFeedLifetime,
+		BlockKillFeed:      cfg.BlockKillFeed,
 	})
 	actionSettings := config.ResolveClipActionSettings(cfg)
 	settings.EnableVoice = actionSettings.EnableVoiceIndices && actionSettings.EnableVoiceIndicesH
@@ -104,6 +110,9 @@ func (a *App) SaveClipSettings(input ClipSettings) (*ClipSettings, error) {
 	cfg.EnableSpecShowXray = settings.EnableSpecShowXray
 	cfg.HideAllUI = settings.HideAllUI
 	cfg.PovHudEnabled = settings.PovHudEnabled
+	cfg.SkyBlackout = settings.SkyBlackout
+	cfg.KillFeedLifetime = settings.KillFeedLifetime
+	cfg.BlockKillFeed = settings.BlockKillFeed
 	actionSettings := config.ResolveClipActionSettings(cfg)
 	actionSettings.EnableVoiceIndices = settings.EnableVoice
 	actionSettings.EnableVoiceIndicesH = settings.EnableVoice
@@ -208,6 +217,15 @@ func normalizeClipSettings(input ClipSettings) ClipSettings {
 		settings.LaunchResolution = config.DefaultLaunchResolution
 	}
 	settings.RecordOutputDir = config.CleanPath(settings.RecordOutputDir)
+	if settings.KillFeedLifetime <= 0 {
+		settings.KillFeedLifetime = config.DefaultKillFeedLifetime
+	}
+	if settings.KillFeedLifetime < config.MinKillFeedLifetime {
+		settings.KillFeedLifetime = config.MinKillFeedLifetime
+	}
+	if settings.KillFeedLifetime > config.MaxKillFeedLifetime {
+		settings.KillFeedLifetime = config.MaxKillFeedLifetime
+	}
 	return settings
 }
 

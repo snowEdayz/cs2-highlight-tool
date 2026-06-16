@@ -112,6 +112,103 @@ func TestBuild_DrawOnlyDeathnoticesOnlyWhenHideAllUIEnabled(t *testing.T) {
 	assertNoPrefixAction(t, disabled.Sequences[0].Actions, "cl_draw_only_deathnotices")
 }
 
+func TestBuild_SkyBlackoutEmitsTwoCommandsOnlyWhenEnabled(t *testing.T) {
+	enabled, err := Build([]Item{{
+		Kill:          demo.ClipKill{ID: "k1", Tick: 200, KillerSlot: 7},
+		IncludeVictim: false,
+	}}, BuildOptions{
+		TickRate:          64,
+		KillerPreSeconds:  1,
+		KillerPostSeconds: 1,
+		RecordFPS:         60,
+		VideoPreset:       "n1",
+		RecordOutputDir:   `D:/clips/output`,
+		SkyBlackout:       true,
+		KillFeedLifetime:  4,
+	})
+	if err != nil {
+		t.Fatalf("Build sky on: %v", err)
+	}
+	assertHasAction(t, enabled.Sequences[0].Actions, "mirv_sky clouds draw 0")
+	assertHasAction(t, enabled.Sequences[0].Actions, "r_drawskybox 0")
+
+	disabled, err := Build([]Item{{
+		Kill:          demo.ClipKill{ID: "k1", Tick: 200, KillerSlot: 7},
+		IncludeVictim: false,
+	}}, BuildOptions{
+		TickRate:          64,
+		KillerPreSeconds:  1,
+		KillerPostSeconds: 1,
+		RecordFPS:         60,
+		VideoPreset:       "n1",
+		RecordOutputDir:   `D:/clips/output`,
+		SkyBlackout:       false,
+		KillFeedLifetime:  4,
+	})
+	if err != nil {
+		t.Fatalf("Build sky off: %v", err)
+	}
+	assertNoAction(t, disabled.Sequences[0].Actions, "mirv_sky clouds draw 0")
+	assertNoAction(t, disabled.Sequences[0].Actions, "r_drawskybox 0")
+}
+
+func TestBuild_KillFeedLifetimeFollowsOption(t *testing.T) {
+	result, err := Build([]Item{{
+		Kill:          demo.ClipKill{ID: "k1", Tick: 200, KillerSlot: 7},
+		IncludeVictim: false,
+	}}, BuildOptions{
+		TickRate:          64,
+		KillerPreSeconds:  1,
+		KillerPostSeconds: 1,
+		RecordFPS:         60,
+		VideoPreset:       "n1",
+		RecordOutputDir:   `D:/clips/output`,
+		KillFeedLifetime:  7,
+	})
+	if err != nil {
+		t.Fatalf("Build lifetime=7: %v", err)
+	}
+	assertHasAction(t, result.Sequences[0].Actions, "mirv_deathmsg lifetime 7")
+}
+
+func TestBuild_BlockKillFeedEmitsFilterOnlyWhenEnabled(t *testing.T) {
+	enabled, err := Build([]Item{{
+		Kill:          demo.ClipKill{ID: "k1", Tick: 200, KillerSlot: 7},
+		IncludeVictim: false,
+	}}, BuildOptions{
+		TickRate:          64,
+		KillerPreSeconds:  1,
+		KillerPostSeconds: 1,
+		RecordFPS:         60,
+		VideoPreset:       "n1",
+		RecordOutputDir:   `D:/clips/output`,
+		BlockKillFeed:     true,
+		KillFeedLifetime:  4,
+	})
+	if err != nil {
+		t.Fatalf("Build block on: %v", err)
+	}
+	assertHasAction(t, enabled.Sequences[0].Actions, "mirv_deathmsg filter add block 1")
+
+	disabled, err := Build([]Item{{
+		Kill:          demo.ClipKill{ID: "k1", Tick: 200, KillerSlot: 7},
+		IncludeVictim: false,
+	}}, BuildOptions{
+		TickRate:          64,
+		KillerPreSeconds:  1,
+		KillerPostSeconds: 1,
+		RecordFPS:         60,
+		VideoPreset:       "n1",
+		RecordOutputDir:   `D:/clips/output`,
+		BlockKillFeed:     false,
+		KillFeedLifetime:  4,
+	})
+	if err != nil {
+		t.Fatalf("Build block off: %v", err)
+	}
+	assertNoAction(t, disabled.Sequences[0].Actions, "mirv_deathmsg filter add block 1")
+}
+
 func TestBuild_VoiceIndicesValueFollowsEnableSwitch(t *testing.T) {
 	enabled, err := Build([]Item{{
 		Kill:          demo.ClipKill{ID: "k1", Tick: 200, KillerSlot: 7},

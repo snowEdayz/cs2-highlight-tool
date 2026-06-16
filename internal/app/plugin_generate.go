@@ -438,6 +438,9 @@ func (a *App) generatePluginJSONInternal(
 		RecordOutputDir:    a.fixedRecordOutputDir(),
 		EnableSpecShowXray: cfg.EnableSpecShowXray,
 		HideAllUI:          cfg.HideAllUI,
+		SkyBlackout:        cfg.SkyBlackout,
+		KillFeedLifetime:   cfg.KillFeedLifetime,
+		BlockKillFeed:      cfg.BlockKillFeed,
 	})
 
 	var items []clipsjson.Item
@@ -499,6 +502,9 @@ func (a *App) generatePluginJSONInternal(
 		RecordBatchName:           recordBatchName,
 		EnableSpecShowXray:        clipSettings.EnableSpecShowXray,
 		HideAllUI:                 clipSettings.HideAllUI,
+		SkyBlackout:               clipSettings.SkyBlackout,
+		KillFeedLifetime:          clipSettings.KillFeedLifetime,
+		BlockKillFeed:             clipSettings.BlockKillFeed,
 		ForcePerPassVoiceCommands: hasVoiceOverride,
 		ForcePerPassXrayCommands:  hasSpecShowXrayOverride,
 		LaunchResolution:          cfg.LaunchResolution,

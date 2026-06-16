@@ -30,7 +30,7 @@ func povVPKPath(env producePluginTestEnvironment) string {
 
 // TestPrepareGameInfoForProduce_InjectsPluginAndPovWhenEnabled verifies that
 // when PovHudEnabled=true, prepareGameInfoForProduce injects both
-// csgo/plugin and csgo/pov in a single backup + write, and the restore path
+// csgo/plugin and csgo/pov.vpk in a single backup + write, and the restore path
 // brings gameinfo.gi back to its exact original bytes.
 func TestPrepareGameInfoForProduce_InjectsPluginAndPovWhenEnabled(t *testing.T) {
 	env := setupProducePluginTestEnvironment(t)
@@ -49,7 +49,7 @@ func TestPrepareGameInfoForProduce_InjectsPluginAndPovWhenEnabled(t *testing.T) 
 		t.Fatalf("expected csgo/plugin to be injected:\n%s", content)
 	}
 	if !producegame.HasSearchPath(content, producegame.SearchPathPOV) {
-		t.Fatalf("expected csgo/pov to be injected:\n%s", content)
+		t.Fatalf("expected csgo/pov.vpk to be injected:\n%s", content)
 	}
 	backupPath := env.gameInfoPath + produceGameInfoBackupSuffix
 	if _, err := os.Stat(backupPath); err != nil {

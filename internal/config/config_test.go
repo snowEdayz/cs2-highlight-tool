@@ -352,6 +352,83 @@ func TestLoadOrCreate_FillsClipActionSettingsForLegacyConfig(t *testing.T) {
 	}
 }
 
+func TestLoadOrCreate_LegacyConfigBackfillsRecordingFieldDefaults(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+	payload := `{
+  "killer_pre_seconds": 5
+}`
+	if err := os.WriteFile(path, []byte(payload), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := LoadOrCreate(path, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.SkyBlackout {
+		t.Fatalf("legacy config should backfill sky_blackout=true, got %v", cfg.SkyBlackout)
+	}
+	if cfg.KillFeedLifetime != DefaultKillFeedLifetime {
+		t.Fatalf("legacy config should backfill kill_feed_lifetime=%d, got %d", DefaultKillFeedLifetime, cfg.KillFeedLifetime)
+	}
+	if cfg.BlockKillFeed {
+		t.Fatalf("block_kill_feed should default to false")
+	}
+
+	saved, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(saved), "sky_blackout") || !strings.Contains(string(saved), "kill_feed_lifetime") || !strings.Contains(string(saved), "block_kill_feed") {
+		t.Fatalf("saved config should contain new recording fields, got: %s", string(saved))
+	}
+}
+
+func TestLoadOrCreate_ExplicitFalseSkyBlackoutIsPreserved(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+	payload := `{
+  "sky_blackout": false,
+  "kill_feed_lifetime": 7
+}`
+	if err := os.WriteFile(path, []byte(payload), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := LoadOrCreate(path, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.SkyBlackout {
+		t.Fatalf("explicit sky_blackout=false should be preserved, got %v", cfg.SkyBlackout)
+	}
+	if cfg.KillFeedLifetime != 7 {
+		t.Fatalf("explicit kill_feed_lifetime=7 should be preserved, got %d", cfg.KillFeedLifetime)
+	}
+}
+
+func TestApplyDefaults_KillFeedLifetimeClamp(t *testing.T) {
+	dir := t.TempDir()
+	cfg := &Config{KillFeedLifetime: 0}
+	ApplyDefaults(cfg, dir)
+	if cfg.KillFeedLifetime != MinKillFeedLifetime {
+		t.Fatalf("zero KillFeedLifetime should clamp to %d, got %d", MinKillFeedLifetime, cfg.KillFeedLifetime)
+	}
+
+	cfg = &Config{KillFeedLifetime: 999}
+	ApplyDefaults(cfg, dir)
+	if cfg.KillFeedLifetime != MaxKillFeedLifetime {
+		t.Fatalf("large KillFeedLifetime should clamp to %d, got %d", MaxKillFeedLifetime, cfg.KillFeedLifetime)
+	}
+
+	cfg = &Config{KillFeedLifetime: 5}
+	ApplyDefaults(cfg, dir)
+	if cfg.KillFeedLifetime != 5 {
+		t.Fatalf("valid KillFeedLifetime should be preserved, got %d", cfg.KillFeedLifetime)
+	}
+}
+
 func TestResolveClipActionSettings_RequiresBothEnableFlags(t *testing.T) {
 	cfg := &Config{
 		ClipActionSettings: &ClipActionSettings{

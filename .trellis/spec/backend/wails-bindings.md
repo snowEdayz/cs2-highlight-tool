@@ -355,8 +355,8 @@ launch_resolution: "16:9" | "4:3" | "4:3_1280x960";
 
 - `launch_resolution` allowed values:
   - `16:9`: launch without explicit 4:3 width/height override.
-  - `4:3`: launch with `-w 1440 -h 1080`.
-  - `4:3_1280x960`: launch with `-w 1280 -h 960`.
+  - `4:3`: launch with `-w 1440 -h 1080`; recording output is tagged with FFmpeg `-aspect 16:9` for stretched playback.
+  - `4:3_1280x960`: launch with `-w 1280 -h 960`; recording output is tagged with FFmpeg `-aspect 16:9` for stretched playback.
 - Default is `4:3`.
 - Existing `4:3` config values must continue to mean `1440x1080`; do not repurpose this value for lower 4:3 resolutions.
 - Frontend option labels are i18n keys under `main.settings.*`; per frontend rules, new labels are added to `zh-CN.json` only.
@@ -371,6 +371,7 @@ launch_resolution: "16:9" | "4:3" | "4:3_1280x960";
 
 - Good: selecting `4:3_1280x960` persists that exact value and launches with `-w 1280 -h 960`.
 - Base: selecting `4:3` preserves backward-compatible `-w 1440 -h 1080` behavior.
+- Base: 4:3 recording output uses display aspect metadata for 16:9 stretched playback; do not add pixel scaling unless a separate output-size feature requires it.
 - Bad: changing the meaning of `4:3` to `1280x960`, which silently alters existing user configs.
 
 ### 6. Tests Required
@@ -378,6 +379,7 @@ launch_resolution: "16:9" | "4:3" | "4:3_1280x960";
 - `internal/config`: `ApplyDefaults` preserves every supported `launch_resolution` value.
 - `internal/app`: `SaveClipSettings` and `GetClipSettings` round-trip each supported launch resolution value.
 - `internal/app`: `buildHLAECommandLine` maps `4:3` to `1440x1080`, maps `4:3_1280x960` to `1280x960`, and leaves `16:9` without 4:3 dimensions.
+- `internal/clipsjson`: generated FFmpeg recording settings include `-aspect 16:9` for `4:3` and `4:3_1280x960`, and omit it for `16:9` / empty values.
 - Frontend: `cd frontend && npm run build` must pass so the shared TypeScript union and settings options stay aligned.
 
 ### 7. Wrong vs Correct

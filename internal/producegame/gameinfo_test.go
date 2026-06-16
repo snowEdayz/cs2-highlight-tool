@@ -117,6 +117,161 @@ func TestRemovePluginSearchPathNoopWhenHealthy(t *testing.T) {
 	}
 }
 
+func TestInjectSearchPath_InjectsArbitraryPathBeforeGameCsgo(t *testing.T) {
+	content := "FileSystem\n{\n\tSearchPaths\n\t{\n\t\tGame\tcsgo\n\t}\n}\n"
+	result, ok := InjectSearchPath(content, SearchPathPOV)
+	if !ok {
+		t.Fatal("expected successful injection, got false")
+	}
+	if !strings.Contains(result, "Game\tcsgo/pov") {
+		t.Fatalf("expected injected pov search path in:\n%s", result)
+	}
+	if !strings.Contains(result, "Game\tcsgo") {
+		t.Fatalf("original Game csgo line should remain:\n%s", result)
+	}
+	idx1 := strings.Index(result, "Game\tcsgo/pov")
+	idx2 := strings.Index(result, "Game\tcsgo\n")
+	if idx1 > idx2 {
+		t.Fatalf("injected line should appear before original:\n%s", result)
+	}
+}
+
+func TestInjectSearchPath_NoopWhenAlreadyInjected(t *testing.T) {
+	content := "Game\tcsgo/pov\nGame\tcsgo\n"
+	result, ok := InjectSearchPath(content, SearchPathPOV)
+	if !ok {
+		t.Fatal("expected ok=true when already injected")
+	}
+	if result != content {
+		t.Fatalf("content should be unchanged when already injected, got:\n%s", result)
+	}
+}
+
+func TestInjectSearchPath_ReturnsFalseWhenNoInjectionPoint(t *testing.T) {
+	content := "something unrelated"
+	result, ok := InjectSearchPath(content, SearchPathPOV)
+	if ok {
+		t.Fatal("expected ok=false when no injection point")
+	}
+	if result != content {
+		t.Fatalf("content should be unchanged on failure, got:\n%s", result)
+	}
+}
+
+func TestHasSearchPathDetectsStandaloneLine(t *testing.T) {
+	tests := []struct {
+		name       string
+		searchPath string
+		content    string
+		want       bool
+	}{
+		{
+			name:       "pov tab separated",
+			searchPath: SearchPathPOV,
+			content:    "FileSystem\n{\n\t\tGame\tcsgo/pov\n\t\tGame\tcsgo\n}\n",
+			want:       true,
+		},
+		{
+			name:       "pov space separated",
+			searchPath: SearchPathPOV,
+			content:    "FileSystem\n{\n\t\tGame csgo/pov\n\t\tGame\tcsgo\n}\n",
+			want:       true,
+		},
+		{
+			name:       "pov comment only ignored",
+			searchPath: SearchPathPOV,
+			content:    "// Game\tcsgo/pov\nGame\tcsgo\n",
+			want:       false,
+		},
+		{
+			name:       "plugin present but pov absent",
+			searchPath: SearchPathPOV,
+			content:    "Game\tcsgo/plugin\nGame\tcsgo\n",
+			want:       false,
+		},
+		{
+			name:       "healthy",
+			searchPath: SearchPathPOV,
+			content:    "Game\tcsgo\n",
+			want:       false,
+		},
+		{
+			name:       "plugin still detected via generic helper",
+			searchPath: SearchPathPlugin,
+			content:    "Game\tcsgo/plugin\nGame\tcsgo\n",
+			want:       true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := HasSearchPath(tt.content, tt.searchPath); got != tt.want {
+				t.Fatalf("HasSearchPath(%q) = %v, want %v", tt.searchPath, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRemoveSearchPathRemovesOnlyMatchingEntries(t *testing.T) {
+	// Content with both plugin and pov injected: removing pov must leave plugin
+	// and the original csgo line intact.
+	content := "FileSystem\n{\n\tSearchPaths\n\t{\n\t\t// Game\tcsgo/pov\n\t\tGame\tcsgo/pov\n\t\tGame csgo/pov\n\t\tGame\tcsgo/plugin\n\t\tGame\tcsgo\n\t}\n}\n"
+
+	result, changed := RemoveSearchPath(content, SearchPathPOV)
+	if !changed {
+		t.Fatal("expected RemoveSearchPath(pov) to report changed=true")
+	}
+	if strings.Contains(result, "\t\tGame\tcsgo/pov\n") {
+		t.Fatalf("tab pov injected line should be removed:\n%s", result)
+	}
+	if strings.Contains(result, "\t\tGame csgo/pov\n") {
+		t.Fatalf("space pov injected line should be removed:\n%s", result)
+	}
+	if !strings.Contains(result, "// Game\tcsgo/pov") {
+		t.Fatalf("comment should remain:\n%s", result)
+	}
+	if !strings.Contains(result, "Game\tcsgo/plugin") {
+		t.Fatalf("plugin search path should remain when removing pov:\n%s", result)
+	}
+	if !strings.Contains(result, "Game\tcsgo") {
+		t.Fatalf("original csgo search path should remain:\n%s", result)
+	}
+}
+
+func TestRemoveSearchPathNoopWhenAbsent(t *testing.T) {
+	content := "FileSystem\n{\n\tSearchPaths\n\t{\n\t\tGame\tcsgo/plugin\n\t\tGame\tcsgo\n\t}\n}\n"
+
+	result, changed := RemoveSearchPath(content, SearchPathPOV)
+	if changed {
+		t.Fatal("expected changed=false when pov absent")
+	}
+	if result != content {
+		t.Fatalf("content should be unchanged when target absent, got:\n%s", result)
+	}
+}
+
+func TestKnownInjectedSearchPathsAreHandledByHelpers(t *testing.T) {
+	// Regression guard: every path this tool may inject can be detected and
+	// removed through the generic helpers.
+	paths := []string{SearchPathPlugin, SearchPathPOV}
+	base := "FileSystem\n{\n\tSearchPaths\n\t{\n\t\tGame\tcsgo\n\t}\n}\n"
+	for _, p := range paths {
+		injected, ok := InjectSearchPath(base, p)
+		if !ok {
+			t.Fatalf("InjectSearchPath(%q) failed", p)
+		}
+		if !HasSearchPath(injected, p) {
+			t.Fatalf("HasSearchPath(%q) should detect injected content", p)
+		}
+		removed, changed := RemoveSearchPath(injected, p)
+		if !changed {
+			t.Fatalf("RemoveSearchPath(%q) should report changed", p)
+		}
+		if HasSearchPath(removed, p) {
+			t.Fatalf("RemoveSearchPath(%q) should leave no residual", p)
+		}
+	}
+}
+
 func TestResolveGameInfoPath_FindsFileRelativeToCS2Exe(t *testing.T) {
 	root := t.TempDir()
 	cs2Exe := filepath.Join(root, "game", "bin", "win64", "cs2.exe")

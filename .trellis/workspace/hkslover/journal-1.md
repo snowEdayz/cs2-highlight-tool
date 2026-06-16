@@ -1089,3 +1089,36 @@ Added gameinfo.gi health detection and one-click repair, top bar status UI, test
 ### Next Steps
 
 - None - task complete
+
+
+## Session 33: POV gameinfo health refactor (PR1 scope)
+
+**Date**: 2026-06-16
+**Task**: POV gameinfo health refactor (PR1 scope)
+**Branch**: `main`
+
+### Summary
+
+Generalized gameinfo search-path helpers in internal/producegame to cover both csgo/plugin and csgo/pov, refactored health check + repair to iterate knownInjectedSearchPaths() symmetrically, seeded pov.vpk asset for future embed wiring, and updated the wails-bindings spec to document the closure-driven contract and asymmetric-mechanism gotcha. PR2/PR3 (POV runtime refactor, embed) deferred until PR #11 lands.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0957e39` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

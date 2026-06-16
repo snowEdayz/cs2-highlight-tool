@@ -14,6 +14,13 @@ const (
 	gameInfoHealthUnknown     = "unknown"
 )
 
+// knownInjectedSearchPaths lists every search path this tool may inject into
+// gameinfo.gi. The health check reports needs_repair when any is present as a
+// standalone entry, and RepairGameInfo removes all of them for crash-recovery.
+func knownInjectedSearchPaths() []string {
+	return []string{producegame.SearchPathPlugin, producegame.SearchPathPOV}
+}
+
 type GameInfoHealth struct {
 	Status       string `json:"status"`
 	NeedsRepair  bool   `json:"needs_repair"`
@@ -38,7 +45,15 @@ func (a *App) RepairGameInfo() (*GameInfoHealth, error) {
 	if err != nil {
 		return nil, fmt.Errorf("读取 gameinfo.gi 失败: %w", err)
 	}
-	repaired, changed := producegame.RemovePluginSearchPath(string(contentBytes))
+	// Remove every known injected search path (plugin + POV) so crash-recovery
+	// repairs residual entries left by either flow.
+	repaired := string(contentBytes)
+	changed := false
+	for _, searchPath := range knownInjectedSearchPaths() {
+		next, pathChanged := producegame.RemoveSearchPath(repaired, searchPath)
+		repaired = next
+		changed = changed || pathChanged
+	}
 	if !changed {
 		return &GameInfoHealth{
 			Status:       gameInfoHealthOK,
@@ -78,13 +93,16 @@ func (a *App) readGameInfoHealth() (*GameInfoHealth, error) {
 	if err != nil {
 		return unknownGameInfoHealth(gameInfoPath, fmt.Errorf("读取 gameinfo.gi 失败: %w", err)), nil
 	}
-	if producegame.HasPluginSearchPath(string(contentBytes)) {
-		return &GameInfoHealth{
-			Status:       gameInfoHealthNeedsRepair,
-			NeedsRepair:  true,
-			GameInfoPath: gameInfoPath,
-			Message:      "检测到 CS2 插件搜索路径残留，可能导致正常启动游戏失败",
-		}, nil
+	content := string(contentBytes)
+	for _, searchPath := range knownInjectedSearchPaths() {
+		if producegame.HasSearchPath(content, searchPath) {
+			return &GameInfoHealth{
+				Status:       gameInfoHealthNeedsRepair,
+				NeedsRepair:  true,
+				GameInfoPath: gameInfoPath,
+				Message:      "检测到 gameinfo.gi 搜索路径残留，可能导致正常启动游戏失败",
+			}, nil
+		}
 	}
 	return &GameInfoHealth{
 		Status:       gameInfoHealthOK,

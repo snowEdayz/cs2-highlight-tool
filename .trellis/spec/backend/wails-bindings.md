@@ -6,7 +6,7 @@ Concrete contracts for Go methods exposed through `internal/app.App` and consume
 
 ### 1. Scope / Trigger
 
-- Trigger: The app must recover when a previous abnormal exit leaves `Game\tcsgo/plugin` in CS2's `gameinfo.gi`.
+- Trigger: The app must recover when a previous abnormal exit leaves any of this tool's injected search paths in CS2's `gameinfo.gi`. The known injected paths are enumerated by `producegame.SearchPathPlugin` (`csgo/plugin`) and `producegame.SearchPathPOV` (`csgo/pov`); both the health check and repair iterate that list, so adding a new path only requires extending it.
 - Scope: `internal/app` Wails methods, `internal/producegame` line-level gameinfo helpers, frontend top bar health UI, and shared TypeScript types.
 - Boundary: TopBar health button -> `GetGameInfoHealth` / `RepairGameInfo` -> CS2 `gameinfo.gi` file -> returned health state.
 
@@ -43,10 +43,11 @@ export interface GameInfoHealth {
 
 - `GetGameInfoHealth` must be safe to call from the top bar on startup.
 - If the workspace is not initialized, `GetGameInfoHealth` returns `status=unknown` and must not create `config.json`.
-- `status=ok` means `gameinfo.gi` was found/read and contains no standalone `Game\tcsgo/plugin` or `Game csgo/plugin` line.
-- `status=needs_repair` means at least one standalone plugin search path line exists and can be repaired by `RepairGameInfo`.
+- `status=ok` means `gameinfo.gi` was found/read and contains no standalone `Game\t<known path>` or `Game <known path>` line for any path returned by `knownInjectedSearchPaths()` (currently `csgo/plugin` and `csgo/pov`).
+- `status=needs_repair` means at least one standalone known-injected search path line exists and can be repaired by `RepairGameInfo`.
 - `status=unknown` means config, CS2 exe, `gameinfo.gi`, or file reading could not be resolved; details go in `error`.
-- `RepairGameInfo` removes only standalone plugin search path lines, then returns the latest health state.
+- `RepairGameInfo` removes every standalone line matching any path in `knownInjectedSearchPaths()`, then returns the latest health state. Detection and repair MUST iterate the same closure — never hardcode an individual path on one side and not the other.
+- The user-facing health message is intentionally generic ("检测到 gameinfo.gi 搜索路径残留..."); do not regress to a plugin-specific string when the set may grow.
 - The normal produce flow still uses backup-based restore; repair is a stateless crash-recovery fallback, not a replacement for session backups.
 
 ### 4. Validation & Error Matrix
@@ -60,17 +61,19 @@ export interface GameInfoHealth {
 
 ### 5. Good/Base/Bad Cases
 
-- Good: Abnormal exit leaves `Game\tcsgo/plugin`; startup health returns `needs_repair`, user clicks repair, the line is removed and state becomes `ok`.
-- Base: Normal produce session still backs up `gameinfo.gi`, injects plugin search path, and restores from backup on session end.
+- Good: Abnormal exit leaves `Game\tcsgo/plugin` and/or `Game\tcsgo/pov`; startup health returns `needs_repair`, user clicks repair, every residual injected line is removed and state becomes `ok`.
+- Base: Normal produce session still backs up `gameinfo.gi`, injects the required search paths (plugin always, pov when `PovHudEnabled`), and restores from backup on session end.
 - Base: Workspace not initialized returns `unknown` without creating app data files.
 - Bad: Using `strings.Replace` globally can remove comments or unrelated text.
 - Bad: Replacing the normal backup restore path with line deletion loses exact restoration fidelity.
+- Bad: Detection and repair iterating different sets of paths — repair removes a path the detection never reports, or detection flags a path repair leaves behind.
 
 ### 6. Tests Required
 
-- `internal/producegame`: helper detects standalone tab/space plugin lines and ignores comments.
-- `internal/producegame`: helper removes only standalone plugin lines and leaves `Game\tcsgo` intact.
-- `internal/app`: `GetGameInfoHealth` reports `needs_repair` and `RepairGameInfo` repairs stale gameinfo without backup/session state.
+- `internal/producegame`: generic `HasSearchPath` / `RemoveSearchPath` / `InjectSearchPath` accept any path constant; tests must cover both `SearchPathPlugin` and `SearchPathPOV` (standalone tab/space lines detected, comments ignored, only the targeted path is touched).
+- `internal/producegame`: a regression guard asserts every entry in the known-injected set round-trips through inject -> has -> remove without residual (`TestKnownInjectedSearchPathsAreHandledByHelpers`).
+- `internal/producegame`: legacy `*PluginSearchPath` wrappers must remain as thin shims over the generic helpers so existing plugin callers compile unchanged.
+- `internal/app`: `GetGameInfoHealth` reports `needs_repair` and `RepairGameInfo` repairs stale gameinfo without backup/session state — for both `csgo/plugin` and `csgo/pov` residuals, and any future entries in `knownInjectedSearchPaths()`.
 - `internal/app`: healthy repair is idempotent.
 - `internal/app`: uninitialized workspace health check returns `unknown` and does not create `config.json`.
 - Frontend: `cd frontend && npm run build` passes for shared type and top bar usage.
@@ -80,23 +83,37 @@ export interface GameInfoHealth {
 #### Wrong
 
 ```go
+// Hardcoded path + global string replace: damages comments and unrelated text,
+// and silently misses any other injected path (e.g. csgo/pov).
 content = strings.ReplaceAll(content, "Game\tcsgo/plugin", "")
 ```
 
-This can damage comments or non-search-path text and may leave malformed blank fragments.
+```go
+// Asymmetric detection vs. repair: detection only checks one path while
+// repair removes several (or vice versa). Health state diverges from reality.
+if producegame.HasSearchPath(content, producegame.SearchPathPlugin) {
+    needsRepair = true
+}
+for _, p := range knownInjectedSearchPaths() {
+    content, _ = producegame.RemoveSearchPath(content, p)
+}
+```
 
 #### Correct
 
 ```go
-for _, line := range strings.Split(content, "\n") {
-    if isPluginSearchPathLine(line) {
-        continue
-    }
-    next = append(next, line)
+// Detection and repair iterate the same closure, so adding a path is a
+// single-line change and the two sides cannot drift.
+repaired := string(contentBytes)
+changed := false
+for _, searchPath := range knownInjectedSearchPaths() {
+    next, pathChanged := producegame.RemoveSearchPath(repaired, searchPath)
+    repaired = next
+    changed = changed || pathChanged
 }
 ```
 
-Remove only standalone search path entries and preserve unrelated file content.
+`RemoveSearchPath` itself walks the file line-by-line and only drops standalone `Game\t<path>` / `Game <path>` entries, preserving comments and unrelated content.
 
 ## Scenario: Startup FFmpeg Reinstall Probe Cancellation Contract
 

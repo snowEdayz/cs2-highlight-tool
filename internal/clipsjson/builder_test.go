@@ -441,6 +441,44 @@ func TestBuild_AppliesRecordQualityToHardwarePreset(t *testing.T) {
 	assertHasActionContaining(t, bootstrap, "-qp 10")
 }
 
+func TestBuild_AddsDisplayAspectForFourThreeLaunchResolution(t *testing.T) {
+	tests := []struct {
+		name             string
+		launchResolution string
+		wantAspect       bool
+	}{
+		{name: "4:3 1440x1080", launchResolution: "4:3", wantAspect: true},
+		{name: "4:3 1280x960", launchResolution: "4:3_1280x960", wantAspect: true},
+		{name: "16:9", launchResolution: "16:9", wantAspect: false},
+		{name: "empty", launchResolution: "", wantAspect: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := Build([]Item{{
+				Kill: demo.ClipKill{ID: "k1", Tick: 200, KillerSlot: 7},
+			}}, BuildOptions{
+				TickRate:          64,
+				KillerPreSeconds:  1,
+				KillerPostSeconds: 1,
+				RecordFPS:         60,
+				VideoPreset:       "c1",
+				RecordOutputDir:   `D:/clips/output`,
+				LaunchResolution:  tt.launchResolution,
+			})
+			if err != nil {
+				t.Fatalf("Build: %v", err)
+			}
+			bootstrap := result.Sequences[0].Actions
+			if tt.wantAspect {
+				assertHasActionContaining(t, bootstrap, "-aspect 16:9")
+				return
+			}
+			assertNoActionContaining(t, bootstrap, "-aspect 16:9")
+		})
+	}
+}
+
 func assertHasAction(t *testing.T, actions []Action, cmd string) {
 	t.Helper()
 	for _, action := range actions {
@@ -487,6 +525,15 @@ func assertHasActionContaining(t *testing.T, actions []Action, needle string) {
 		}
 	}
 	t.Fatalf("action containing %q not found in %#v", needle, actions)
+}
+
+func assertNoActionContaining(t *testing.T, actions []Action, needle string) {
+	t.Helper()
+	for _, action := range actions {
+		if strings.Contains(action.Cmd, needle) {
+			t.Fatalf("unexpected action containing %q found: %#v", needle, action)
+		}
+	}
 }
 
 func takeName(index int) string {

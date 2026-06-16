@@ -492,6 +492,7 @@ func (a *App) generatePluginJSONInternal(
 		HideAllUI:                 clipSettings.HideAllUI,
 		ForcePerPassVoiceCommands: hasVoiceOverride,
 		ForcePerPassXrayCommands:  hasSpecShowXrayOverride,
+		LaunchResolution:          cfg.LaunchResolution,
 	})
 	if err != nil {
 		return nil, nil, err

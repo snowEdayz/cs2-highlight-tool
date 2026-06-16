@@ -81,7 +81,7 @@
 - `GetClipSettings` / `SaveClipSettings` 字段约定新增：`edit_fps`（范围 `24..240`，默认 `60`）与 `edit_quality`（`standard|high|ultra`，默认 `high`）
 - `GetClipSettings` / `SaveClipSettings` 字段约定新增：`record_quality`（`standard|high|ultra`，默认 `high`；软件编码映射到 `crf`，硬件编码映射到 `qp` / `q:v`）
 - `GetClipSettings` / `SaveClipSettings` 字段约定更新：`video_preset` 取值 `auto|c1|n1|a1|i1`（默认 `auto`；`auto` 表示按 FFmpeg 探测能力自动选择）
-- `GetClipSettings` / `SaveClipSettings` 字段约定更新：`launch_resolution` 取值 `16:9|4:3|4:3_1280x960`（默认 `4:3`；`4:3` 表示 `1440x1080`，`4:3_1280x960` 表示 `1280x960`）
+- `GetClipSettings` / `SaveClipSettings` 字段约定更新：`launch_resolution` 取值 `16:9|4:3|4:3_1280x960`（默认 `4:3`；`4:3` 表示 `1440x1080`，`4:3_1280x960` 表示 `1280x960`；两种 4:3 录制输出均通过 FFmpeg `-aspect 16:9` 标记为 stretched playback）
 - `GetClipSettings` / `SaveClipSettings` 字段约定新增：`hide_all_ui`（默认 `false`；开启时生成插件 JSON bootstrap 写入 `cl_draw_only_deathnotices 1`，关闭时不写入该命令）
 - `GeneratePluginJSON`
 - `GeneratePluginJSON` 支持可选参数 `record_victim_view`（开启后按片段生成“击杀者视角 -> 被害者视角”连续序列）

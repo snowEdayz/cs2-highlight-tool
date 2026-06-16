@@ -14,6 +14,7 @@ export interface ClipSettings {
   record_output_dir: string;
   enable_spec_show_xray_zero: boolean;
   hide_all_ui: boolean;
+  pov_hud_enabled: boolean;
 }
 
 export interface OutputsStorageStats {

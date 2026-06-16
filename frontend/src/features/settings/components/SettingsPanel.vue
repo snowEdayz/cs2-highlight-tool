@@ -38,6 +38,10 @@
           <span class="setting-label">{{ t("main.settings.hide_all_ui") }}</span>
           <n-switch v-model:value="settings.hide_all_ui" />
         </div>
+        <div class="setting-row">
+          <span class="setting-label">{{ t("main.settings.pov_hud_enabled") }}</span>
+          <n-switch v-model:value="settings.pov_hud_enabled" />
+        </div>
       </n-space>
     </n-card>
 
@@ -189,6 +193,7 @@ const settings = reactive<ClipSettings>({
   record_output_dir: "",
   enable_spec_show_xray_zero: true,
   hide_all_ui: false,
+  pov_hud_enabled: false,
 });
 const outputsStats = reactive<OutputsStorageStats>({
   output_dir: "",

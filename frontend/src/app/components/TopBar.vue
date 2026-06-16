@@ -26,6 +26,49 @@
             class="locale-select"
             @update:value="setLocale"
           />
+          <n-popover
+            v-model:show="gameInfoPopoverVisible"
+            trigger="click"
+            placement="bottom-end"
+            :show-arrow="true"
+          >
+            <template #trigger>
+              <button class="health-btn" :title="t('topbar.gameinfo_health')" @click="onGameInfoHealthClick">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M14.7 6.3a4.2 4.2 0 0 0-5.2 5.2L3.8 17.2a1.8 1.8 0 0 0 0 2.6l.4.4a1.8 1.8 0 0 0 2.6 0l5.7-5.7a4.2 4.2 0 0 0 5.2-5.2l-2.8 2.8-2.9-.8-.8-2.9 3.5-2.1z"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                <span :class="['health-dot', healthDotClass]" />
+              </button>
+            </template>
+            <div class="health-popover">
+              <div class="health-popover-header">
+                <span class="health-title">{{ t("topbar.gameinfo_health") }}</span>
+                <span :class="['health-status', healthStatusClass]">{{ gameInfoStatusText }}</span>
+              </div>
+              <p class="health-message">{{ gameInfoMessage }}</p>
+              <!-- <p v-if="gameInfoPath" class="health-path">{{ gameInfoPath }}</p> -->
+              <p v-if="gameInfoError" class="health-error">{{ gameInfoError }}</p>
+              <div class="health-actions">
+                <n-button
+                  v-if="needsRepair"
+                  size="tiny"
+                  type="error"
+                  :loading="repairing"
+                  @click="repairGameInfo"
+                >
+                  {{ t("topbar.gameinfo_repair") }}
+                </n-button>
+                <n-button size="tiny" :loading="loading" @click="refreshGameInfoHealth">
+                  {{ t("topbar.gameinfo_refresh") }}
+                </n-button>
+              </div>
+            </div>
+          </n-popover>
           <button class="history-btn" :title="t('topbar.history')" @click="openHistoryDrawer">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.5" />
@@ -111,21 +154,36 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
+import { useMessage } from "naive-ui";
 import { WindowMinimise, WindowToggleMaximise, Quit } from "../../../wailsjs/runtime/runtime";
 import { useI18n } from "@/shared/i18n";
 import { useProduceHistory } from "@/features/produce/composables/useProduceHistory";
 import { useDebugSettings } from "@/shared/state/useDebugSettings";
+import { useGameInfoHealth } from "@/app/composables/useGameInfoHealth";
 import SettingsPanel from "@/features/settings/components/SettingsPanel.vue";
 import ProduceHistoryDropdown from "@/app/components/ProduceHistoryDropdown.vue";
 import { OPEN_PRODUCE_HISTORY_EVENT } from "@/shared/events";
-import { ROUTE_NAMES } from "@/app/composables/topbar-nav";
 
 const { locale, setLocale, t } = useI18n();
+const message = useMessage();
 const { debugEnabled, activateDebugByBrandClick } = useDebugSettings();
 const { historySnapshot } = useProduceHistory();
+const {
+  health: gameInfoHealth,
+  loading,
+  repairing,
+  lastError,
+  needsRepair,
+  isHealthy,
+  isUnknown,
+  refresh,
+  repair,
+} = useGameInfoHealth();
 const historyVisible = ref(false);
 const settingsVisible = ref(false);
 const donateVisible = ref(false);
+const gameInfoPopoverVisible = ref(false);
+const autoOpenedGameInfoPopover = ref(false);
 const historyDropdownRef = ref<InstanceType<typeof ProduceHistoryDropdown> | null>(null);
 
 const onOpenProduceHistory = () => {
@@ -137,8 +195,41 @@ const localeOptions = computed(() => [
   { label: t("common.locale.en"), value: "en-US" },
 ]);
 
+const healthDotClass = computed(() => {
+  if (needsRepair.value) return "health-dot--error";
+  if (isHealthy.value) return "health-dot--ok";
+  return "health-dot--unknown";
+});
+
+const healthStatusClass = computed(() => {
+  if (needsRepair.value) return "health-status--error";
+  if (isHealthy.value) return "health-status--ok";
+  return "health-status--unknown";
+});
+
+const gameInfoStatusText = computed(() => {
+  if (needsRepair.value) return t("topbar.gameinfo_status_needs_repair");
+  if (isHealthy.value) return t("topbar.gameinfo_status_ok");
+  return t("topbar.gameinfo_status_unknown");
+});
+
+const gameInfoMessage = computed(() => {
+  if (gameInfoHealth.value.message) return gameInfoHealth.value.message;
+  if (needsRepair.value) return t("topbar.gameinfo_message_needs_repair");
+  if (isHealthy.value) return t("topbar.gameinfo_message_ok");
+  return t("topbar.gameinfo_message_unknown");
+});
+
+const gameInfoPath = computed(() => gameInfoHealth.value.gameinfo_path || "");
+const gameInfoError = computed(() => lastError.value || gameInfoHealth.value.error || "");
+
 onMounted(async () => {
   window.addEventListener(OPEN_PRODUCE_HISTORY_EVENT, onOpenProduceHistory);
+  const next = await refresh();
+  if (next.needs_repair && !autoOpenedGameInfoPopover.value) {
+    autoOpenedGameInfoPopover.value = true;
+    gameInfoPopoverVisible.value = true;
+  }
 });
 
 onBeforeUnmount(() => {
@@ -147,6 +238,29 @@ onBeforeUnmount(() => {
 
 function openSettings() {
   settingsVisible.value = true;
+}
+
+async function onGameInfoHealthClick() {
+  if (isUnknown.value || gameInfoError.value) {
+    await refreshGameInfoHealth();
+  }
+}
+
+async function refreshGameInfoHealth() {
+  await refresh();
+}
+
+async function repairGameInfo() {
+  try {
+    const next = await repair();
+    if (!next.needs_repair) {
+      gameInfoPopoverVisible.value = false;
+      message.success(t("topbar.gameinfo_repair_success"));
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    message.error(t("topbar.gameinfo_repair_failed", { error: errorMessage }));
+  }
 }
 
 async function openHistoryDrawer() {
@@ -226,6 +340,7 @@ function onHistoryExported() {
   width: 100px;
 }
 
+.health-btn,
 .history-btn,
 .settings-btn {
   align-items: center;
@@ -242,12 +357,120 @@ function onHistoryExported() {
   width: 28px;
 }
 
+.health-btn {
+  position: relative;
+}
+
+.health-dot {
+  border: 1px solid #111312;
+  border-radius: 50%;
+  bottom: 4px;
+  height: 7px;
+  position: absolute;
+  right: 5px;
+  width: 7px;
+}
+
+.health-dot--ok {
+  background: #2f9462;
+}
+
+.health-dot--error {
+  background: #c95d5d;
+  box-shadow: 0 0 8px rgba(201, 93, 93, 0.5);
+}
+
+.health-dot--unknown {
+  background: #777f7a;
+}
+
+.health-popover {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 320px;
+  min-width: 260px;
+}
+
+.health-popover-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.health-title {
+  color: #edf1ee;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.health-status {
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 1;
+  padding: 4px 7px;
+  white-space: nowrap;
+}
+
+.health-status--ok {
+  background: rgba(47, 148, 98, 0.16);
+  color: #6fd69f;
+}
+
+.health-status--error {
+  background: rgba(201, 93, 93, 0.16);
+  color: #f09797;
+}
+
+.health-status--unknown {
+  background: rgba(141, 152, 144, 0.16);
+  color: #aeb8b0;
+}
+
+.health-message {
+  color: #c9d3cb;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.health-path {
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  color: #8d9890;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  margin: 0;
+  max-width: 300px;
+  overflow-wrap: anywhere;
+  padding: 6px 7px;
+}
+
+.health-error {
+  color: #f09797;
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.health-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.health-btn:hover,
 .history-btn:hover,
 .settings-btn:hover {
   background: rgba(255, 255, 255, 0.08);
   color: #edf1ee;
 }
 
+.health-btn:active,
 .history-btn:active,
 .settings-btn:active {
   background: rgba(255, 255, 255, 0.12);

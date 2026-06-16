@@ -230,6 +230,93 @@ func TestForceRestoreProduceEnvironmentForProduce_RestoresGameInfoAndPluginDLL(t
 	}
 }
 
+func TestGetGameInfoHealthAndRepairGameInfoWithoutBackup(t *testing.T) {
+	env := setupProducePluginTestEnvironment(t)
+	app := &App{exeDir: env.exeDir, dataDir: env.exeDir}
+	stale := strings.Replace(env.originalGameInfo, "Game\tcsgo", "Game\tcsgo/plugin\n\t\tGame\tcsgo", 1)
+	if err := os.WriteFile(env.gameInfoPath, []byte(stale), 0644); err != nil {
+		t.Fatalf("write stale gameinfo: %v", err)
+	}
+
+	health, err := app.GetGameInfoHealth()
+	if err != nil {
+		t.Fatalf("GetGameInfoHealth: %v", err)
+	}
+	if health.Status != "needs_repair" {
+		t.Fatalf("health status = %q, want needs_repair", health.Status)
+	}
+	if !health.NeedsRepair {
+		t.Fatal("expected NeedsRepair=true")
+	}
+	if health.GameInfoPath != env.gameInfoPath {
+		t.Fatalf("gameinfo path = %q, want %q", health.GameInfoPath, env.gameInfoPath)
+	}
+
+	repaired, err := app.RepairGameInfo()
+	if err != nil {
+		t.Fatalf("RepairGameInfo: %v", err)
+	}
+	if repaired.Status != "ok" {
+		t.Fatalf("repaired status = %q, want ok", repaired.Status)
+	}
+	if repaired.NeedsRepair {
+		t.Fatal("expected NeedsRepair=false after repair")
+	}
+	contentBytes, err := os.ReadFile(env.gameInfoPath)
+	if err != nil {
+		t.Fatalf("read repaired gameinfo: %v", err)
+	}
+	content := string(contentBytes)
+	if strings.Contains(content, "Game\tcsgo/plugin") {
+		t.Fatalf("plugin search path should be removed:\n%s", content)
+	}
+	if !strings.Contains(content, "Game\tcsgo") {
+		t.Fatalf("original csgo search path should remain:\n%s", content)
+	}
+}
+
+func TestRepairGameInfoNoopWhenHealthy(t *testing.T) {
+	env := setupProducePluginTestEnvironment(t)
+	app := &App{exeDir: env.exeDir, dataDir: env.exeDir}
+
+	health, err := app.RepairGameInfo()
+	if err != nil {
+		t.Fatalf("RepairGameInfo: %v", err)
+	}
+	if health.Status != "ok" {
+		t.Fatalf("health status = %q, want ok", health.Status)
+	}
+	if health.NeedsRepair {
+		t.Fatal("expected healthy gameinfo to need no repair")
+	}
+	contentBytes, err := os.ReadFile(env.gameInfoPath)
+	if err != nil {
+		t.Fatalf("read gameinfo: %v", err)
+	}
+	if string(contentBytes) != env.originalGameInfo {
+		t.Fatalf("healthy gameinfo should be unchanged:\n%s", string(contentBytes))
+	}
+}
+
+func TestGetGameInfoHealth_UninitializedDoesNotCreateConfig(t *testing.T) {
+	exeDir := t.TempDir()
+	app := &App{exeDir: exeDir}
+
+	health, err := app.GetGameInfoHealth()
+	if err != nil {
+		t.Fatalf("GetGameInfoHealth: %v", err)
+	}
+	if health.Status != "unknown" {
+		t.Fatalf("health status = %q, want unknown", health.Status)
+	}
+	if health.NeedsRepair {
+		t.Fatal("uninitialized workspace should not need repair")
+	}
+	if _, err := os.Stat(filepath.Join(exeDir, "config.json")); !os.IsNotExist(err) {
+		t.Fatalf("GetGameInfoHealth should not create config.json before workspace init, stat err=%v", err)
+	}
+}
+
 func TestGeneratePluginJSONBatchAndLaunchHLAE_PluginPrepareFailureRollsBackGameInfo(t *testing.T) {
 	exeDir := t.TempDir()
 	cs2Root := t.TempDir()

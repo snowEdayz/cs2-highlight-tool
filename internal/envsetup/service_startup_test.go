@@ -214,6 +214,107 @@ func TestRunStartupChecks_CS2ReadyWhenAutoDetectAvailable(t *testing.T) {
 	}
 }
 
+func TestRunStartupChecks_DefersComponentTasksWhenSelfUpdateAvailable(t *testing.T) {
+	setPreferredReleaseSourceForTest(t, func() (string, string, error) {
+		return "github", "CN", nil
+	})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"project":{"id":"cs2-highlight-tool-v2","name":"cs2-highlight-tool-v2"},
+			"dependencies":{
+				"app":{
+					"name":"app",
+					"repo":"hkslover/cs2-highlight-tool",
+					"latest_tag":"v2.0.0",
+					"latest":{
+						"tag_name":"v2.0.0",
+						"assets":[{
+							"name":"cs2-highlight-tool-windows-amd64.exe",
+							"url":"https://example.test/cs2-highlight-tool.exe",
+							"github_url":"https://github.com/hkslover/cs2-highlight-tool/releases/download/v2.0.0/cs2-highlight-tool-windows-amd64.exe"
+						}]
+					}
+				},
+				"advancedfx":{
+					"name":"advancedfx",
+					"repo":"advancedfx/advancedfx",
+					"latest_tag":"v2.0.0",
+					"latest":{
+						"tag_name":"v2.0.0",
+						"assets":[{
+							"name":"hlae_2_0_0.zip",
+							"url":"https://example.test/hlae.zip",
+							"github_url":"https://github.com/advancedfx/advancedfx/releases/download/v2.0.0/hlae_2_0_0.zip"
+						}]
+					}
+				},
+				"cs2-server-plugin":{
+					"name":"cs2-server-plugin",
+					"repo":"hkslover/cs2-server-plugin",
+					"latest_tag":"v0.0.9",
+					"latest":{
+						"tag_name":"v0.0.9",
+						"assets":[{
+							"name":"cs2-server-plugin.zip",
+							"url":"https://example.test/plugin.zip",
+							"github_url":"https://github.com/hkslover/cs2-server-plugin/releases/download/v0.0.9/cs2-server-plugin.zip"
+						}]
+					}
+				}
+			}
+		}`))
+	}))
+	defer server.Close()
+	t.Setenv("CS2_RELEASE_API_URL", server.URL)
+
+	exeDir := t.TempDir()
+	_ = writeLocalHLAEForTest(t, filepath.Join(exeDir, "hlae"), `<changelog><version>2.0.0</version></changelog>`)
+	_ = writeLocalPluginForTest(t, filepath.Join(exeDir, "plugin"), `<changelog><version>0.0.9</version></changelog>`)
+
+	ffmpegDir := filepath.Join(exeDir, "ffmpeg", "bin")
+	if err := os.MkdirAll(ffmpegDir, 0o755); err != nil {
+		t.Fatalf("mkdir ffmpeg dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(ffmpegDir, "ffmpeg.exe"), []byte("stub"), 0o755); err != nil {
+		t.Fatalf("write ffmpeg exe: %v", err)
+	}
+
+	detected := filepath.Join(exeDir, "steamlib", "steamapps", "common", "Counter-Strike 2", "game", "bin", "win64", "cs2.exe")
+	if err := os.MkdirAll(filepath.Dir(detected), 0o755); err != nil {
+		t.Fatalf("mkdir detected cs2 dir: %v", err)
+	}
+	if err := os.WriteFile(detected, []byte("stub"), 0o755); err != nil {
+		t.Fatalf("write detected cs2 exe: %v", err)
+	}
+	setDetectCS2ExeFromSteamForTest(t, func() (string, error) {
+		return detected, nil
+	})
+
+	svc := New(exeDir, "1.0.0")
+	svc.Startup(nil)
+
+	_ = svc.RunStartupChecks()
+	state := svc.GetStartupState()
+	if state.Running {
+		t.Fatal("state.running should be false after startup checks return")
+	}
+	if state.CanEnterMain {
+		t.Fatal("can_enter_main should remain false when self update is available")
+	}
+	if !state.SelfUpdate.Available {
+		t.Fatal("self_update.available should be true")
+	}
+	if state.SelfUpdate.Status != statusNeedsAction {
+		t.Fatalf("self_update.status = %q, want %q", state.SelfUpdate.Status, statusNeedsAction)
+	}
+	for _, step := range state.Steps {
+		if step.Status != statusPending {
+			t.Fatalf("component %s status = %q, want %q", step.ID, step.Status, statusPending)
+		}
+	}
+}
+
 func TestReinstallStartupComponent_ValidateGuard(t *testing.T) {
 	setPreferredReleaseSourceForTest(t, func() (string, string, error) {
 		return "github", "CN", nil

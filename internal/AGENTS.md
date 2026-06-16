@@ -8,6 +8,8 @@
 - Must：保持以下状态值语义一致：`pending` `checking` `downloading` `installing` `ready` `warning` `failed` `needs_action`。
 - Must：保持以下阶段值语义一致：`detecting_source` `waiting_source` `running_tasks` `ready`。
 - Must：`StartupState` 字段语义保持稳定，新增字段需保证前端兼容并更新规则文档。
+- Must：统一 Release 快照获取完成后先检查软件自身更新；若 `SelfUpdate.Available=true` 且状态为 `needs_action`，不得启动组件检查/下载/安装任务，组件步骤应保持未启动语义。
+- Must：软件更新检查失败保持非致命语义，可继续组件环境检查；只有确认发现新版本时才阻断组件流程。
 - Must：`StartupState.ads[]` 仅承载 `placement=main_steps_top_banner` 的有效 Sponsored Card 广告数据（`click_url/sponsor/title/rich_html/image_url/image_alt`），广告解析失败不得阻塞启动主流程。
 - Must：HLAE 的 `LocalVersion` 必须来自安装目录 `changelog.xml` 的首个 `<version>`；不得以配置文件持久化版本号作为真值来源。
 - Must：插件 DLL 的 `LocalVersion` 必须来自安装目录 `changelog.xml` 的首个 `<version>`；不得以配置文件持久化版本号作为真值来源。

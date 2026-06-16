@@ -27,6 +27,7 @@
 - Must：保持 `StartupState` / `ProgressMessage` 字段与后端模型语义一致。
 - Must：`StartupState.ads[]` 仅渲染 `placement=main_steps_top_banner` Sponsored Card 广告位（使用 `click_url/sponsor/title/rich_html/image_url/image_alt`），不得在导入方式卡片区混入广告入口。
 - Must：消费 `GetProduceHistorySnapshot` 时保持 `ProduceHistoryItem.history_type`（`produce_clip|edited_video`）与 `source_label` 的向后兼容（缺省按 `produce_clip` 处理）。
+- Must：`gameinfo.gi` 健康状态以 `GetGameInfoHealth` / `RepairGameInfo` 返回值为来源；前端不得自行读取或推断 `gameinfo.gi` 文件内容。
 - Must：`ClipSettings.video_preset` 需与后端保持一致，允许值 `auto|c1|n1|a1|i1`（`auto` 代表使用后端探测到的 FFmpeg 能力自动选择编码）。
 - Must：`ClipSettings.record_quality` 需与后端保持一致，允许值 `standard|high|ultra`（默认 `high`；软件编码映射到 CRF，硬件编码映射到 QP / `q:v`）。
 - Must：`ClipSettings.launch_resolution` 需与后端保持一致，允许值 `16:9|4:3|4:3_1280x960`（`4:3` 代表 `1440x1080`，`4:3_1280x960` 代表 `1280x960`）。

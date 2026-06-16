@@ -50,7 +50,7 @@ func (a *App) prepareGameInfoForProduce() error {
 		return fmt.Errorf("读取 gameinfo.gi 失败: %w", err)
 	}
 	content := string(contentBytes)
-	if strings.Contains(content, "Game\tcsgo/plugin") {
+	if producegame.HasPluginSearchPath(content) {
 		a.produceStateMu.Lock()
 		a.produceState.gameInfo = gameInfoSessionState{
 			gameInfoPath: gameInfoPath,

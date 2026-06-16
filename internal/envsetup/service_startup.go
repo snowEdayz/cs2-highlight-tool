@@ -188,6 +188,21 @@ func (s *Service) runTasksDefault(source DownloadSource) {
 	s.mu.Unlock()
 	s.emitState()
 
+	s.checkSelfUpdate(source)
+	s.mu.Lock()
+	selfUpdateAvailable := s.state.SelfUpdate.Available && s.state.SelfUpdate.Status == statusNeedsAction
+	s.mu.Unlock()
+	if selfUpdateAvailable {
+		s.emitLogWithFields("warning", "检测到软件新版本，组件检查将在软件更新后继续", logFields{
+			Component: "startup",
+			Stage:     "tasks",
+			Action:    "defer_components_for_self_update",
+			Source:    string(source),
+		})
+		s.refreshCanEnterMain()
+		return
+	}
+
 	jobs := []struct {
 		id string
 		fn func() error
@@ -199,12 +214,6 @@ func (s *Service) runTasksDefault(source DownloadSource) {
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		s.checkSelfUpdate(source)
-	}()
-
 	for _, job := range jobs {
 		job := job
 		wg.Add(1)

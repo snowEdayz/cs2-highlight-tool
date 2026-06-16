@@ -4,7 +4,7 @@
 
 ## 项目概览
 - 技术栈：`Wails v2 + Go + Vue 3 + TypeScript + Naive UI + vue-router@4`。
-- 目标：启动时完成环境准备（统一更新源检查、组件检查/安装、自更新检测），成功后进入主页面。
+- 目标：启动时完成环境准备（统一更新源检查、自更新检测、组件检查/安装），成功后进入主页面。
 - 目录分层：
 - 根级规则：本文件（全局规则）。
 - 子目录规则：`internal/AGENTS.md`、`frontend/AGENTS.md`（更具体，优先级更高）。
@@ -102,6 +102,8 @@
 - `GetDemoStorageStats`（递归统计 `<dataDir>/demo`，返回 `demo_dir`、Demo 文件数量 `demo_count`、所有文件总字节数 `total_size_bytes`）
 - `OpenDemoDirectory`（确保 `<dataDir>/demo` 存在并打开目录位置）
 - `ClearDemoDirectory`（删除 `<dataDir>/demo` 下所有直接子项，保留 demo 目录本身，并返回清理后的统计）
+- `GetGameInfoHealth`（检测 CS2 `gameinfo.gi` 是否残留 `Game\tcsgo/plugin`；返回 `status=ok|needs_repair|unknown`、`needs_repair`、`gameinfo_path`、`message`、`error`）
+- `RepairGameInfo`（不依赖会话备份，删除 `gameinfo.gi` 中独立成行的 `Game\tcsgo/plugin` / `Game csgo/plugin` 残留并返回最新健康状态）
 - `GetProduceHistorySnapshot` 返回的 `items[]` 新增可选字段：`history_type=produce_clip|edited_video`、`source_label`（用于区分录制片段与剪辑成片来源）
 - `config.json` 新增持久化字段：`fivee_player_name`（5E 导入页查询 ID 缓存，保存 5E domain ID）
 - `config.json` 新增持久化字段：`record_quality`（录制质量，取值 `standard|high|ultra`，默认 `high`）
@@ -122,6 +124,9 @@
 - `steps[].local_version`（`id=plugin`）由安装目录 `changelog.xml` 的首个 `<version>` 解析，不以 `config.json` 持久化字段为准。
 - 统一更新源选择约定：
 - 启动时实时 GeoIP 获取 `country_code`；统一更新源固定为 `github`（地区结果不持久化）。
+- 自更新优先约定：
+- 启动时统一 Release 快照获取完成后，必须先检查软件自身版本；若 `self_update.available=true`，不得启动 HLAE、插件、FFmpeg、CS2 组件检查/安装流程，用户必须先完成软件更新。
+- 自更新检查失败不等同于发现新版本，保持非致命语义并继续后续组件检查。
 - 组件下载回退顺序：`country_code=CN` 时 `url -> mirror_url`；非 CN 时仅 `github_url`；GeoIP 检测失败或 `country_code` 为空时默认 `url -> mirror_url`；失败后直接报错（不再做 gh-proxy 终极兜底）。
 
 ## 变更前检查

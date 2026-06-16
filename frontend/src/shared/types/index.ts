@@ -10,6 +10,11 @@ export type {
 } from "./startup";
 
 export type {
+  GameInfoHealth,
+  GameInfoHealthStatus,
+} from "./app";
+
+export type {
   DemoMetadata,
   DemoPlayerInfo,
   DemoClipPlayer,

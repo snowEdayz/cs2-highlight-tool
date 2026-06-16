@@ -123,13 +123,13 @@ func TestInjectSearchPath_InjectsArbitraryPathBeforeGameCsgo(t *testing.T) {
 	if !ok {
 		t.Fatal("expected successful injection, got false")
 	}
-	if !strings.Contains(result, "Game\tcsgo/pov") {
+	if !strings.Contains(result, "Game\tcsgo/pov.vpk") {
 		t.Fatalf("expected injected pov search path in:\n%s", result)
 	}
 	if !strings.Contains(result, "Game\tcsgo") {
 		t.Fatalf("original Game csgo line should remain:\n%s", result)
 	}
-	idx1 := strings.Index(result, "Game\tcsgo/pov")
+	idx1 := strings.Index(result, "Game\tcsgo/pov.vpk")
 	idx2 := strings.Index(result, "Game\tcsgo\n")
 	if idx1 > idx2 {
 		t.Fatalf("injected line should appear before original:\n%s", result)
@@ -137,7 +137,7 @@ func TestInjectSearchPath_InjectsArbitraryPathBeforeGameCsgo(t *testing.T) {
 }
 
 func TestInjectSearchPath_NoopWhenAlreadyInjected(t *testing.T) {
-	content := "Game\tcsgo/pov\nGame\tcsgo\n"
+	content := "Game\tcsgo/pov.vpk\nGame\tcsgo\n"
 	result, ok := InjectSearchPath(content, SearchPathPOV)
 	if !ok {
 		t.Fatal("expected ok=true when already injected")
@@ -168,19 +168,19 @@ func TestHasSearchPathDetectsStandaloneLine(t *testing.T) {
 		{
 			name:       "pov tab separated",
 			searchPath: SearchPathPOV,
-			content:    "FileSystem\n{\n\t\tGame\tcsgo/pov\n\t\tGame\tcsgo\n}\n",
+			content:    "FileSystem\n{\n\t\tGame\tcsgo/pov.vpk\n\t\tGame\tcsgo\n}\n",
 			want:       true,
 		},
 		{
 			name:       "pov space separated",
 			searchPath: SearchPathPOV,
-			content:    "FileSystem\n{\n\t\tGame csgo/pov\n\t\tGame\tcsgo\n}\n",
+			content:    "FileSystem\n{\n\t\tGame csgo/pov.vpk\n\t\tGame\tcsgo\n}\n",
 			want:       true,
 		},
 		{
 			name:       "pov comment only ignored",
 			searchPath: SearchPathPOV,
-			content:    "// Game\tcsgo/pov\nGame\tcsgo\n",
+			content:    "// Game\tcsgo/pov.vpk\nGame\tcsgo\n",
 			want:       false,
 		},
 		{
@@ -214,19 +214,19 @@ func TestHasSearchPathDetectsStandaloneLine(t *testing.T) {
 func TestRemoveSearchPathRemovesOnlyMatchingEntries(t *testing.T) {
 	// Content with both plugin and pov injected: removing pov must leave plugin
 	// and the original csgo line intact.
-	content := "FileSystem\n{\n\tSearchPaths\n\t{\n\t\t// Game\tcsgo/pov\n\t\tGame\tcsgo/pov\n\t\tGame csgo/pov\n\t\tGame\tcsgo/plugin\n\t\tGame\tcsgo\n\t}\n}\n"
+	content := "FileSystem\n{\n\tSearchPaths\n\t{\n\t\t// Game\tcsgo/pov.vpk\n\t\tGame\tcsgo/pov.vpk\n\t\tGame csgo/pov.vpk\n\t\tGame\tcsgo/plugin\n\t\tGame\tcsgo\n\t}\n}\n"
 
 	result, changed := RemoveSearchPath(content, SearchPathPOV)
 	if !changed {
 		t.Fatal("expected RemoveSearchPath(pov) to report changed=true")
 	}
-	if strings.Contains(result, "\t\tGame\tcsgo/pov\n") {
+	if strings.Contains(result, "\t\tGame\tcsgo/pov.vpk\n") {
 		t.Fatalf("tab pov injected line should be removed:\n%s", result)
 	}
-	if strings.Contains(result, "\t\tGame csgo/pov\n") {
+	if strings.Contains(result, "\t\tGame csgo/pov.vpk\n") {
 		t.Fatalf("space pov injected line should be removed:\n%s", result)
 	}
-	if !strings.Contains(result, "// Game\tcsgo/pov") {
+	if !strings.Contains(result, "// Game\tcsgo/pov.vpk") {
 		t.Fatalf("comment should remain:\n%s", result)
 	}
 	if !strings.Contains(result, "Game\tcsgo/plugin") {

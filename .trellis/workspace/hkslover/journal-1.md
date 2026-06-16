@@ -1122,3 +1122,36 @@ Generalized gameinfo search-path helpers in internal/producegame to cover both c
 ### Next Steps
 
 - None - task complete
+
+
+## Session 34: POV HUD recording MVP (embedded vpk + gameinfo 单出口)
+
+**Date**: 2026-06-16
+**Task**: POV HUD recording MVP (embedded vpk + gameinfo 单出口)
+**Branch**: `main`
+
+### Summary
+
+Implemented POV HUD recording end-to-end: PovHudEnabled toggle through Config/ClipSettings/SettingsPanel switch; pov.vpk embedded via go:embed; prepareGameInfoForProduce extended to a multi-path injection with single .cs2ht_produce.bak backup; preparePovForProduce/forceRestorePovForProduce use vpkInstalled to protect any user-placed pov.vpk and never introduce a .cs2ht_pov.bak; launch sequence and restore order (pluginDLL → vpk → gameinfo) wired in plugin_generate.go; new POV HUD Recording Contract scenario added to wails-bindings.md.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c802b1a` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

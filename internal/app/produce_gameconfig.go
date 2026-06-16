@@ -32,6 +32,16 @@ type pluginDLLSessionState struct {
 	pluginDirCreated bool
 }
 
+// povSessionState tracks POV HUD vpk file lifecycle for a single produce session.
+// Per Decision D3 in the POV HUD recording PRD, we never introduce a `.cs2ht_pov.bak`
+// backup file: if csgo/pov.vpk already exists when prepare runs we leave the user's
+// file untouched (vpkInstalled=false) and never touch it on restore. Only files we
+// wrote ourselves (vpkInstalled=true) are removed during restore.
+type povSessionState struct {
+	vpkPath      string
+	vpkInstalled bool
+}
+
 func (a *App) prepareGameInfoForProduce() error {
 	cfg, err := config.LoadOrCreate(a.configPath(), a.dataRoot())
 	if err != nil {
@@ -50,7 +60,24 @@ func (a *App) prepareGameInfoForProduce() error {
 		return fmt.Errorf("读取 gameinfo.gi 失败: %w", err)
 	}
 	content := string(contentBytes)
-	if producegame.HasPluginSearchPath(content) {
+
+	// Build the set of search paths to inject in this session. Plugin is always
+	// required; POV is added only when PovHudEnabled. The same path set drives
+	// both the early-return check and the injection loop so the two sides cannot
+	// diverge.
+	targetPaths := []string{producegame.SearchPathPlugin}
+	if cfg.PovHudEnabled {
+		targetPaths = append(targetPaths, producegame.SearchPathPOV)
+	}
+
+	allPresent := true
+	for _, p := range targetPaths {
+		if !producegame.HasSearchPath(content, p) {
+			allPresent = false
+			break
+		}
+	}
+	if allPresent {
 		a.produceStateMu.Lock()
 		a.produceState.gameInfo = gameInfoSessionState{
 			gameInfoPath: gameInfoPath,
@@ -60,9 +87,14 @@ func (a *App) prepareGameInfoForProduce() error {
 		a.produceStateMu.Unlock()
 		return nil
 	}
-	injected, ok := producegame.InjectPluginSearchPath(content)
-	if !ok {
-		return fmt.Errorf("无法在 gameinfo.gi 中找到可注入位置")
+
+	injected := content
+	for _, p := range targetPaths {
+		next, ok := producegame.InjectSearchPath(injected, p)
+		if !ok {
+			return fmt.Errorf("无法在 gameinfo.gi 中找到可注入位置")
+		}
+		injected = next
 	}
 	backupPath := gameInfoPath + produceGameInfoBackupSuffix
 	if err := copyFile(gameInfoPath, backupPath); err != nil {
@@ -76,6 +108,69 @@ func (a *App) prepareGameInfoForProduce() error {
 		gameInfoPath: gameInfoPath,
 		backupPath:   backupPath,
 		modified:     true,
+	}
+	a.produceStateMu.Unlock()
+	return nil
+}
+
+// preparePovForProduce drops the embedded pov.vpk into csgo/pov.vpk when the
+// POV HUD toggle is enabled. Per Decision D3 in the POV HUD recording PRD, an
+// existing pov.vpk file is left strictly alone (sourcing the user's own bytes),
+// and only files we write ourselves are removed on restore — there is no
+// .cs2ht_pov.bak. Callers must invoke forceRestoreProduceEnvironmentForProduce
+// on failure to roll back any earlier gameinfo / plugin-DLL preparation.
+func (a *App) preparePovForProduce() error {
+	cfg, err := config.LoadOrCreate(a.configPath(), a.dataRoot())
+	if err != nil {
+		return err
+	}
+	if !cfg.PovHudEnabled {
+		// Toggle off — leave POV session state empty.
+		return nil
+	}
+	cs2Exe, err := resolveCS2ExeForLaunch(cfg)
+	if err != nil {
+		return err
+	}
+	gameInfoPath := ""
+	a.produceStateMu.Lock()
+	gameInfoPath = strings.TrimSpace(a.produceState.gameInfo.gameInfoPath)
+	a.produceStateMu.Unlock()
+	if gameInfoPath == "" {
+		gameInfoPath, err = producegame.ResolveGameInfoPath(cs2Exe, config.CleanPath(cfg.CS2Dir))
+		if err != nil {
+			return err
+		}
+	}
+	csgoDir := filepath.Dir(gameInfoPath)
+	vpkPath := filepath.Join(csgoDir, "pov.vpk")
+
+	if info, statErr := os.Stat(vpkPath); statErr == nil {
+		if info.IsDir() {
+			return fmt.Errorf("POV vpk 目标路径被目录占用: %s", vpkPath)
+		}
+		// User-supplied (or pre-existing) vpk — do not touch.
+		a.produceStateMu.Lock()
+		a.produceState.pov = povSessionState{
+			vpkPath:      vpkPath,
+			vpkInstalled: false,
+		}
+		a.produceStateMu.Unlock()
+		return nil
+	} else if !os.IsNotExist(statErr) {
+		return fmt.Errorf("读取 POV vpk 失败: %w", statErr)
+	}
+
+	if len(producegame.PovVPK) == 0 {
+		return fmt.Errorf("POV vpk 资源为空，无法投放")
+	}
+	if err := os.WriteFile(vpkPath, producegame.PovVPK, 0644); err != nil {
+		return fmt.Errorf("写入 POV vpk 失败: %w", err)
+	}
+	a.produceStateMu.Lock()
+	a.produceState.pov = povSessionState{
+		vpkPath:      vpkPath,
+		vpkInstalled: true,
 	}
 	a.produceStateMu.Unlock()
 	return nil
@@ -270,10 +365,30 @@ func (a *App) forceRestorePluginDLLForProduce() error {
 	return nil
 }
 
+// forceRestorePovForProduce deletes csgo/pov.vpk only when we installed it
+// ourselves in this session. Per D3, a pre-existing user file is never touched.
+func (a *App) forceRestorePovForProduce() error {
+	a.produceStateMu.Lock()
+	defer a.produceStateMu.Unlock()
+	state := a.produceState.pov
+	if !state.vpkInstalled || strings.TrimSpace(state.vpkPath) == "" {
+		a.produceState.pov = povSessionState{}
+		return nil
+	}
+	if err := os.Remove(state.vpkPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("移除 POV vpk 失败: %w", err)
+	}
+	a.produceState.pov = povSessionState{}
+	return nil
+}
+
 func (a *App) forceRestoreProduceEnvironmentForProduce() error {
 	var restoreErr error
 	if err := a.forceRestorePluginDLLForProduce(); err != nil {
 		restoreErr = errors.Join(restoreErr, fmt.Errorf("恢复插件 DLL 失败: %w", err))
+	}
+	if err := a.forceRestorePovForProduce(); err != nil {
+		restoreErr = errors.Join(restoreErr, fmt.Errorf("恢复 POV vpk 失败: %w", err))
 	}
 	if err := a.forceRestoreGameInfoForProduce(); err != nil {
 		restoreErr = errors.Join(restoreErr, fmt.Errorf("恢复 gameinfo 失败: %w", err))

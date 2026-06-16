@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 33
+- **Total Sessions**: 34
 - **Last Active**: 2026-06-16
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1124 | Active |
+| `journal-1.md` | ~1157 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 34 | 2026-06-16 | POV HUD recording MVP (embedded vpk + gameinfo 单出口) | `c802b1a` | `main` |
 | 33 | 2026-06-16 | POV gameinfo health refactor (PR1 scope) | `0957e39` | `main` |
 | 32 | 2026-06-16 | Gameinfo health repair | `921d272`, `0384408` | `main` |
 | 31 | 2026-06-04 | Gate startup self-update flow | `b3fe33f`, `9073b17` | `main` |

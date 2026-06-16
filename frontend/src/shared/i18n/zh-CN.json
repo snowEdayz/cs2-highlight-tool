@@ -306,6 +306,7 @@
       "record_output_dir_placeholder": "例如: D:/cs2/outputs",
       "enable_spec_show_xray_zero": "关闭 X 光",
       "hide_all_ui": "隐藏所有 UI",
+      "pov_hud_enabled": "启用 POV HUD",
       "outputs_video_count": "视频数量",
       "demo_count": "Dem数量",
       "outputs_total_size": "占用空间",

@@ -56,7 +56,7 @@ const SearchPathPlugin = "csgo/plugin"
 
 // SearchPathPOV is the POV HUD (pov.vpk) search path injected into gameinfo.gi
 // when the user enables POV HUD mode for recording.
-const SearchPathPOV = "csgo/pov"
+const SearchPathPOV = "csgo/pov.vpk"
 
 // InjectPluginSearchPath inserts the "Game\tcsgo/plugin" search path line into
 // gameinfo.gi content if it is not already present. Returns the modified content
@@ -68,7 +68,7 @@ func InjectPluginSearchPath(content string) (string, bool) {
 
 // InjectSearchPath inserts a "Game\t<searchPath>" line into gameinfo.gi content
 // if it is not already present. It mirrors InjectPluginSearchPath but accepts an
-// arbitrary search path (e.g. "csgo/plugin", "csgo/pov"). Returns the modified
+// arbitrary search path (e.g. "csgo/plugin", "csgo/pov.vpk"). Returns the modified
 // content and true on success, or the original content and false if no injection
 // point could be found.
 func InjectSearchPath(content string, searchPath string) (string, bool) {
@@ -103,7 +103,7 @@ func HasPluginSearchPath(content string) bool {
 }
 
 // HasSearchPath reports whether gameinfo.gi content contains the given search
-// path as a standalone SearchPaths entry (e.g. "csgo/plugin", "csgo/pov").
+// path as a standalone SearchPaths entry (e.g. "csgo/plugin", "csgo/pov.vpk").
 // Comments and unrelated text are ignored.
 func HasSearchPath(content string, searchPath string) bool {
 	lines := strings.Split(content, "\n")
@@ -122,7 +122,7 @@ func RemovePluginSearchPath(content string) (string, bool) {
 }
 
 // RemoveSearchPath removes all standalone entries for the given search path
-// (e.g. "csgo/plugin", "csgo/pov") from gameinfo.gi content. Comments and
+// (e.g. "csgo/plugin", "csgo/pov.vpk") from gameinfo.gi content. Comments and
 // unrelated text are left unchanged. Returns the modified content and true if any
 // line was removed.
 func RemoveSearchPath(content string, searchPath string) (string, bool) {

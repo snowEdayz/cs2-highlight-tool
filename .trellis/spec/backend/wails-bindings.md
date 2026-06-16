@@ -6,7 +6,7 @@ Concrete contracts for Go methods exposed through `internal/app.App` and consume
 
 ### 1. Scope / Trigger
 
-- Trigger: The app must recover when a previous abnormal exit leaves any of this tool's injected search paths in CS2's `gameinfo.gi`. The known injected paths are enumerated by `producegame.SearchPathPlugin` (`csgo/plugin`) and `producegame.SearchPathPOV` (`csgo/pov`); both the health check and repair iterate that list, so adding a new path only requires extending it.
+- Trigger: The app must recover when a previous abnormal exit leaves any of this tool's injected search paths in CS2's `gameinfo.gi`. The known injected paths are enumerated by `producegame.SearchPathPlugin` (`csgo/plugin`) and `producegame.SearchPathPOV` (`csgo/pov.vpk`); both the health check and repair iterate that list, so adding a new path only requires extending it.
 - Scope: `internal/app` Wails methods, `internal/producegame` line-level gameinfo helpers, frontend top bar health UI, and shared TypeScript types.
 - Boundary: TopBar health button -> `GetGameInfoHealth` / `RepairGameInfo` -> CS2 `gameinfo.gi` file -> returned health state.
 
@@ -43,7 +43,7 @@ export interface GameInfoHealth {
 
 - `GetGameInfoHealth` must be safe to call from the top bar on startup.
 - If the workspace is not initialized, `GetGameInfoHealth` returns `status=unknown` and must not create `config.json`.
-- `status=ok` means `gameinfo.gi` was found/read and contains no standalone `Game\t<known path>` or `Game <known path>` line for any path returned by `knownInjectedSearchPaths()` (currently `csgo/plugin` and `csgo/pov`).
+- `status=ok` means `gameinfo.gi` was found/read and contains no standalone `Game\t<known path>` or `Game <known path>` line for any path returned by `knownInjectedSearchPaths()` (currently `csgo/plugin` and `csgo/pov.vpk`).
 - `status=needs_repair` means at least one standalone known-injected search path line exists and can be repaired by `RepairGameInfo`.
 - `status=unknown` means config, CS2 exe, `gameinfo.gi`, or file reading could not be resolved; details go in `error`.
 - `RepairGameInfo` removes every standalone line matching any path in `knownInjectedSearchPaths()`, then returns the latest health state. Detection and repair MUST iterate the same closure — never hardcode an individual path on one side and not the other.
@@ -61,7 +61,7 @@ export interface GameInfoHealth {
 
 ### 5. Good/Base/Bad Cases
 
-- Good: Abnormal exit leaves `Game\tcsgo/plugin` and/or `Game\tcsgo/pov`; startup health returns `needs_repair`, user clicks repair, every residual injected line is removed and state becomes `ok`.
+- Good: Abnormal exit leaves `Game\tcsgo/plugin` and/or `Game\tcsgo/pov.vpk`; startup health returns `needs_repair`, user clicks repair, every residual injected line is removed and state becomes `ok`.
 - Base: Normal produce session still backs up `gameinfo.gi`, injects the required search paths (plugin always, pov when `PovHudEnabled`), and restores from backup on session end.
 - Base: Workspace not initialized returns `unknown` without creating app data files.
 - Bad: Using `strings.Replace` globally can remove comments or unrelated text.
@@ -73,7 +73,7 @@ export interface GameInfoHealth {
 - `internal/producegame`: generic `HasSearchPath` / `RemoveSearchPath` / `InjectSearchPath` accept any path constant; tests must cover both `SearchPathPlugin` and `SearchPathPOV` (standalone tab/space lines detected, comments ignored, only the targeted path is touched).
 - `internal/producegame`: a regression guard asserts every entry in the known-injected set round-trips through inject -> has -> remove without residual (`TestKnownInjectedSearchPathsAreHandledByHelpers`).
 - `internal/producegame`: legacy `*PluginSearchPath` wrappers must remain as thin shims over the generic helpers so existing plugin callers compile unchanged.
-- `internal/app`: `GetGameInfoHealth` reports `needs_repair` and `RepairGameInfo` repairs stale gameinfo without backup/session state — for both `csgo/plugin` and `csgo/pov` residuals, and any future entries in `knownInjectedSearchPaths()`.
+- `internal/app`: `GetGameInfoHealth` reports `needs_repair` and `RepairGameInfo` repairs stale gameinfo without backup/session state — for both `csgo/plugin` and `csgo/pov.vpk` residuals, and any future entries in `knownInjectedSearchPaths()`.
 - `internal/app`: healthy repair is idempotent.
 - `internal/app`: uninitialized workspace health check returns `unknown` and does not create `config.json`.
 - Frontend: `cd frontend && npm run build` passes for shared type and top bar usage.
@@ -84,7 +84,7 @@ export interface GameInfoHealth {
 
 ```go
 // Hardcoded path + global string replace: damages comments and unrelated text,
-// and silently misses any other injected path (e.g. csgo/pov).
+// and silently misses any other injected path (e.g. csgo/pov.vpk).
 content = strings.ReplaceAll(content, "Game\tcsgo/plugin", "")
 ```
 
@@ -729,3 +729,166 @@ matches, err := fivee.ListRecentMatches(playerName, page)
 ```
 
 This keeps all callers on the same normalized 5E domain ID contract.
+
+## Scenario: POV HUD Recording Contract
+
+### 1. Scope / Trigger
+
+- Trigger: A user-facing `pov_hud_enabled` toggle in Settings controls whether produce sessions inject a POV HUD overlay (rendered by a CS2 `pov.vpk` asset shipped in the binary). The asset is embedded into the Go binary, dropped into `csgo/pov.vpk` at session start when the toggle is on, and removed afterwards.
+- Scope: `internal/config` persistence, `internal/app` Wails bindings (`GetClipSettings` / `SaveClipSettings`), `internal/app` produce session prepare/restore (`prepareGameInfoForProduce` / `preparePovForProduce` / `forceRestorePovForProduce`), `internal/producegame` (`PovVPK` embedded asset, generic SearchPath helpers), frontend `ClipSettings` type, and Settings UI switch.
+- Boundary: Settings UI switch → `SaveClipSettings` → `config.json (pov_hud_enabled)` → produce launch sequence drops `csgo/pov.vpk` + injects `csgo/pov.vpk` search path → session end / failure restores both.
+
+### 2. Signatures
+
+```go
+// internal/config
+type Config struct {
+    PovHudEnabled bool `json:"pov_hud_enabled"`
+}
+
+// internal/app
+type ClipSettings struct {
+    PovHudEnabled bool `json:"pov_hud_enabled"`
+}
+
+// internal/producegame
+//go:embed assets/pov.vpk
+var PovVPK []byte
+
+// internal/app produce session
+type povSessionState struct {
+    vpkPath      string // resolved csgo/pov.vpk path under CS2 dir
+    vpkInstalled bool   // true ONLY when this session wrote the file
+}
+
+func (a *App) prepareGameInfoForProduce() error  // multi-path: plugin + (pov if enabled)
+func (a *App) preparePovForProduce() error        // no-op when !cfg.PovHudEnabled
+func (a *App) forceRestorePovForProduce() error   // deletes only when vpkInstalled
+```
+
+Frontend shared type:
+
+```ts
+pov_hud_enabled: boolean;
+```
+
+### 3. Contracts
+
+- `pov_hud_enabled` default is `false`; missing-from-config loads as `false`.
+- The `pov.vpk` asset is embedded into the Go binary via `go:embed`; there is NO online download fallback and NO version negotiation. Asset bytes are tied to the app release.
+- **Multi-path gameinfo invariant**: `prepareGameInfoForProduce` builds a target-path set (`["csgo/plugin"]` always; appends `"csgo/pov.vpk"` when `cfg.PovHudEnabled`). It performs ONE backup (`.cs2ht_produce.bak`) and ONE write injecting all missing paths via `producegame.InjectSearchPath`. The injected path for POV is the **vpk file path** (`csgo/pov.vpk`), NOT a directory — CS2 mounts the vpk archive directly.
+- **Single-backup invariant**: gameinfo has exactly ONE backup file per session, `.cs2ht_produce.bak`. No `.cs2ht_pov.bak` or any other gameinfo backup variant may be created — neither for gameinfo nor for the vpk file. (The R4 health repair flow in the Gameinfo Health Repair Contract above relies on this.)
+- **Idempotent early-return**: When gameinfo already contains ALL target paths, `prepareGameInfoForProduce` returns without backup/write and records `modified=false`. The check MUST iterate every target path (not just `csgo/plugin`) — short-circuiting on the first match leaves a half-prepared gameinfo when plugin is present but pov is not.
+- **vpk "write-if-absent, delete-only-what-we-wrote" lifecycle**: `preparePovForProduce` stats `csgo/pov.vpk`. If the file already exists, it sets `vpkInstalled=false` and leaves the user's file alone. If absent, it writes `producegame.PovVPK` and sets `vpkInstalled=true`. `forceRestorePovForProduce` deletes the file ONLY when `vpkInstalled=true`; otherwise it is a no-op. This protects users who manually placed a custom pov.vpk.
+- **Restore order**: `forceRestoreProduceEnvironmentForProduce` runs `pluginDLL → POV vpk → gameinfo`. Gameinfo is restored last because the search-path entry must remain valid until the dependent assets (plugin DLL, vpk) are torn down.
+- **Launch rollback**: Any failure in `preparePovForProduce` (or `prepareGameInfoForProduce` / `preparePluginDLLForProduce` / `launchHLAEGame`) MUST trigger `forceRestoreProduceEnvironmentForProduce` before returning; partial state is not allowed to escape.
+- **Toggle-off regression guard**: When `cfg.PovHudEnabled=false`, the gameinfo target-path set is plugin-only, `preparePovForProduce` returns nil with empty state, and behavior is byte-identical to the legacy plugin-only path.
+- **Crash residual handling**: The Gameinfo Health Repair Contract (above) covers `csgo/pov.vpk` search-path residuals via `knownInjectedSearchPaths()`. The vpk file itself is intentionally NOT in the repair scope — once the search path is removed, CS2 will not load `csgo/pov.vpk`, so the file becomes inert.
+
+### 4. Validation & Error Matrix
+
+- Missing `pov_hud_enabled` in an existing config → load as `false`, save back with `pov_hud_enabled:false`.
+- `cfg.PovHudEnabled=true` + cannot resolve CS2 dir / gameinfo path → return Go error from `prepareGameInfoForProduce` with Chinese context; nothing is written; launch aborted.
+- `cfg.PovHudEnabled=true` + `csgo/pov.vpk` write fails (e.g., disk full, ACL) → return Go error from `preparePovForProduce`; launch caller MUST call `forceRestoreProduceEnvironmentForProduce` to undo gameinfo + plugin DLL.
+- `cfg.PovHudEnabled=true` + `csgo/pov.vpk` already exists → silently use the user's file (`vpkInstalled=false`); no error; no backup.
+- Restore fails after a successful prepare → `forceRestorePovForProduce` joins errors with the rest of the restore chain via `errors.Join`; partial restore is reported to the user as a single combined message.
+
+### 5. Good/Base/Bad Cases
+
+- **Good (toggle on, clean state)**: User flips the switch, saves settings, launches a take. gameinfo gets both `csgo/plugin` and `csgo/pov.vpk` from a single backup/write. `csgo/pov.vpk` is written from the embedded bytes. Session ends → vpk deleted, gameinfo restored from `.cs2ht_produce.bak`, csgo dir matches its pre-session state byte-for-byte.
+- **Good (toggle on, user pre-placed vpk)**: User already has a custom `csgo/pov.vpk` (e.g., a community HUD). prepare skips the write (`vpkInstalled=false`). Session ends → user's file untouched, gameinfo restored normally.
+- **Base (toggle off)**: gameinfo target-path set is `["csgo/plugin"]` only; no vpk activity; behavior identical to pre-task plugin-only path. This MUST remain a regression guard.
+- **Bad: introducing `.cs2ht_pov.bak`** — adding a second backup file for the vpk (or for gameinfo's pov state) breaks the single-backup invariant and creates ambiguity about the source of truth during health repair.
+- **Bad: short-circuit early-return on plugin alone** — `if HasPluginSearchPath(content) { return }` skips POV injection when plugin is already present, leaving gameinfo half-prepared.
+- **Bad: deleting `csgo/pov.vpk` unconditionally during restore** — destroys a user-placed file when `vpkInstalled=false`.
+- **Bad: restoring gameinfo before tearing down vpk / plugin DLL** — produces a transient window where CS2 sees the original gameinfo while the dependent assets are still in place.
+
+### 6. Tests Required
+
+- `internal/config`: legacy config without `pov_hud_enabled` loads with the field defaulted to `false`; saved config emits the key.
+- `internal/app`: `GetClipSettings` default is `false`; `SaveClipSettings` round-trips `true`.
+- `internal/producegame`: `PovVPK` is non-empty and matches the expected asset size (regression guard so silent asset-truncation is caught in CI).
+- `internal/app`: with `PovHudEnabled=true` and no pre-existing vpk, after `prepareGameInfoForProduce` + `preparePovForProduce`:
+  - gameinfo contains both `Game\tcsgo/plugin` and `Game\tcsgo/pov.vpk`
+  - exactly one backup file `.cs2ht_produce.bak` exists in csgo dir
+  - `csgo/pov.vpk` exists with the embedded bytes
+  - `vpkInstalled=true`
+- `internal/app`: with `PovHudEnabled=true` and a pre-existing `csgo/pov.vpk` (different bytes), after prepare:
+  - vpk bytes are unchanged (user file preserved)
+  - `vpkInstalled=false`
+- `internal/app`: with `PovHudEnabled=true`, after `forceRestoreProduceEnvironmentForProduce`:
+  - gameinfo restored to pre-session bytes
+  - `csgo/pov.vpk` deleted IFF `vpkInstalled=true` (else present and unchanged)
+  - NO `.cs2ht_pov.bak` file anywhere in csgo dir at any point — assert via directory scan
+- `internal/app`: with `PovHudEnabled=false`, prepare + restore is a strict regression of the legacy plugin-only flow (no vpk touched, gameinfo only contains `csgo/plugin`).
+- `internal/app`: launch-failure rollback — simulate `launchHLAEGame` failure with `PovHudEnabled=true`, assert `forceRestoreProduceEnvironmentForProduce` ran and the csgo dir is clean.
+- Frontend: `cd frontend && npm run build` passes; `ClipSettings` interface and SettingsPanel switch stay aligned.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```go
+// Hardcoded plugin-only early-return — silently skips POV injection when
+// plugin is already present but POV is not, leaving gameinfo half-prepared.
+content := string(contentBytes)
+if producegame.HasPluginSearchPath(content) {
+    a.produceState.gameInfo = gameInfoSessionState{gameInfoPath: gameInfoPath, modified: false}
+    return nil
+}
+injected, _ := producegame.InjectPluginSearchPath(content)
+```
+
+```go
+// Backup-then-overwrite for vpk introduces .cs2ht_pov.bak, breaking the
+// single-backup invariant and risking ambiguity during health repair.
+backup := vpkPath + ".cs2ht_pov.bak"
+_ = os.Rename(vpkPath, backup)
+_ = os.WriteFile(vpkPath, producegame.PovVPK, 0644)
+state.vpkBackup = backup
+```
+
+#### Correct
+
+```go
+// Build the target-path set from the toggle, then require ALL paths to be
+// present for the early-return. The injection loop handles the missing ones.
+targetPaths := []string{producegame.SearchPathPlugin}
+if cfg.PovHudEnabled {
+    targetPaths = append(targetPaths, producegame.SearchPathPOV)
+}
+content := string(contentBytes)
+allPresent := true
+for _, p := range targetPaths {
+    if !producegame.HasSearchPath(content, p) {
+        allPresent = false
+        break
+    }
+}
+if allPresent {
+    a.produceState.gameInfo = gameInfoSessionState{gameInfoPath: gameInfoPath, modified: false}
+    return nil
+}
+injected := content
+for _, p := range targetPaths {
+    next, ok := producegame.InjectSearchPath(injected, p)
+    if !ok {
+        return fmt.Errorf("无法在 gameinfo.gi 中注入搜索路径 %s", p)
+    }
+    injected = next
+}
+// ... single backup + single write
+```
+
+```go
+// Stat first, write only if absent, track ownership in vpkInstalled.
+// Restore deletes ONLY what we wrote. No backup file is ever created.
+if _, err := os.Stat(vpkPath); err == nil {
+    a.produceState.pov = povSessionState{vpkPath: vpkPath, vpkInstalled: false}
+    return nil
+}
+if err := os.WriteFile(vpkPath, producegame.PovVPK, 0644); err != nil {
+    return fmt.Errorf("写入 POV vpk 失败: %w", err)
+}
+a.produceState.pov = povSessionState{vpkPath: vpkPath, vpkInstalled: true}
+```

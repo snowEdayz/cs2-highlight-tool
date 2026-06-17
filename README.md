@@ -88,5 +88,6 @@
 - [Purple-CSGO](https://github.com/Purple-CSGO/)
 - [wails](https://wails.io/)
 - [cs-demo-manager](https://github.com/akiver/cs-demo-manager)
-
+- [POV HUD](https://www.youtube.com/watch?v=vB1b11rRDzI)
+- [gh-proxy](https://gh-proxy.com/)
 ---

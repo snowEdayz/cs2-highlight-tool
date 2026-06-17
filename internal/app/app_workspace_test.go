@@ -108,18 +108,6 @@ func TestEnterMainApp_NoServiceReturnsError(t *testing.T) {
 	}
 }
 
-// TestApplySelfUpdate_NoServiceReturnsWorkspaceInit 验证未初始化时 ApplySelfUpdate 返回 mode=workspace_init。
-func TestApplySelfUpdate_NoServiceReturnsWorkspaceInit(t *testing.T) {
-	a := &App{
-		exeDir:   t.TempDir(),
-		produceW: producews.NewDefault(nil),
-	}
-	state := a.ApplySelfUpdate()
-	if state.Mode != envsetup.ModeWorkspaceInit {
-		t.Fatalf("Mode = %q, want %q", state.Mode, envsetup.ModeWorkspaceInit)
-	}
-}
-
 // TestExportStartupLogs_NoServiceReturnsError 验证未初始化时 ExportStartupLogs 返回错误。
 func TestExportStartupLogs_NoServiceReturnsError(t *testing.T) {
 	a := &App{

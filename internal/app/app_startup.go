@@ -101,16 +101,6 @@ func (a *App) EnterMainApp() error {
 	return svc.EnterMainApp()
 }
 
-func (a *App) ApplySelfUpdate() envsetup.StartupState {
-	a.serviceMu.Lock()
-	svc := a.service
-	a.serviceMu.Unlock()
-	if svc == nil {
-		return envsetup.StartupState{Mode: envsetup.ModeWorkspaceInit}
-	}
-	return svc.ApplySelfUpdate()
-}
-
 func (a *App) ReinstallStartupComponent(componentID string) (envsetup.StartupState, error) {
 	a.serviceMu.Lock()
 	svc := a.service

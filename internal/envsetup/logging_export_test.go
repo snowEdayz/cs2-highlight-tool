@@ -81,7 +81,6 @@ func TestBuildStartupLogReport_ContainsTimelineAndSummaries(t *testing.T) {
 			Current:   "1.0.0",
 			Latest:    "1.1.0",
 			URL:       "https://example.com/release?token=abc&version=1.1.0",
-			AssetURL:  "https://example.com/download/app.exe?auth=abcd",
 			Error:     "Authorization: Bearer secret",
 		},
 		Steps: []ComponentStatus{

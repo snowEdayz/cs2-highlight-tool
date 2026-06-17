@@ -7,8 +7,6 @@ import {fivee} from '../models';
 import {wanmei} from '../models';
 import {demo} from '../models';
 
-export function ApplySelfUpdate():Promise<envsetup.StartupState>;
-
 export function CancelStartupDownload(arg1:string):Promise<envsetup.StartupState>;
 
 export function CheckPlatformClients():Promise<Array<app.PlatformClientStatus>>;

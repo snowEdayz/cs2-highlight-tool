@@ -28,7 +28,7 @@ Wails v2 + Go 1.24 + Vue 3 + TypeScript + Naive UI + vue-router@4 (hash mode).
 ## High-Level Architecture
 
 ```
-main.go                          # Wails bootstrap, --apply-update entry for updater
+main.go                          # Wails bootstrap
 internal/
   app/                           # Wails binding layer — top of dep tree, no business logic
   envsetup/                      # Startup state machine (component detect/dl/install)
@@ -39,7 +39,6 @@ internal/
   release/                       # Unified release API client, version compare, asset select
   endpoints/                     # Source registry, GeoIP gh-proxy decisions, URL rewrites
   download/                      # HTTP download with progress, zip/7z extraction
-  updater/                       # Self-update: download new exe, replace, restart
   logging/                       # Structured slog adapter with sanitization
 frontend/src/
   app/                           # Shell (AppShell.vue), router.ts, TopBar, MainApp
@@ -84,7 +83,7 @@ Import alias: Use `@/` for `frontend/src/**` imports.
 ## Stable Wails Public Methods (on `internal/app.App`)
 
 Workspace: `GetWorkspaceState`, `PickWorkspaceDir`, `ValidateWorkspaceDir`, `SetWorkspaceDir`, `ResetWorkspace`, `ExitApp`
-Startup: `GetStartupState`, `RunStartupChecks`, `RetryStartupComponent`, `ReinstallStartupComponent`, `OpenManualDownload`, `ImportManualDownload`, `PickCS2Path`, `EnterMainApp`, `ApplySelfUpdate`, `ExportStartupLogs`
+Startup: `GetStartupState`, `RunStartupChecks`, `RetryStartupComponent`, `ReinstallStartupComponent`, `OpenManualDownload`, `ImportManualDownload`, `PickCS2Path`, `EnterMainApp`, `ExportStartupLogs`
 Demo: `PickDemoFiles`, `ParseDemoFile`
 Clips: `GetClipSettings`, `SaveClipSettings`, `GeneratePluginJSON`, `GeneratePluginJSONBatch`, `GeneratePluginJSONBatchAndLaunchHLAE`
 Produce: `GetProduceWSState`, `GetProduceQueueState`, `GetProduceTakeSnapshot`, `GetProduceHistorySnapshot`, `GetProduceTakeFiles`, `OpenProducedClipInFolder`, `ExportProduceHistoryVideos`

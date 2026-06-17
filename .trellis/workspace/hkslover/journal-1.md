@@ -1289,3 +1289,69 @@ Added internal/changelog package (go:embed bilingual markdown), Config.LastChang
 ### Next Steps
 
 - None - task complete
+
+
+## Session 39: Replace in-app self-update with browser-based manual download
+
+**Date**: 2026-06-17
+**Task**: Replace in-app self-update with browser-based manual download
+**Branch**: `main`
+
+### Summary
+
+Removed the broken in-app self-updater (Wails Job Object killed the child process on Windows before exe rename could complete). Deleted internal/updater package, --apply-update entry, ApplySelfUpdate (Service + App), downloadAndApplySelfUpdate, and SelfUpdateState.AssetURL. Version detection and startup gate remain; the 立即更新 button now opens the GitHub release page via the existing OpenManualDownload('self_update'). Component auto-downloads (HLAE/plugin/ffmpeg) unchanged. v2.0.3 changelog appended; spec/CLAUDE/AGENTS docs updated.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d9884de` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 40: Self-update button opens direct asset URL instead of release page
+
+**Date**: 2026-06-17
+**Task**: Self-update button opens direct asset URL instead of release page
+**Branch**: `main`
+
+### Summary
+
+Switched checkSelfUpdate to store candidates[0].AssetURL (country-aware: mirror_url for CN, asset github_url otherwise) in SelfUpdateState.URL, replacing the previous GitHub release HTML page URL. CN users now get a fast direct mirror download when clicking 前往下载 instead of an often-unreachable github.com/releases/tag page. Up-to-date and fetch-failure branches unchanged. Updated startup-state-machine spec and v2.0.3 changelog (bilingual).
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `777dcc5` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

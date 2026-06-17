@@ -363,6 +363,7 @@
     },
     "actions": {
       "update_now": "立即更新",
+      "download_self_update": "前往下载",
       "reinstall": "重新安装",
       "pick_cs2": "选择 CS2 目录",
       "reset_cs2": "重新设置",

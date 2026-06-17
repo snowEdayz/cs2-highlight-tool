@@ -33,7 +33,6 @@ This is a **Wails v2** desktop application with a Go backend and Vue 3 + TypeScr
 │   ├── producemerge/         # FFmpeg-based video/audio merge logic for produce session take files
 │   ├── producews/            # WebSocket server (127.0.0.1:4574) for HLAE/CS2 game comm
 │   ├── release/              # Unified release API client, version compare, asset select
-│   ├── updater/              # Self-update: download new exe, replace, restart
 │   └── wanmei/               # Wanmei (完美) API client: match listing, demo download/caching
 ├── frontend/                 # Vue 3 + TypeScript frontend
 │   └── src/
@@ -64,7 +63,7 @@ This is a **Wails v2** desktop application with a Go backend and Vue 3 + TypeScr
 
 ### `internal/envsetup/` — Startup State Machine
 
-- **Purpose**: Orchestrates the startup wizard — component detection, download, installation, self-update.
+- **Purpose**: Orchestrates the startup wizard — component detection, download, installation, and self-update version detection (download/replace of the app binary itself is handled manually by the user via the browser).
 - Split across multiple files by concern:
   - `service.go` — `Service` struct, constructor, `Startup()` lifecycle
   - `service_state.go` — State manipulation helpers (snapshot, step updating, config persistence)

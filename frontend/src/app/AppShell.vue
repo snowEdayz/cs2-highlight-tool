@@ -94,7 +94,6 @@ const state = reactive<StartupState>({
     current: "0.0.0",
     latest: "",
     url: "",
-    asset_url: "",
     error: "",
   },
   steps: [],

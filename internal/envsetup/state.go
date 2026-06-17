@@ -82,7 +82,6 @@ type SelfUpdateState struct {
 	Current   string `json:"current"`
 	Latest    string `json:"latest"`
 	URL       string `json:"url"`
-	AssetURL  string `json:"asset_url"`
 	Error     string `json:"error"`
 }
 

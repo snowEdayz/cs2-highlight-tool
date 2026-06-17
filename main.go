@@ -2,7 +2,6 @@ package main
 
 import (
 	application "cs2-highlight-tool-v2/internal/app"
-	"cs2-highlight-tool-v2/internal/updater"
 	"embed"
 	"os"
 
@@ -18,14 +17,6 @@ var assets embed.FS
 var wailsConfigData []byte
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "--apply-update" {
-		if err := updater.RunApplyMode(os.Args[2:]); err != nil {
-			println("Update failed:", err.Error())
-			os.Exit(1)
-		}
-		return
-	}
-
 	// 单例检查：如果已有实例在运行，静默退出
 	cleanup, err := application.EnsureSingleInstance()
 	if err != nil {

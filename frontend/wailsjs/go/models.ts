@@ -1161,13 +1161,12 @@ export namespace envsetup {
 	    current: string;
 	    latest: string;
 	    url: string;
-	    asset_url: string;
 	    error: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new SelfUpdateState(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.status = source["status"];
@@ -1175,7 +1174,6 @@ export namespace envsetup {
 	        this.current = source["current"];
 	        this.latest = source["latest"];
 	        this.url = source["url"];
-	        this.asset_url = source["asset_url"];
 	        this.error = source["error"];
 	    }
 	}

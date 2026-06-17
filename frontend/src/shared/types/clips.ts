@@ -104,6 +104,7 @@ export interface FullRoundPOVSegment {
   freeze_end_tick: number;
   round_end_tick: number;
   official_end_tick?: number;
+  next_round_start_tick?: number;
   death_tick?: number;
   record_start_tick: number;
   record_end_tick: number;

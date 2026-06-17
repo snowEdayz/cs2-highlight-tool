@@ -87,7 +87,7 @@
 - `GeneratePluginJSON` 支持可选参数 `record_victim_view`（开启后按片段生成“击杀者视角 -> 被害者视角”连续序列）
 - `GeneratePluginJSON` 支持可选参数 `victim_view_mode`：`batch`（先击杀者后逐个被害者）/`interleaved`（击杀者与被害者交替）
 - `GeneratePluginJSON` 支持可选参数 `record_material_movies`（开启后每段 pass 用 `mirv_startmovie <name>` / `mirv_endmovie` 包裹，按命名约定 `clip_<order>_<role>` 录出独立素材）
-- `GeneratePluginJSON` / `GeneratePluginJSONBatchAndLaunchHLAE` 支持可选参数 `full_round_pov.player_steam_id`（按指定玩家生成整局 POV 录制计划；每回合从 `RoundStart` 录到目标死亡 tick + `killer_post_seconds`（不超过 `RoundEnd`）或 `RoundEnd`，每回合一个 take，输出顺序早于 victim clip takes；有效击杀/死亡仍以 `RoundFreezetimeEnd` 后为准）
+- `GeneratePluginJSON` / `GeneratePluginJSONBatchAndLaunchHLAE` 支持可选参数 `full_round_pov.player_steam_id`（按指定玩家生成整局 POV 录制计划；每回合从 `RoundStart` 录到目标死亡 tick + 1 秒，或目标存活时录到下一回合 `RoundStart` 前 1 秒（无下一回合时回退到本回合结束 tick），每回合一个 take，输出顺序早于 victim clip takes；有效击杀/死亡仍以 `RoundFreezetimeEnd` 后为准）
 - `GeneratePluginJSON` / `GeneratePluginJSONBatchAndLaunchHLAE` 的 `selected_items[]` 支持可选 `include_killer`（缺省为 `true`；整局 POV 模式下 victim-only 片段传 `false`）
 - `GeneratePluginJSON` / `GeneratePluginJSONBatchAndLaunchHLAE` 的 `selected_items[]` 支持可选 `clip_overrides`：`killer_pre_seconds` `killer_post_seconds` `victim_pre_seconds` `victim_post_seconds` `enable_voice` `enable_spec_show_xray_zero`（字段缺省表示继承全局设置）
 - `GeneratePluginJSON` / `GeneratePluginJSONBatchAndLaunchHLAE` 返回的 `take_plans[]` 支持可选字段：`source_id` `round` `player_name` `player_steam_id` `start_tick` `end_tick` `end_reason`（整局 POV take 使用 `view=full_round_pov` 与稳定 `source_id` 区分每个回合）

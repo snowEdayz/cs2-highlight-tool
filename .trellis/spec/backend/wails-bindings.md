@@ -955,7 +955,7 @@ interface GeneratePluginJSONRequest {
 - `selected_items[].include_killer` defaults to `true` when omitted. Full-round POV mode uses `include_killer=false` for victim-only kill rows.
 - Full-round POV take generation must run before victim clip take generation.
 - Full-round POV segment recording starts at `RoundStart`; fallback to `RoundFreezetimeEnd` only if round start is missing. Valid kill/death filtering still starts at `RoundFreezetimeEnd` when available, so freeze-time events do not create live-round segments.
-- Full-round POV segment end is the tracked player's in-round death tick plus the current `killer_post_seconds` converted with the request tick rate and clamped to `RoundEnd`; if the tracked player survives, use `RoundEnd`. Do not use `RoundEndOfficial` as the normal cutoff.
+- Full-round POV segment end is the tracked player's in-round death tick plus exactly 1 second converted with the request tick rate; this does not use `killer_post_seconds`. If the tracked player survives, use the next round's `RoundStart` minus exactly 1 second when available, falling back to the parsed round-end tick only when no next round start exists. Do not use `RoundEndOfficial` as the normal cutoff.
 - `take_plans[].view=full_round_pov` and a stable `source_id` distinguish full-round takes from kill-window takes and from each other.
 - `ParseDemoFile.players[]` includes `steam_id_text`; frontend must use that string for full-round requests to avoid JavaScript number precision loss.
 - Rounds where the tracked player did not get any kill are skipped — only kill-bearing rounds are turned into full-round POV takes.
@@ -981,10 +981,10 @@ interface GeneratePluginJSONRequest {
 
 ### 6. Tests Required
 
-- `internal/demo`: pure plan tests for round-start recording, target death end, round-end survival end, and ignoring deaths outside the live `[RoundFreezetimeEnd, RoundEnd]` decision window.
+- `internal/demo`: pure plan tests for round-start recording, target death end, next-round-start metadata for survival cutoff, and ignoring deaths outside the live `[RoundFreezetimeEnd, RoundEnd]` decision window.
 - `internal/clipsjson`: builder test proving full-round POV takes precede victim takes and carry `source_id` / round metadata.
 - `internal/plugingen`: history key tests proving distinct `source_id` values do not collide while legacy clip keys remain compatible.
-- `internal/app`: conversion tests for full-round plan -> plugin segment target/tick/player metadata.
+- `internal/app`: conversion tests for full-round plan -> plugin segment target/tick/player metadata, including fixed 1-second death padding and next-round-start-minus-1-second survival cutoff.
 - Required checks: `go test ./...` and `cd frontend && npm run build`.
 
 ### 7. Wrong vs Correct

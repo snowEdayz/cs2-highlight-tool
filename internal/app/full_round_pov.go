@@ -10,6 +10,8 @@ import (
 	"cs2-highlight-tool-v2/internal/demo"
 )
 
+const fullRoundPOVEndPaddingSeconds = 1.0
+
 func (a *App) PreviewFullRoundPOV(demoPath, playerSteamID string) (*demo.FullRoundPOVPlan, error) {
 	steamID, err := strconv.ParseUint(playerSteamID, 10, 64)
 	if err != nil {
@@ -48,21 +50,23 @@ func buildFullRoundPOVSegmentsForPlugin(plan *demo.FullRoundPOVPlan, settings Cl
 	return segments
 }
 
-func fullRoundPOVRecordEndTick(segment demo.FullRoundPOVSegment, settings ClipSettings, tickRate float64) int {
+func fullRoundPOVRecordEndTick(segment demo.FullRoundPOVSegment, _ ClipSettings, tickRate float64) int {
 	endTick := segment.RecordEndTick
-	if strings.TrimSpace(segment.EndReason) != demo.FullRoundPOVEndTargetDeath {
+	if tickRate <= 0 {
 		return endTick
 	}
-	if settings.KillerPostSeconds <= 0 || tickRate <= 0 {
+	paddingTicks := int(math.Round(fullRoundPOVEndPaddingSeconds * tickRate))
+	if paddingTicks <= 0 {
 		return endTick
 	}
-	postTicks := int(math.Round(settings.KillerPostSeconds * tickRate))
-	if postTicks <= 0 {
-		return endTick
+	if strings.TrimSpace(segment.EndReason) == demo.FullRoundPOVEndTargetDeath {
+		return endTick + paddingTicks
 	}
-	endTick += postTicks
-	if segment.RoundEndTick > 0 && endTick > segment.RoundEndTick {
-		return segment.RoundEndTick
+	if segment.NextRoundStartTick > 0 {
+		nextRoundEndTick := segment.NextRoundStartTick - paddingTicks
+		if nextRoundEndTick >= segment.RecordStartTick {
+			return nextRoundEndTick
+		}
 	}
 	return endTick
 }

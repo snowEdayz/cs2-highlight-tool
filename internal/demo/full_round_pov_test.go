@@ -41,9 +41,15 @@ func TestBuildFullRoundPOVPlan_UsesRoundStartAndDeathOrRoundEnd(t *testing.T) {
 	if first.RecordStartTick != 100 || first.RecordEndTick != 980 || first.EndReason != "target_death" {
 		t.Fatalf("unexpected first segment: %+v", first)
 	}
+	if first.NextRoundStartTick != 2000 {
+		t.Fatalf("first next round start=%d want 2000", first.NextRoundStartTick)
+	}
 	second := plan.Segments[1]
 	if second.RecordStartTick != 2000 || second.RecordEndTick != 3600 || second.EndReason != "round_end" {
 		t.Fatalf("unexpected second segment: %+v", second)
+	}
+	if second.NextRoundStartTick != 0 {
+		t.Fatalf("second next round start=%d want 0", second.NextRoundStartTick)
 	}
 }
 

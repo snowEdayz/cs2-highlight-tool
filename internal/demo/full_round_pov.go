@@ -24,16 +24,17 @@ type FullRoundPOVPlan struct {
 }
 
 type FullRoundPOVSegment struct {
-	Round           int    `json:"round"`
-	StartTick       int    `json:"start_tick"`
-	FreezeEndTick   int    `json:"freeze_end_tick"`
-	RoundEndTick    int    `json:"round_end_tick"`
-	OfficialEndTick int    `json:"official_end_tick,omitempty"`
-	DeathTick       int    `json:"death_tick,omitempty"`
-	RecordStartTick int    `json:"record_start_tick"`
-	RecordEndTick   int    `json:"record_end_tick"`
-	TargetSlot      int    `json:"target_slot"`
-	EndReason       string `json:"end_reason"`
+	Round              int    `json:"round"`
+	StartTick          int    `json:"start_tick"`
+	FreezeEndTick      int    `json:"freeze_end_tick"`
+	RoundEndTick       int    `json:"round_end_tick"`
+	OfficialEndTick    int    `json:"official_end_tick,omitempty"`
+	NextRoundStartTick int    `json:"next_round_start_tick,omitempty"`
+	DeathTick          int    `json:"death_tick,omitempty"`
+	RecordStartTick    int    `json:"record_start_tick"`
+	RecordEndTick      int    `json:"record_end_tick"`
+	TargetSlot         int    `json:"target_slot"`
+	EndReason          string `json:"end_reason"`
 }
 
 type FullRoundPOVRound struct {
@@ -221,7 +222,7 @@ func BuildFullRoundPOVPlan(player PlayerInfo, rounds []FullRoundPOVRound) *FullR
 		return ordered[i].Round < ordered[j].Round
 	})
 
-	for _, round := range ordered {
+	for idx, round := range ordered {
 		recordStart := round.StartTick
 		if recordStart <= 0 {
 			recordStart = round.FreezeEndTick
@@ -255,16 +256,25 @@ func BuildFullRoundPOVPlan(player PlayerInfo, rounds []FullRoundPOVRound) *FullR
 			continue
 		}
 
+		nextRoundStart := 0
+		for nextIdx := idx + 1; nextIdx < len(ordered); nextIdx++ {
+			if ordered[nextIdx].StartTick > 0 {
+				nextRoundStart = ordered[nextIdx].StartTick
+				break
+			}
+		}
+
 		segment := FullRoundPOVSegment{
-			Round:           round.Round,
-			StartTick:       round.StartTick,
-			FreezeEndTick:   round.FreezeEndTick,
-			RoundEndTick:    round.EndTick,
-			OfficialEndTick: round.OfficialEndTick,
-			RecordStartTick: recordStart,
-			RecordEndTick:   recordEnd,
-			TargetSlot:      round.Slots[steamID],
-			EndReason:       FullRoundPOVEndRoundEnd,
+			Round:              round.Round,
+			StartTick:          round.StartTick,
+			FreezeEndTick:      round.FreezeEndTick,
+			RoundEndTick:       round.EndTick,
+			OfficialEndTick:    round.OfficialEndTick,
+			NextRoundStartTick: nextRoundStart,
+			RecordStartTick:    recordStart,
+			RecordEndTick:      recordEnd,
+			TargetSlot:         round.Slots[steamID],
+			EndReason:          FullRoundPOVEndRoundEnd,
 		}
 		if death := findTargetDeath(round.Deaths, steamID, liveStart, round.EndTick); death != nil {
 			segment.DeathTick = death.Tick

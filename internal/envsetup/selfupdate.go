@@ -95,7 +95,7 @@ func (s *Service) checkSelfUpdate(source DownloadSource) {
 		Available: true,
 		Current:   current,
 		Latest:    latest,
-		URL:       infoManualURL("self_update", source, info),
+		URL:       assetURL,
 	}
 	s.state.CanEnterMain = false
 	s.mu.Unlock()

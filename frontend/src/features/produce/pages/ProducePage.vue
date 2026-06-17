@@ -212,6 +212,7 @@
         <n-alert v-if="runtimeStateMessage" :type="runtimeStateType" :bordered="false">
           {{ runtimeStateMessage }}
         </n-alert>
+        <n-alert v-if="wsState.last_error" type="error" :bordered="false">{{ wsState.last_error }}</n-alert>
         <n-alert v-if="queueState.last_error" type="error" :bordered="false">{{ queueState.last_error }}</n-alert>
         <n-alert v-if="errorMessage" type="error" :bordered="false">{{ errorMessage }}</n-alert>
       </n-space>

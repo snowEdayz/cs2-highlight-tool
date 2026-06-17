@@ -1,6 +1,7 @@
 package producews
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -18,6 +19,27 @@ const (
 	defaultConnectWaitTimout = 30 * time.Second
 	defaultDemoSwitchDelay   = 800 * time.Millisecond
 )
+
+// retryExhaustedMessage is the user-facing Chinese message written to
+// wsState.LastError when the supervisor has exhausted its retry budget.
+const retryExhaustedMessage = "端口 4574 可能被占用，重试 5 次失败，请检查占用进程后重启 app"
+
+// backoffSequence is the supervisor's exponential backoff schedule between
+// retry attempts. Total window ≈ 15.5s for 5 attempts.
+var backoffSequence = []time.Duration{
+	500 * time.Millisecond,
+	1 * time.Second,
+	2 * time.Second,
+	4 * time.Second,
+	8 * time.Second,
+}
+
+const maxRetryAttempts = 5
+
+// listenFn is the package-level network listener factory. Tests may override
+// it to simulate transient/persistent Listen failures. Production code uses
+// net.Listen.
+var listenFn = net.Listen
 
 type EventEmitter func(name string, payload any)
 
@@ -109,6 +131,10 @@ type Service struct {
 	takeStates      map[string]TakeStatus
 	takeOrder       []string
 	lastTakeEvent   *TakeStatus
+
+	supervisorCtx    context.Context
+	supervisorCancel context.CancelFunc
+	supervisorWG     sync.WaitGroup
 }
 
 func New(addr string, emit EventEmitter) *Service {
@@ -168,21 +194,44 @@ func (s *Service) SetDemoSwitchDelay(delay time.Duration) {
 	}
 }
 
+// Start brings the WebSocket server up. The first Listen attempt is performed
+// synchronously so callers preserve the existing contract: success returns nil,
+// failure returns the listen error. In both cases a background supervisor
+// goroutine takes over to:
+//   - retry Listen with exponential backoff if the first attempt failed; and
+//   - re-establish Listen + Serve when an active Serve() returns mid-flight.
+//
+// The supervisor stops after maxRetryAttempts failed Listen attempts in a row
+// or when Stop() is called.
 func (s *Service) Start() error {
 	s.mu.Lock()
 	if s.started {
 		s.mu.Unlock()
 		return nil
 	}
-	listener, err := net.Listen("tcp", s.addr)
+
+	listener, err := listenFn("tcp", s.addr)
 	if err != nil {
+		// First attempt failed. Preserve the original contract: set
+		// LastError, emit state, return err. The supervisor will take over
+		// retries asynchronously starting from attempt=1.
 		s.wsState.LastError = err.Error()
 		s.wsState.UpdatedAtMs = nowMs()
 		s.emitWSStateLocked()
+		s.startSupervisorLocked(nil, 1)
 		s.mu.Unlock()
 		return err
 	}
 
+	s.adoptListenerLocked(listener)
+	s.startSupervisorLocked(listener, 0)
+	s.mu.Unlock()
+	return nil
+}
+
+// adoptListenerLocked initialises wsState, http.Server, and address fields
+// from a freshly-listening net.Listener. Caller must hold s.mu.
+func (s *Service) adoptListenerLocked(listener net.Listener) {
 	s.listener = listener
 	s.address = listener.Addr().String()
 	s.started = true
@@ -196,18 +245,175 @@ func (s *Service) Start() error {
 	mux.HandleFunc("/", s.handleWebSocket)
 	s.server = &http.Server{Handler: mux}
 	s.emitWSStateLocked()
-	s.mu.Unlock()
+}
 
-	go func() {
-		_ = s.server.Serve(listener)
-	}()
-	return nil
+// startSupervisorLocked spawns the supervisor goroutine. If initialListener is
+// non-nil, the supervisor skips the first Listen attempt and starts Serve()
+// directly using it. attempt is the starting retry attempt count when
+// initialListener is nil. Caller must hold s.mu.
+func (s *Service) startSupervisorLocked(initialListener net.Listener, attempt int) {
+	if s.supervisorCancel != nil {
+		// Should not happen — defensive.
+		return
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	s.supervisorCtx = ctx
+	s.supervisorCancel = cancel
+	s.supervisorWG.Add(1)
+	go s.runSupervisor(ctx, initialListener, attempt)
+}
+
+// runSupervisor is the supervisor main loop. It re-establishes Listen + Serve
+// after failures, bounded by maxRetryAttempts within each failure burst. A
+// successful Serve start resets the attempt counter to 0 so each new burst
+// gets a fresh budget.
+//
+// The supervisor exits when:
+//   - retries are exhausted (writes a clear LastError); or
+//   - the context is cancelled (Stop() was called).
+//
+// s.mu MUST NOT be held while calling listenFn / server.Serve / time.After.
+func (s *Service) runSupervisor(ctx context.Context, initialListener net.Listener, startAttempt int) {
+	defer s.supervisorWG.Done()
+
+	listener := initialListener
+	attempt := startAttempt
+
+	for {
+		// Acquire a listener if we don't already have one.
+		if listener == nil {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
+			newListener, err := listenFn("tcp", s.addr)
+			if err != nil {
+				attempt++
+				exhausted := attempt > maxRetryAttempts
+
+				s.mu.Lock()
+				if exhausted {
+					s.wsState.LastError = retryExhaustedMessage
+				} else {
+					s.wsState.LastError = err.Error()
+				}
+				s.wsState.Connected = false
+				s.wsState.UpdatedAtMs = nowMs()
+				s.emitWSStateLocked()
+				s.mu.Unlock()
+
+				if exhausted {
+					return
+				}
+				if !sleepCtx(ctx, backoffForAttempt(attempt)) {
+					return
+				}
+				continue
+			}
+
+			// Stop may have raced with the successful listen — discard the
+			// new listener if we've been cancelled.
+			s.mu.Lock()
+			select {
+			case <-ctx.Done():
+				s.mu.Unlock()
+				_ = newListener.Close()
+				return
+			default:
+			}
+			s.adoptListenerLocked(newListener)
+			s.mu.Unlock()
+			listener = newListener
+		}
+
+		// Reset attempt counter — each failure burst gets a fresh budget.
+		attempt = 0
+
+		// Serve blocks until the listener is closed or an unrecoverable error
+		// occurs. http.Server.Serve always returns a non-nil error.
+		serveErr := s.server.Serve(listener)
+		listener = nil
+
+		// If Stop() was called, exit immediately.
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		// Serve exited unexpectedly — record the cause and try to re-listen.
+		s.mu.Lock()
+		if serveErr != nil {
+			s.wsState.LastError = "serve exited: " + serveErr.Error()
+		} else {
+			s.wsState.LastError = "serve exited"
+		}
+		s.wsState.Connected = false
+		s.wsState.UpdatedAtMs = nowMs()
+		s.emitWSStateLocked()
+		s.mu.Unlock()
+
+		attempt = 1
+		if !sleepCtx(ctx, backoffForAttempt(attempt)) {
+			return
+		}
+	}
+}
+
+// sleepCtx sleeps for d or until ctx is cancelled. Returns false if ctx was
+// cancelled (caller should abort), true if the sleep completed.
+func sleepCtx(ctx context.Context, d time.Duration) bool {
+	if d <= 0 {
+		select {
+		case <-ctx.Done():
+			return false
+		default:
+			return true
+		}
+	}
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
+// backoffForAttempt returns the backoff duration for the given 1-based attempt
+// number. Clamps to the last entry if attempt exceeds the sequence length.
+func backoffForAttempt(attempt int) time.Duration {
+	if attempt <= 0 {
+		return 0
+	}
+	if attempt > len(backoffSequence) {
+		return backoffSequence[len(backoffSequence)-1]
+	}
+	return backoffSequence[attempt-1]
 }
 
 func (s *Service) Stop() error {
 	s.mu.Lock()
+	cancel := s.supervisorCancel
+	s.supervisorCancel = nil
+	s.supervisorCtx = nil
+	// Cancel the supervisor's context while still holding s.mu so that any
+	// supervisor goroutine racing on post-listenFn lock acquisition observes
+	// ctx.Done() and discards its freshly-acquired listener instead of
+	// adopting it and swapping in a new http.Server we'd leak. cancel() is a
+	// non-blocking signal (close on a channel), safe to call under lock.
+	if cancel != nil {
+		cancel()
+	}
+
 	if !s.started {
 		s.mu.Unlock()
+		if cancel != nil {
+			s.supervisorWG.Wait()
+		}
 		return nil
 	}
 	server := s.server
@@ -220,10 +426,13 @@ func (s *Service) Stop() error {
 	if conn != nil {
 		_ = conn.Close()
 	}
+	var closeErr error
 	if server != nil {
-		return server.Close()
+		closeErr = server.Close()
 	}
-	return nil
+	// Wait for the supervisor goroutine to exit so callers see a clean state.
+	s.supervisorWG.Wait()
+	return closeErr
 }
 
 func (s *Service) Address() string {

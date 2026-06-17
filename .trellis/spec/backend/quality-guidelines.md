@@ -118,6 +118,48 @@ if !strings.Contains(content, expected) {
 
 ---
 
+## Concurrency
+
+### Pattern: Call `cancel()` inside the lock when a goroutine re-acquires it
+
+When a long-running goroutine (supervisor / watcher / state-machine loop) re-acquires the same `s.mu` that `Stop()` holds, the `cancel()` (or `close(stopCh)`) call MUST happen **inside** `Stop()`'s critical section, not after `Unlock()`. Otherwise the goroutine can pass its `ctx.Done()` check **between** `Stop()`'s unlock and cancel, miss the signal, then continue work — typically leaving an orphaned listener / server / connection that `Stop()` never closes, deadlocking `WaitGroup.Wait()`.
+
+**Wrong** — race window between `Unlock` and `cancel`:
+
+```go
+func (s *Service) Stop() error {
+    s.mu.Lock()
+    server := s.server
+    s.mu.Unlock()        // <-- supervisor may take s.mu here
+    s.cancel()           // <-- and observe ctx not yet Done
+    server.Close()
+    s.wg.Wait()          // deadlock: orphaned supervisor never sees cancellation
+    return nil
+}
+```
+
+**Correct** — cancellation visible to any future `s.mu` acquirer:
+
+```go
+func (s *Service) Stop() error {
+    s.mu.Lock()
+    s.cancel()           // goroutine taking s.mu after this point sees ctx.Err() != nil
+    server := s.server
+    s.mu.Unlock()
+    server.Close()
+    s.wg.Wait()
+    return nil
+}
+```
+
+**Why this is safe under "no blocking I/O under lock"**: `context.CancelFunc` and `close(ch)` are non-blocking primitives — they only flip a state flag and wake any selectors. They are explicitly exempt from the "no blocking I/O" rule.
+
+**Where this applies**: any package that holds a long-running goroutine whose first action after a `select { case <-time.After: case <-ctx.Done: }` (or similar wake-up) is to acquire `s.mu`. Used in `internal/producews` (supervisor goroutine wrapping `Listen + Serve` with bounded retry).
+
+**Companion checklist item**: see Code Review Checklist below.
+
+---
+
 ## Code Style & Formatting
 
 ### Go
@@ -177,6 +219,7 @@ if !strings.Contains(content, expected) {
 - [ ] Error messages are descriptive and in Chinese (user-facing) where appropriate
 - [ ] Log entries use structured fields, not inline `fmt.Sprintf`
 - [ ] State mutators acquire `mu.Lock()` / `mu.Unlock()` — no data races
+- [ ] `Stop()` / shutdown methods cancel ctx **inside** `mu` if any owned goroutine re-acquires the same lock (see Concurrency section above)
 - [ ] No dead code, no commented-out blocks
 - [ ] New or changed stable contracts (Wails methods, event names, state enums) are documented in `AGENTS.md`
 

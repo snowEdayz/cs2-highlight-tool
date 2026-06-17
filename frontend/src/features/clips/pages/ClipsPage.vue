@@ -93,6 +93,10 @@
                   </n-collapse>
                 </template>
 
+                <div v-else-if="fullRoundPlanErrorByDemo[entry.key]" class="full-round-loading full-round-error">
+                  <span>{{ t("main.clips.full_round_pov_load_failed", { error: fullRoundPlanErrorByDemo[entry.key] }) }}</span>
+                </div>
+
                 <div v-else-if="fullRoundPlanByDemo[entry.key]" class="full-round-loading">
                   <span>{{ t("main.clips.full_round_pov_no_kills_empty") }}</span>
                 </div>
@@ -368,6 +372,7 @@ const {
   setFullRoundPOVEnabled,
   syncFullRoundPOVPlayer,
   fullRoundPlanByDemo,
+  fullRoundPlanErrorByDemo,
   fetchFullRoundPOVPlan,
   getFullRoundPOVTrackingLabel,
   getMaterialSelections,
@@ -972,6 +977,10 @@ function handlePOVRoundExpanded(
   padding: 8px 12px;
   font-size: 12px;
   color: #8d9890;
+}
+
+.full-round-error {
+  color: #e07f7f;
 }
 
 .full-round-player {

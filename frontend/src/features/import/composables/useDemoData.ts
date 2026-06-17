@@ -8,12 +8,14 @@ import type {
   DemoMaterialSelection,
   DemoMetadata,
   DemoPlayerInfo,
+  FullRoundPOVPlan,
 } from "@/shared/types";
 
 export const selectedPlayerByDemo = ref<Record<string, string>>({});
 export const materialByDemo = ref<Record<string, DemoMaterialSelection[]>>({});
 export const fullRoundPovByDemo = ref<Record<string, DemoFullRoundPOVSelection>>({});
-export const fullRoundPlanByDemo = ref<Record<string, import("@/shared/types").FullRoundPOVPlan>>({});
+export const fullRoundPlanByDemo = ref<Record<string, FullRoundPOVPlan>>({});
+export const fullRoundPlanErrorByDemo = ref<Record<string, string>>({});
 
 export interface DemoFullRoundPOVSelection {
   enabled: boolean;
@@ -72,6 +74,7 @@ export function getFullRoundPOVSelection(entry: DemoListEntry | null): DemoFullR
 
 export function setFullRoundPOVEnabled(entry: DemoListEntry | null, enabled: boolean) {
   if (!entry) return;
+  clearFullRoundPOVPlanState(entry);
   if (enabled) {
     syncDefaultFullRoundPlayer(entry);
     const playerSteamID = selectedPlayerByDemo.value[entry.key] || "";
@@ -96,9 +99,18 @@ export function syncFullRoundPOVPlayer(entry: DemoListEntry | null, playerSteamI
     ...fullRoundPovByDemo.value,
     [entry.key]: { enabled: true, player_steam_id: String(playerSteamID || "").trim() },
   };
+  clearFullRoundPOVPlanState(entry);
+}
+
+export function clearFullRoundPOVPlanState(entry: DemoListEntry | null) {
+  if (!entry) return;
   const nextPlanCache = { ...fullRoundPlanByDemo.value };
   delete nextPlanCache[entry.key];
   fullRoundPlanByDemo.value = nextPlanCache;
+
+  const nextErrorCache = { ...fullRoundPlanErrorByDemo.value };
+  delete nextErrorCache[entry.key];
+  fullRoundPlanErrorByDemo.value = nextErrorCache;
 }
 
 export function getDemoMaterials(entry: DemoListEntry | null): DemoMaterialSelection[] {
@@ -138,22 +150,31 @@ export function syncDefaultPlayer(entry: DemoListEntry | null): void {
 }
 
 export async function fetchFullRoundPOVPlan(entry: DemoListEntry | null, playerSteamID: string): Promise<void> {
-  if (!entry || !playerSteamID) return;
+  const requestedPlayerSteamID = String(playerSteamID || "").trim();
+  if (!entry || !requestedPlayerSteamID) return;
+  clearFullRoundPOVPlanState(entry);
+  const entryKey = entry.key;
+  const isCurrentRequest = () => {
+    const current = getFullRoundPOVSelection(entry);
+    return current.enabled && current.player_steam_id === requestedPlayerSteamID;
+  };
   try {
-    const api = (window as any).go?.app?.App as
-      | Record<string, (...a: unknown[]) => Promise<unknown>>
-      | undefined;
-    const fn = api?.PreviewFullRoundPOV;
-    if (!fn) return;
-    const plan = await fn(entry.file_path, playerSteamID);
+    const plan = await callBackend<FullRoundPOVPlan>(
+      "PreviewFullRoundPOV",
+      entry.file_path,
+      requestedPlayerSteamID,
+    );
+    if (!isCurrentRequest()) return;
     fullRoundPlanByDemo.value = {
       ...fullRoundPlanByDemo.value,
-      [entry.key]: plan as import("@/shared/types").FullRoundPOVPlan,
+      [entryKey]: plan,
     };
-  } catch {
-    fullRoundPlanByDemo.value = {
-      ...fullRoundPlanByDemo.value,
-      [entry.key]: { player_name: "", player_steam_id: "", segments: [] },
+  } catch (err: unknown) {
+    if (!isCurrentRequest()) return;
+    const message = err instanceof Error ? err.message : String(err || "");
+    fullRoundPlanErrorByDemo.value = {
+      ...fullRoundPlanErrorByDemo.value,
+      [entryKey]: message || t("main.clips.full_round_pov_load_failed_unknown"),
     };
   }
 }

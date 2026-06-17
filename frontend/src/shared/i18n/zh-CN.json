@@ -178,6 +178,8 @@
       "full_round_pov_round_title_died": "第 {round} 回合 · 击杀 {kills} 人 · 阵亡",
       "full_round_pov_no_kills_empty": "该玩家整局没有击杀，无可录回合",
       "full_round_pov_loading": "正在解析完整回合信息...",
+      "full_round_pov_load_failed": "整局 POV 解析失败：{error}",
+      "full_round_pov_load_failed_unknown": "未知错误",
       "full_round_player_option": "{name} ({kills} 杀 / {deaths} 死)",
       "no_materials_for_demo": "该 DEM 暂无已选素材",
       "no_demo": "请先在导入页导入并解析 Demo",

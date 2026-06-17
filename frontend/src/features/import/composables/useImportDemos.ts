@@ -12,6 +12,7 @@ import {
   materialByDemo,
   fullRoundPovByDemo,
   fullRoundPlanByDemo,
+  fullRoundPlanErrorByDemo,
   getClipPlayers,
   getFullRoundPlayers,
   getSelectedPlayerSteamID,
@@ -117,6 +118,10 @@ function removeDemoAt(index: number) {
     const nextFullRoundPlan = { ...fullRoundPlanByDemo.value };
     delete nextFullRoundPlan[removed.key];
     fullRoundPlanByDemo.value = nextFullRoundPlan;
+
+    const nextFullRoundPlanError = { ...fullRoundPlanErrorByDemo.value };
+    delete nextFullRoundPlanError[removed.key];
+    fullRoundPlanErrorByDemo.value = nextFullRoundPlanError;
   }
 
   if (selectedIndex.value === index) {
@@ -346,6 +351,7 @@ export function useImportDemos() {
     setFullRoundPOVEnabled,
     syncFullRoundPOVPlayer,
     fullRoundPlanByDemo,
+    fullRoundPlanErrorByDemo,
     fetchFullRoundPOVPlan,
     getFullRoundPOVTrackingLabel,
     getMaterialSelections,

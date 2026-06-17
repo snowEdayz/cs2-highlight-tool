@@ -70,6 +70,7 @@ export function useProducePage() {
     getFullRoundPOVSelection,
     getFullRoundPOVTrackingLabel,
     fullRoundPlanByDemo,
+    fullRoundPlanErrorByDemo,
   } = useImportDemos();
   const { batchResult, launchViewEnabled, errorMessage, killSnapshotByDemo, resetProducePageState } = useProducePageState();
   const { historySnapshot } = useProduceHistory();
@@ -806,6 +807,7 @@ export function useProducePage() {
     getFullRoundPOVSelection,
     getFullRoundPOVTrackingLabel,
     fullRoundPlanByDemo,
+    fullRoundPlanErrorByDemo,
     plannedRowsByDemo,
     plannedRoundGroupsByDemo,
     takeStatusByKey,

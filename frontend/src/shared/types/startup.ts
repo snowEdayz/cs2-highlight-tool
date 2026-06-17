@@ -53,7 +53,6 @@ export interface SelfUpdateState {
   current: string;
   latest: string;
   url: string;
-  asset_url: string;
   error: string;
 }
 

@@ -22,8 +22,6 @@ export function normalizeSelfUpdateStatus(
 ): string {
   switch (status) {
     case "checking":
-    case "downloading":
-    case "installing":
     case "ready":
     case "failed":
     case "needs_action":

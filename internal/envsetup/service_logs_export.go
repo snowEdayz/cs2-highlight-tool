@@ -101,7 +101,6 @@ func buildStartupLogReport(exportTime time.Time, state StartupState, logs []LogM
 	writeLine("Current: %s", state.SelfUpdate.Current)
 	writeLine("Latest: %s", state.SelfUpdate.Latest)
 	writeLine("URL: %s", state.SelfUpdate.URL)
-	writeLine("AssetURL: %s", state.SelfUpdate.AssetURL)
 	writeLine("Error: %s", state.SelfUpdate.Error)
 	writeLine("")
 	writeLine("[Components]")
@@ -211,7 +210,6 @@ func sanitizeStartupStateForExport(state StartupState) StartupState {
 	state.SourceStep.Message = sanitizeTextForExport(state.SourceStep.Message)
 	state.SourceStep.Error = sanitizeErrorForExport(state.SourceStep.Error)
 	state.SelfUpdate.URL = sanitizeURLForExport(state.SelfUpdate.URL)
-	state.SelfUpdate.AssetURL = sanitizeURLForExport(state.SelfUpdate.AssetURL)
 	state.SelfUpdate.Error = sanitizeErrorForExport(state.SelfUpdate.Error)
 	for i := range state.Steps {
 		state.Steps[i].Path = sanitizePathForExport(state.Steps[i].Path)

@@ -65,9 +65,9 @@
                   type="primary"
                   size="small"
                   :disabled="busy"
-                  @click="applySelfUpdate"
+                  @click="openSelfUpdateDownload"
                 >
-                  {{ t("startup.actions.update_now") }}
+                  {{ t("startup.actions.download_self_update") }}
                 </n-button>
 
                 <template v-else-if="task.kind === 'component' && task.component">
@@ -229,7 +229,7 @@ const {
   cancelDownload,
   importManual,
   pickCS2Path,
-  applySelfUpdate,
+  openSelfUpdateDownload,
   enterMain,
   exportLogs,
   confirmReset,

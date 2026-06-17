@@ -11,7 +11,7 @@
 - 约束策略：严格执行（Must / Must Not / Required Checks）。
 
 ## 代码地图
-- `main.go`：Wails 入口；`--apply-update` 时进入 updater 流程。
+- `main.go`：Wails 入口。
 - `internal/app`：Wails 绑定层（UI 可调用方法入口）。
 - `internal/appdata`：应用数据根目录解析与旧版 exe 同目录数据迁移。
 - `internal/envsetup`：启动状态机、组件检查、统一更新源快照消费、日志导出（按 `service_*.go` 进行职责拆分）。
@@ -21,7 +21,6 @@
 - `internal/download`：下载与解压/替换目录工具。
 - `internal/logging`：启动链路结构化日志适配（`log/slog` + 脱敏）。
 - `internal/demo`：Demo 文件解析（demoinfocs-golang）。
-- `internal/updater`：自更新应用逻辑。
 - `frontend/src/app`：应用壳、顶部栏、主流程容器与路由装配。
 - `frontend/src/features`：按业务域组织页面与组件（`startup`、`import`、`clips`、`produce`）。
 - `frontend/src/shared`：跨功能通用能力（`i18n`、共享类型）。
@@ -59,7 +58,6 @@
 - `PickCS2Path`
 - `EnterMainApp`
 - `CancelStartupDownload(componentID string)` StartupState
-- `ApplySelfUpdate`
 - `ExportStartupLogs`
 - `PickDemoFiles`
 - `PickDemoFiles` 返回值语义：返回位于 `<dataDir>/demo/raw/...` 的受管控 Demo 路径（非原始选择路径）

@@ -12,15 +12,15 @@ Backend entry points stay unchanged:
 
 ```go
 func (s *Service) RunStartupChecks() StartupState
-func (s *Service) ApplySelfUpdate() StartupState
 ```
 
 Wails-facing bindings stay unchanged:
 
 ```go
 func (a *App) RunStartupChecks() envsetup.StartupState
-func (a *App) ApplySelfUpdate() envsetup.StartupState
 ```
+
+When a new app version is available, the frontend opens the GitHub release page in the user's default browser by calling `App.OpenManualDownload("self_update")`; the application binary is no longer downloaded or replaced in-process.
 
 ### 3. Contracts
 
@@ -35,7 +35,7 @@ can_enter_main        = false
 steps[].status        = pending
 ```
 
-The component jobs for `hlae`, `plugin`, `ffmpeg`, and `cs2` must not start in that run. The frontend update button becomes usable from backend state/events once `running=false`; no frontend-local override should be needed.
+The component jobs for `hlae`, `plugin`, `ffmpeg`, and `cs2` must not start in that run. The frontend update button becomes usable from backend state/events once `running=false`; clicking it opens the release page in the system browser (no in-process download / restart).
 
 If the app is up to date, component jobs may run concurrently as before. If self-update checking fails, it remains non-fatal and component checks continue.
 

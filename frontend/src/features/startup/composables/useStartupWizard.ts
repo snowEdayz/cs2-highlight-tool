@@ -39,19 +39,9 @@ export function useStartupWizard(props: {
   const message = useMessage();
   const dialog = useDialog();
 
-  const busy = computed(
-    () =>
-      props.state.running ||
-      props.state.self_update.status === "downloading" ||
-      props.state.self_update.status === "installing",
-  );
+  const busy = computed(() => props.state.running);
 
-  const canReset = computed(
-    () =>
-      !props.state.running &&
-      props.state.self_update.status !== "downloading" &&
-      props.state.self_update.status !== "installing",
-  );
+  const canReset = computed(() => !props.state.running);
 
   const tasks = computed<TaskItem[]>(() => {
     const selfUpdateStatus = normalizeSelfUpdateStatus(
@@ -115,8 +105,8 @@ export function useStartupWizard(props: {
     callBackend("PickCS2Path");
   }
 
-  function applySelfUpdate() {
-    callBackend("ApplySelfUpdate");
+  function openSelfUpdateDownload() {
+    callBackend("OpenManualDownload", "self_update");
   }
 
   async function doEnterMain() {
@@ -207,7 +197,7 @@ export function useStartupWizard(props: {
     cancelDownload,
     importManual,
     pickCS2Path,
-    applySelfUpdate,
+    openSelfUpdateDownload,
     enterMain,
     exportLogs,
     confirmReset,

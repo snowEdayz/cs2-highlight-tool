@@ -297,41 +297,6 @@ func (s *Service) EnterMainApp() error {
 	return nil
 }
 
-func (s *Service) ApplySelfUpdate() StartupState {
-	s.emitLogWithFields("info", "用户触发应用更新", logFields{
-		Component: "self_update",
-		Action:    "apply_update",
-	})
-	s.mu.Lock()
-	update := s.state.SelfUpdate
-	s.mu.Unlock()
-	if !update.Available || update.AssetURL == "" {
-		s.mu.Lock()
-		s.state.SelfUpdate.Error = "没有可用的软件更新"
-		s.mu.Unlock()
-		s.emitLogWithFields("warning", "无可用更新，忽略应用更新请求", logFields{
-			Component: "self_update",
-			Action:    "apply_update",
-		})
-		s.emitState()
-		return s.GetStartupState()
-	}
-	if err := s.downloadAndApplySelfUpdate(update); err != nil {
-		s.mu.Lock()
-		s.state.SelfUpdate.Status = statusFailed
-		s.state.SelfUpdate.Error = err.Error()
-		s.mu.Unlock()
-		s.emitLogWithFields("error", err.Error(), logFields{
-			Component: "self_update",
-			Stage:     "apply",
-			Action:    "apply_update",
-			Error:     err.Error(),
-		})
-		s.emitState()
-	}
-	return s.GetStartupState()
-}
-
 func isReinstallableComponent(componentID string) bool {
 	switch componentID {
 	case componentHLAE, componentPlugin, componentFFmpeg:

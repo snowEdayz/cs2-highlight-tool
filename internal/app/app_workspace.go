@@ -106,6 +106,7 @@ func (a *App) SetWorkspaceDir(path string) error {
 	// 构造 service 并启动
 	a.serviceMu.Lock()
 	a.dataDir = path
+	a.seedFirstInstallChangelog()
 	a.service = envsetup.NewWithDataDir(a.exeDir, path, a.version)
 	svc := a.service
 	a.serviceMu.Unlock()

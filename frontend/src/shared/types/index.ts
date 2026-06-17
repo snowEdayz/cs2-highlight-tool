@@ -62,3 +62,5 @@ export type {
   ProduceHistorySnapshot,
   ProduceHistoryExportResult,
 } from "./edit";
+
+export type { PendingChangelog } from "./changelog";

@@ -14,6 +14,7 @@
                 <WorkspaceInitModal v-if="state.mode === 'workspace_init'" />
               </template>
             </div>
+            <ChangelogModal :pending="pendingChangelog" @close="ackChangelog" />
           </div>
         </n-notification-provider>
       </n-dialog-provider>
@@ -22,13 +23,15 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive } from "vue";
+import { onMounted, reactive, watch } from "vue";
 import { darkTheme, type GlobalThemeOverrides } from "naive-ui";
 import { EventsOn } from "../../wailsjs/runtime/runtime";
 import MainApp from "@/app/components/MainApp.vue";
 import TopBar from "@/app/components/TopBar.vue";
 import StartupWizard from "@/features/startup/components/StartupWizard.vue";
 import WorkspaceInitModal from "@/features/workspace-init/components/WorkspaceInitModal.vue";
+import ChangelogModal from "@/features/changelog/components/ChangelogModal.vue";
+import { useChangelog } from "@/features/changelog/composables/useChangelog";
 import { useI18n } from "@/shared/i18n";
 import type { ProgressMessage, StartupState } from "@/shared/types";
 
@@ -100,6 +103,17 @@ const state = reactive<StartupState>({
 });
 
 const progressMap = reactive<Record<string, ProgressMessage>>({});
+
+const { pending: pendingChangelog, checkPending, ack: ackChangelog } = useChangelog();
+
+watch(
+  () => state.mode,
+  (mode) => {
+    if (mode === "main") {
+      void checkPending();
+    }
+  },
+);
 
 function isActiveStatus(status: string | undefined): boolean {
   return ["checking", "downloading", "installing"].includes(status || "");

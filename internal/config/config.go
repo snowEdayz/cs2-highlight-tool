@@ -42,6 +42,7 @@ type Config struct {
 	SkyBlackout            bool                `json:"sky_blackout"`
 	KillFeedLifetime       int                 `json:"kill_feed_lifetime"`
 	BlockKillFeed          bool                `json:"block_kill_feed"`
+	LastChangelogVersion   string              `json:"last_changelog_version,omitempty"`
 	ClipActionSettings     *ClipActionSettings `json:"clip_action_settings,omitempty"`
 }
 
@@ -99,6 +100,29 @@ func Default(dataDir string) *Config {
 		BlockKillFeed:      false,
 		ClipActionSettings: Ptr(DefaultClipActionSettings()),
 	}
+}
+
+// EnsureFirstInstallChangelogSeed 在 config.json 不存在时创建一份 Default(),
+// 并将 LastChangelogVersion 预设为当前版本，避免全新安装首次进入主界面时弹出"更新日志"。
+// 当 config.json 已经存在（无论是否带 last_changelog_version key），不做任何修改。
+// 必须在任何 LoadOrCreate 调用之前调用，否则会失去"首装"判定语义。
+// 返回 seeded=true 仅用于调用方日志或测试。
+func EnsureFirstInstallChangelogSeed(path, dataDir, currentVersion string) (bool, error) {
+	currentVersion = strings.TrimSpace(currentVersion)
+	if currentVersion == "" {
+		return false, nil
+	}
+	if _, err := os.Stat(path); err == nil {
+		return false, nil
+	} else if !os.IsNotExist(err) {
+		return false, fmt.Errorf("读取配置文件失败: %w", err)
+	}
+	cfg := Default(dataDir)
+	cfg.LastChangelogVersion = currentVersion
+	if err := Save(path, cfg); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func LoadOrCreate(path, dataDir string) (*Config, error) {

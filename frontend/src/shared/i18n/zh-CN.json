@@ -426,5 +426,9 @@
       "success": "已重置工作目录",
       "failure": "重置失败：{error}"
     }
+  },
+  "changelog": {
+    "title": "更新到 v{version}",
+    "close": "知道了"
   }
 }

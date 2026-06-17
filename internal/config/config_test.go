@@ -443,3 +443,98 @@ func TestResolveClipActionSettings_RequiresBothEnableFlags(t *testing.T) {
 		t.Fatalf("expected both flags false when only one is enabled: %+v", settings)
 	}
 }
+
+func TestEnsureFirstInstallChangelogSeed_SeedsWhenMissing(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+	seeded, err := EnsureFirstInstallChangelogSeed(path, dir, "2.0.2")
+	if err != nil {
+		t.Fatalf("seed failed: %v", err)
+	}
+	if !seeded {
+		t.Fatalf("expected seeded=true for missing config")
+	}
+	cfg, err := LoadOrCreate(path, dir)
+	if err != nil {
+		t.Fatalf("load failed: %v", err)
+	}
+	if cfg.LastChangelogVersion != "2.0.2" {
+		t.Fatalf("expected seeded version 2.0.2, got %q", cfg.LastChangelogVersion)
+	}
+}
+
+func TestEnsureFirstInstallChangelogSeed_NoopWhenConfigExists(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+	cfg, err := LoadOrCreate(path, dir)
+	if err != nil {
+		t.Fatalf("initial load failed: %v", err)
+	}
+	if cfg.LastChangelogVersion != "" {
+		t.Fatalf("expected empty LastChangelogVersion in fresh default cfg, got %q", cfg.LastChangelogVersion)
+	}
+	seeded, err := EnsureFirstInstallChangelogSeed(path, dir, "2.0.2")
+	if err != nil {
+		t.Fatalf("seed failed: %v", err)
+	}
+	if seeded {
+		t.Fatalf("expected seeded=false when config already exists")
+	}
+	loaded, err := LoadOrCreate(path, dir)
+	if err != nil {
+		t.Fatalf("reload failed: %v", err)
+	}
+	if loaded.LastChangelogVersion != "" {
+		t.Fatalf("seed must not overwrite existing config, got %q", loaded.LastChangelogVersion)
+	}
+}
+
+func TestEnsureFirstInstallChangelogSeed_EmptyVersionIsNoop(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+	seeded, err := EnsureFirstInstallChangelogSeed(path, dir, "  ")
+	if err != nil {
+		t.Fatalf("seed failed: %v", err)
+	}
+	if seeded {
+		t.Fatalf("expected seeded=false for empty version")
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("expected config.json to remain absent when version is empty, stat err=%v", err)
+	}
+}
+
+func TestConfigJSONOmitsEmptyLastChangelogVersion(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+	if _, err := LoadOrCreate(path, dir); err != nil {
+		t.Fatalf("load failed: %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if strings.Contains(string(data), "last_changelog_version") {
+		t.Fatalf("expected empty LastChangelogVersion to be omitted via omitempty, got %s", data)
+	}
+}
+
+func TestConfigJSONRoundtripsLastChangelogVersion(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+	cfg, err := LoadOrCreate(path, dir)
+	if err != nil {
+		t.Fatalf("load failed: %v", err)
+	}
+	cfg.LastChangelogVersion = "2.0.3"
+	if err := Save(path, cfg); err != nil {
+		t.Fatalf("save failed: %v", err)
+	}
+	loaded, err := LoadOrCreate(path, dir)
+	if err != nil {
+		t.Fatalf("reload failed: %v", err)
+	}
+	if loaded.LastChangelogVersion != "2.0.3" {
+		t.Fatalf("expected LastChangelogVersion=2.0.3, got %q", loaded.LastChangelogVersion)
+	}
+}

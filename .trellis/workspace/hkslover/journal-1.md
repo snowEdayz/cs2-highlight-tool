@@ -1188,3 +1188,71 @@ Implemented POV HUD recording end-to-end: PovHudEnabled toggle through Config/Cl
 ### Next Steps
 
 - None - task complete
+
+
+## Session 36: Full-round POV recording
+
+**Date**: 2026-06-17
+**Task**: Full-round POV recording
+**Branch**: `main`
+
+### Summary
+
+Implemented full-round POV recording with victim-only clip support, fixed preview error handling, corrected edit-page POV grouping, and updated fixed 1s POV end tick rules.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `db5db2c` | (see git log) |
+| `aa7c99c` | (see git log) |
+| `cce6d4f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 37: producews supervisor auto-retry
+
+**Date**: 2026-06-17
+**Task**: producews supervisor auto-retry
+**Branch**: `main`
+
+### Summary
+
+Investigated whether the producews WS server retries on failure (it didn't — single Listen attempt, swallowed Serve exit). Brainstormed Option C: 5 bounded retries with 500ms→1s→2s→4s→8s backoff, no manual button, no new Wails methods. Implemented a supervisor goroutine with ctx-cancellable backoff covering both initial Listen failure and mid-flight Serve exit; preserved Start() sync-first-attempt contract so existing tests pass unmodified. trellis-check caught a TOCTOU race in Stop() where cancel() after Unlock could leave the supervisor with an orphaned listener and deadlock WaitGroup.Wait — fixed by moving cancel() inside the mu critical section. Frontend renders wsState.last_error via a new n-alert in ProducePage.vue. Captured the cancel-under-lock pattern into spec/backend/quality-guidelines.md (Concurrency section + checklist) since it's a generalizable shutdown discipline. Clarified the architecture mid-brainstorm: WS client is the HLAE plugin DLL injected into CS2, not the HLAE process itself — its in-game periodic reconnect rendezvous naturally with the server retry window.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `457d3b4` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

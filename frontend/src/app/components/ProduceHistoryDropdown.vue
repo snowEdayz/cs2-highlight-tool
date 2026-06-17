@@ -61,11 +61,20 @@
                         <div class="history-head">
                           <n-tag size="small" :bordered="false" :type="viewTagType(row.item.view)">{{ viewLabel(row.item.view) }}</n-tag>
                           <span class="history-time">{{ formatHistoryTime(row.item.completed_at_ms) }}</span>
+                          <span
+                            v-if="String(row.item.view).toLowerCase() === 'full_round_pov'"
+                            class="history-meta"
+                          >
+                            {{ povRowStatusLabel(row.item) }}
+                          </span>
                         </div>
                         <div v-if="row.kills.length" class="history-kills">
                           <div v-for="kill in row.kills" :key="kill.id" class="history-kill-row">
                             <DeathNoticeLine :kill="kill" compact />
                           </div>
+                        </div>
+                        <div v-else-if="String(row.item.view).toLowerCase() === 'full_round_pov'" class="history-meta">
+                          -
                         </div>
                         <div v-else class="history-meta">
                           {{ t("topbar.history_kill_count", { count: row.item.kill_ids.length }) }}
@@ -204,6 +213,26 @@ const historyRoundGroupsByDemo = computed(() => {
   for (const group of historyGroups.value) {
     const groupedByRound = new Map<string, HistoryRoundGroup>();
     for (const item of group.items) {
+      if (String(item.view).toLowerCase() === "full_round_pov") {
+        const name = "pov-group";
+        if (!groupedByRound.has(name)) {
+          groupedByRound.set(name, {
+            name,
+            round: 0,
+            kill_count: 0,
+            rows: [],
+          });
+        }
+        const target = groupedByRound.get(name)!;
+        const kills = (item.kills || []).filter((kill): kill is DemoClipKill => !!kill?.id);
+        target.rows.push({
+          key: `${historyRowKey(item)}#${name}`,
+          item,
+          kills,
+        });
+        target.kill_count += kills.length;
+        continue;
+      }
       const split = splitKillsByRound((item.kills || []).filter((kill): kill is DemoClipKill => !!kill?.id));
       if (!split.length) {
         split.push({ round: 0, kills: [] });
@@ -231,9 +260,19 @@ const historyRoundGroupsByDemo = computed(() => {
     const sortedGroups = Array.from(groupedByRound.values())
       .map((roundGroup) => ({
         ...roundGroup,
-        rows: roundGroup.rows.slice().sort((a, b) => (b.item.completed_at_ms || 0) - (a.item.completed_at_ms || 0)),
+        rows:
+          roundGroup.name === "pov-group"
+            ? roundGroup.rows
+                .slice()
+                .sort((a, b) => Number(a.item.round || 0) - Number(b.item.round || 0))
+            : roundGroup.rows
+                .slice()
+                .sort((a, b) => (b.item.completed_at_ms || 0) - (a.item.completed_at_ms || 0)),
       }))
       .sort((a, b) => {
+        if (a.name === "pov-group" && b.name === "pov-group") return 0;
+        if (a.name === "pov-group") return -1;
+        if (b.name === "pov-group") return 1;
         if (a.round <= 0 && b.round <= 0) return 0;
         if (a.round <= 0) return 1;
         if (b.round <= 0) return -1;
@@ -271,11 +310,25 @@ function normalizeHistoryType(item: ProduceHistoryItem): "produce_clip" | "edite
 }
 
 function viewLabel(view: string): string {
-  return String(view).toLowerCase() === "victim" ? t("main.clips.victim_view") : t("main.clips.killer_view");
+  const normalized = String(view).toLowerCase();
+  if (normalized === "victim") return t("main.clips.victim_view");
+  if (normalized === "full_round_pov") return t("main.clips.full_round_pov_tag");
+  return t("main.clips.killer_view");
 }
 
-function viewTagType(view: string): "success" | "warning" {
-  return String(view).toLowerCase() === "victim" ? "warning" : "success";
+function viewTagType(view: string): "success" | "warning" | "info" {
+  const normalized = String(view).toLowerCase();
+  if (normalized === "victim") return "warning";
+  if (normalized === "full_round_pov") return "info";
+  return "success";
+}
+
+function povRowStatusLabel(item: ProduceHistoryItem): string {
+  const round = Number(item.round || 0);
+  const kills = item.kills?.length || 0;
+  const died = String(item.end_reason || "").toLowerCase() === "target_death";
+  const key = died ? "main.clips.full_round_pov_round_title_died" : "main.clips.full_round_pov_round_title_survived";
+  return t(key, { round, kills });
 }
 
 function formatHistoryTime(tsMs: number): string {
@@ -324,6 +377,9 @@ function onHistoryRoundExpandedChange(
 }
 
 function historyRoundTitle(group: HistoryRoundGroup): string {
+  if (group.name === "pov-group") {
+    return t("topbar.history_full_round_pov_group_title", { count: group.rows.length });
+  }
   if (group.round > 0) {
     return t("main.clips.round_title", { round: group.round, kills: group.kill_count });
   }

@@ -43,6 +43,7 @@ export interface ClipParameterOverrides {
 
 export interface GeneratePluginSelectedItem {
   kill: DemoClipKill;
+  include_killer?: boolean;
   include_victim: boolean;
   killer_spec_mode: number;
   victim_spec_mode: number;
@@ -53,6 +54,9 @@ export interface GeneratePluginJSONRequest {
   demo_path: string;
   tick_rate: number;
   selected_items: GeneratePluginSelectedItem[];
+  full_round_pov?: {
+    player_steam_id: string;
+  };
   extra_commands?: string[];
 }
 
@@ -94,6 +98,26 @@ export interface GeneratePluginJSONBatchResult {
   launch_error?: string;
 }
 
+export interface FullRoundPOVSegment {
+  round: number;
+  start_tick: number;
+  freeze_end_tick: number;
+  round_end_tick: number;
+  official_end_tick?: number;
+  next_round_start_tick?: number;
+  death_tick?: number;
+  record_start_tick: number;
+  record_end_tick: number;
+  target_slot: number;
+  end_reason: string;
+}
+
+export interface FullRoundPOVPlan {
+  player_name: string;
+  player_steam_id: string;
+  segments: FullRoundPOVSegment[];
+}
+
 export interface ProduceTakePlan {
   demo_path: string;
   take_index: number;
@@ -101,6 +125,13 @@ export interface ProduceTakePlan {
   view: string;
   spec_mode: number;
   kill_ids: string[];
+  source_id?: string;
+  round?: number;
+  player_name?: string;
+  player_steam_id?: string;
+  start_tick?: number;
+  end_tick?: number;
+  end_reason?: string;
 }
 
 export interface ProduceTakeFile {

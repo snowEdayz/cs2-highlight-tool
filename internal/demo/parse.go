@@ -34,11 +34,12 @@ type Metadata struct {
 
 // PlayerInfo holds per-player stats extracted from the demo.
 type PlayerInfo struct {
-	Name    string `json:"name"`
-	SteamID uint64 `json:"steam_id"`
-	Kills   int    `json:"kills"`
-	Deaths  int    `json:"deaths"`
-	Assists int    `json:"assists"`
+	Name        string `json:"name"`
+	SteamID     uint64 `json:"steam_id"`
+	SteamIDText string `json:"steam_id_text,omitempty"`
+	Kills       int    `json:"kills"`
+	Deaths      int    `json:"deaths"`
+	Assists     int    `json:"assists"`
 }
 
 // ClipPlayer groups kill clips by killer.
@@ -254,11 +255,12 @@ func ParseMetadata(demoPath string) (*Metadata, error) {
 	playerList := make([]PlayerInfo, 0, len(stats))
 	for _, s := range stats {
 		playerList = append(playerList, PlayerInfo{
-			Name:    s.Name,
-			SteamID: s.SteamID,
-			Kills:   s.Kills,
-			Deaths:  s.Deaths,
-			Assists: s.Assists,
+			Name:        s.Name,
+			SteamID:     s.SteamID,
+			SteamIDText: strconv.FormatUint(s.SteamID, 10),
+			Kills:       s.Kills,
+			Deaths:      s.Deaths,
+			Assists:     s.Assists,
 		})
 	}
 	sort.Slice(playerList, func(i, j int) bool {

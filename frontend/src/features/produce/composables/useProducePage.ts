@@ -37,6 +37,9 @@ export interface ProduceTakeRow {
   spec_mode: number;
   kill_ids: string[];
   kills: DemoClipKill[];
+  round?: number;
+  player_name?: string;
+  player_steam_id?: string;
 }
 
 export interface ProduceTakeRoundRow {
@@ -64,6 +67,10 @@ export function useProducePage() {
     clipReadyDemos,
     ensureClipDemoSelected,
     getMaterialSelections,
+    getFullRoundPOVSelection,
+    getFullRoundPOVTrackingLabel,
+    fullRoundPlanByDemo,
+    fullRoundPlanErrorByDemo,
   } = useImportDemos();
   const { batchResult, launchViewEnabled, errorMessage, killSnapshotByDemo, resetProducePageState } = useProducePageState();
   const { historySnapshot } = useProduceHistory();
@@ -153,12 +160,18 @@ export function useProducePage() {
       if ((plannedRowsByDemo.value.get(entry.file_path) || []).length > 0) {
         return true;
       }
+      if (getFullRoundPOVSelection(entry).enabled) {
+        return true;
+      }
       return pendingSelectionsForDemo(entry).length > 0;
     }),
   );
 
   const hasPendingMaterials = computed(() =>
-    clipReadyDemos.value.some((entry) => pendingSelectionsForDemo(entry).length > 0),
+    clipReadyDemos.value.some((entry) => {
+      if (pendingSelectionsForDemo(entry).length > 0) return true;
+      return povSegmentCountForDemo(entry) > 0;
+    }),
   );
 
   const hasEditableClips = computed(() =>
@@ -211,9 +224,27 @@ export function useProducePage() {
       if (!rows.length) continue;
       const groupMap = new Map<string, ProduceTakeRoundGroup>();
       for (const row of rows) {
+        if (String(row.view).toLowerCase() === "full_round_pov") {
+          const groupName = "pov-group";
+          if (!groupMap.has(groupName)) {
+            groupMap.set(groupName, {
+              name: groupName,
+              round: 0,
+              kill_count: 0,
+              rows: [],
+            });
+          }
+          const group = groupMap.get(groupName)!;
+          group.rows.push({
+            key: `${row.key}#${groupName}`,
+            row,
+            kills: [],
+          });
+          continue;
+        }
         const groupedKills = splitKillsByRound(row.kills);
         if (!groupedKills.length) {
-          groupedKills.push({ round: 0, kills: [] });
+          groupedKills.push({ round: Number(row.round || 0), kills: [] });
         }
         for (const grouped of groupedKills) {
           const groupName = grouped.round > 0 ? `round-${grouped.round}` : "round-unknown";
@@ -403,6 +434,9 @@ export function useProducePage() {
       spec_mode: Number(plan.spec_mode || 1),
       kill_ids: killIDs,
       kills,
+      round: Number(plan.round || 0),
+      player_name: String(plan.player_name || ""),
+      player_steam_id: String(plan.player_steam_id || ""),
     };
   }
 
@@ -448,16 +482,28 @@ export function useProducePage() {
   }
 
   function plannedRoundTitle(group: ProduceTakeRoundGroup): string {
+    if (group.name === "pov-group") {
+      return t("main.clips.full_round_pov_group_title");
+    }
     if (group.round > 0) {
       return t("main.clips.round_title", { round: group.round, kills: group.kill_count });
     }
     return t("main.produce.round_unknown_title", { kills: group.kill_count });
   }
 
+  function povSegmentCountForDemo(entry: DemoListEntry): number {
+    const selection = getFullRoundPOVSelection(entry);
+    if (!selection.enabled) return 0;
+    const plan = fullRoundPlanByDemo.value[entry.key];
+    return plan?.segments?.length ?? 0;
+  }
+
   function displayCountForDemo(entry: DemoListEntry): number {
     const planned = plannedRowsForDemo(entry);
     if (planned.length > 0) return planned.length;
-    return pendingSelectionsForDemo(entry).length;
+    const pendingMaterialCount = pendingSelectionsForDemo(entry).length;
+    const povCount = povSegmentCountForDemo(entry);
+    return pendingMaterialCount + povCount;
   }
 
   function pendingSelectionsForDemo(entry: DemoListEntry): DemoMaterialSelection[] {
@@ -525,18 +571,26 @@ export function useProducePage() {
 
   function buildPendingBatchJobs(): GeneratePluginJSONRequest[] {
     return clipReadyDemos.value
-      .map((entry) => ({
-        demo_path: entry.file_path,
-        tick_rate: entry.meta?.tick_rate ?? 64,
-        selected_items: pendingSelectionsForDemo(entry).map((item) => ({
-          kill: item.kill,
-          include_victim: item.include_victim,
-          killer_spec_mode: 1,
-          victim_spec_mode: 1,
-          clip_overrides: item.clip_overrides,
-        })),
-      }))
-      .filter((job) => job.selected_items.length > 0);
+      .map((entry) => {
+        const selection = getFullRoundPOVSelection(entry);
+        const hasPOVSegments = selection.enabled && !!selection.player_steam_id && povSegmentCountForDemo(entry) > 0;
+        return {
+          demo_path: entry.file_path,
+          tick_rate: entry.meta?.tick_rate ?? 64,
+          selected_items: pendingSelectionsForDemo(entry).map((item) => ({
+            kill: item.kill,
+            include_killer: item.include_killer,
+            include_victim: item.include_victim,
+            killer_spec_mode: 1,
+            victim_spec_mode: 1,
+            clip_overrides: item.clip_overrides,
+          })),
+          full_round_pov: hasPOVSegments
+            ? { player_steam_id: selection.player_steam_id }
+            : undefined,
+        };
+      })
+      .filter((job) => job.selected_items.length > 0 || !!job.full_round_pov);
   }
 
   async function generateAndLaunch() {
@@ -667,11 +721,27 @@ export function useProducePage() {
   }
 
   function viewLabel(view: string): string {
-    return String(view).toLowerCase() === "victim" ? t("main.clips.victim_view") : t("main.clips.killer_view");
+    const normalized = String(view).toLowerCase();
+    if (normalized === "victim") return t("main.clips.victim_view");
+    if (normalized === "full_round_pov") return t("main.clips.full_round_pov_tag");
+    return t("main.clips.killer_view");
   }
 
-  function viewTagType(view: string): "success" | "warning" {
-    return String(view).toLowerCase() === "victim" ? "warning" : "success";
+  function viewTagType(view: string): "success" | "warning" | "info" {
+    const normalized = String(view).toLowerCase();
+    if (normalized === "victim") return "warning";
+    if (normalized === "full_round_pov") return "info";
+    return "success";
+  }
+
+  function rowSourceLabel(row: ProduceTakeRow): string {
+    if (String(row.view).toLowerCase() === "full_round_pov") {
+      return t("main.produce.full_round_pov_row", {
+        round: Number(row.round || 0),
+        player: row.player_name || row.player_steam_id || "-",
+      });
+    }
+    return t("main.produce.kill_info_missing");
   }
 
   function takeFileByRow(row: ProduceTakeRow): ProduceTakeFile | undefined {
@@ -734,6 +804,10 @@ export function useProducePage() {
     displayDemos,
     hasPendingMaterials,
     hasEditableClips,
+    getFullRoundPOVSelection,
+    getFullRoundPOVTrackingLabel,
+    fullRoundPlanByDemo,
+    fullRoundPlanErrorByDemo,
     plannedRowsByDemo,
     plannedRoundGroupsByDemo,
     takeStatusByKey,
@@ -749,6 +823,7 @@ export function useProducePage() {
     onPlannedRoundExpandedChange,
     plannedRoundTitle,
     displayCountForDemo,
+    povSegmentCountForDemo,
     pendingSelectionsForDemo,
     selectedRoundGroupsForDemo,
     splitKillsByRound,
@@ -764,6 +839,7 @@ export function useProducePage() {
     statusTagType,
     viewLabel,
     viewTagType,
+    rowSourceLabel,
     takeFileByRow,
     canOpenClip,
     openProducedClip,

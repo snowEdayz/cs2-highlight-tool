@@ -84,17 +84,26 @@
                             <n-tag
                               size="tiny"
                               :bordered="false"
-                              :type="viewTagType(item.view)"
+                              :type="viewTagType(item)"
                             >
-                              {{ viewLabel(item.view) }}
+                              {{ viewLabel(item) }}
                             </n-tag>
                             <span class="source-time">{{ formatTime(item.completed_at_ms) }}</span>
+                            <span
+                              v-if="historyItemView(item) === 'full_round_pov'"
+                              class="source-time"
+                            >
+                              {{ povRowStatusLabel(item) }}
+                            </span>
                           </div>
 
                           <div v-if="item.kills?.length" class="source-kills">
                             <div v-for="kill in item.kills" :key="kill.id" class="source-kill-row">
                               <DeathNoticeLine :kill="kill" compact />
                             </div>
+                          </div>
+                          <div v-else-if="historyItemView(item) === 'full_round_pov'" class="source-kill-count">
+                            {{ povRowStatusLabel(item) }}
                           </div>
                           <div v-else class="source-kill-count">
                             {{ t("topbar.history_kill_count", { count: item.kill_ids?.length || 0 }) }}
@@ -148,9 +157,9 @@
                   <n-tag
                     size="tiny"
                     :bordered="false"
-                    :type="viewTagType(item.historyItem.view)"
+                    :type="viewTagType(item.historyItem)"
                   >
-                    {{ viewLabel(item.historyItem.view) }}
+                    {{ viewLabel(item.historyItem) }}
                   </n-tag>
                   <span class="sequence-sub">{{ item.duration.toFixed(1) }}s</span>
                 </div>
@@ -163,6 +172,9 @@
                   >
                     <DeathNoticeLine :kill="kill" compact />
                   </div>
+                </div>
+                <div v-else-if="historyItemView(item.historyItem) === 'full_round_pov'" class="sequence-sub">
+                  {{ povRowStatusLabel(item.historyItem) }}
                 </div>
                 <div v-else class="sequence-sub">
                   {{ t("topbar.history_kill_count", { count: item.historyItem.kill_ids?.length || 0 }) }}
@@ -313,6 +325,15 @@ const sourceRoundGroupsByDemo = computed(() => {
   for (const demoGroup of produceClipsByDemo.value) {
     const byRound = new Map<string, SourceRoundGroup>();
     for (const item of demoGroup.items) {
+      if (historyItemView(item) === "full_round_pov") {
+        const name = "pov-group";
+        if (!byRound.has(name)) {
+          byRound.set(name, { name, round: 0, kill_count: 0, items: [] });
+        }
+        byRound.get(name)!.items.push(item);
+        byRound.get(name)!.kill_count += (item.kills || []).length;
+        continue;
+      }
       const kills = (item.kills || []).filter((k): k is DemoClipKill => !!k?.id);
       const split = splitKillsByRound(kills);
       if (!split.length) split.push({ round: 0, kills: [] });
@@ -325,12 +346,23 @@ const sourceRoundGroupsByDemo = computed(() => {
         byRound.get(name)!.kill_count += part.kills.length;
       }
     }
-    const sorted = Array.from(byRound.values()).sort((a, b) => {
-      if (a.round <= 0 && b.round <= 0) return 0;
-      if (a.round <= 0) return 1;
-      if (b.round <= 0) return -1;
-      return a.round - b.round;
-    });
+    const sorted = Array.from(byRound.values())
+      .map((group) => {
+        if (group.name !== "pov-group") return group;
+        return {
+          ...group,
+          items: group.items.slice().sort((a, b) => Number(a.round || 0) - Number(b.round || 0)),
+        };
+      })
+      .sort((a, b) => {
+        if (a.name === "pov-group" && b.name === "pov-group") return 0;
+        if (a.name === "pov-group") return -1;
+        if (b.name === "pov-group") return 1;
+        if (a.round <= 0 && b.round <= 0) return 0;
+        if (a.round <= 0) return 1;
+        if (b.round <= 0) return -1;
+        return a.round - b.round;
+      });
     next.set(demoGroup.demo_path, sorted);
   }
   return next;
@@ -521,6 +553,9 @@ function sourceRoundGroupsForDemo(demoPath: string): SourceRoundGroup[] {
 }
 
 function sourceRoundTitle(group: SourceRoundGroup): string {
+  if (group.name === "pov-group") {
+    return t("topbar.history_full_round_pov_group_title", { count: group.items.length });
+  }
   if (group.round > 0) {
     return t("main.clips.round_title", { round: group.round, kills: group.kill_count });
   }
@@ -557,13 +592,16 @@ function basename(path: string): string {
 }
 
 function orderByView(items: ProduceHistoryItem[]): ProduceHistoryItem[] {
+  const pov = sortByTick(
+    items.filter((item) => historyItemView(item) === "full_round_pov"),
+  );
   const killer = sortByTick(
-    items.filter((item) => String(item.view || "").toLowerCase() !== "victim"),
+    items.filter((item) => historyItemView(item) === "killer"),
   );
   const victim = sortByTick(
-    items.filter((item) => String(item.view || "").toLowerCase() === "victim"),
+    items.filter((item) => historyItemView(item) === "victim"),
   );
-  return [...killer, ...victim];
+  return [...pov, ...killer, ...victim];
 }
 
 function sortByTick(items: ProduceHistoryItem[]): ProduceHistoryItem[] {
@@ -582,6 +620,10 @@ function sortByTick(items: ProduceHistoryItem[]): ProduceHistoryItem[] {
 }
 
 function resolvePrimaryTick(item: ProduceHistoryItem): number {
+  if (historyItemView(item) === "full_round_pov") {
+    const startTick = Number(item.start_tick || 0);
+    if (Number.isFinite(startTick) && startTick > 0) return startTick;
+  }
   const ticks = (item.kills || [])
     .map((kill) => Number(kill?.tick || 0))
     .filter((tick) => Number.isFinite(tick) && tick > 0);
@@ -590,17 +632,39 @@ function resolvePrimaryTick(item: ProduceHistoryItem): number {
 }
 
 function historyRowKey(item: ProduceHistoryItem): string {
-  return `${item.history_type || "produce_clip"}#${item.demo_path}#${item.view}#${item.spec_mode}#${item.completed_at_ms}#${item.video_path}#${(item.kill_ids || []).join("|")}`;
+  return `${item.history_type || "produce_clip"}#${item.demo_path}#${item.view}#${item.spec_mode}#${item.source_id || ""}#${item.round || 0}#${item.completed_at_ms}#${item.video_path}#${(item.kill_ids || []).join("|")}`;
 }
 
-function viewLabel(view: string): string {
-  return String(view).toLowerCase() === "victim"
-    ? t("main.clips.victim_view")
-    : t("main.clips.killer_view");
+function historyItemView(item: ProduceHistoryItem): "killer" | "victim" | "full_round_pov" {
+  const view = String(item.view || "").toLowerCase();
+  if (view === "victim") return "victim";
+  if (view === "full_round_pov") return "full_round_pov";
+  if (String(item.source_id || "").toLowerCase().startsWith("full_round_pov:")) {
+    return "full_round_pov";
+  }
+  return "killer";
 }
 
-function viewTagType(view: string): "success" | "warning" {
-  return String(view).toLowerCase() === "victim" ? "warning" : "success";
+function viewLabel(item: ProduceHistoryItem): string {
+  const view = historyItemView(item);
+  if (view === "victim") return t("main.clips.victim_view");
+  if (view === "full_round_pov") return t("main.clips.full_round_pov_tag");
+  return t("main.clips.killer_view");
+}
+
+function viewTagType(item: ProduceHistoryItem): "success" | "warning" | "info" {
+  const view = historyItemView(item);
+  if (view === "victim") return "warning";
+  if (view === "full_round_pov") return "info";
+  return "success";
+}
+
+function povRowStatusLabel(item: ProduceHistoryItem): string {
+  const round = Number(item.round || 0);
+  const kills = item.kills?.length || 0;
+  const died = String(item.end_reason || "").toLowerCase() === "target_death";
+  const key = died ? "main.clips.full_round_pov_round_title_died" : "main.clips.full_round_pov_round_title_survived";
+  return t(key, { round, kills });
 }
 
 function formatTime(tsMs: number): string {

@@ -74,7 +74,7 @@
 - `ImportFiveEMatch`
 - `ImportFiveEMatch` 返回值语义：输入 `matchID`（支持原始 ID/URL/zip 名），通过 5E match 接口解析 `demo_url` 下载并解压，返回位于 `<dataDir>/demo/5e/<matchID>/<matchID>.dem` 的受管控 Demo 路径
 - `ParseDemoFile`
-- `ParseDemoFile` 返回的 `players[]` 字段：`name` `steam_id` `kills` `deaths` `assists`（不包含 `team`）
+- `ParseDemoFile` 返回的 `players[]` 字段：`name` `steam_id` `steam_id_text` `kills` `deaths` `assists`（不包含 `team`；前端需要精确 SteamID 时使用字符串字段 `steam_id_text`，避免 JS number 精度丢失）
 - `ParseDemoFile` 额外返回 `clip_players[]`（按玩家 -> 回合 -> 击杀明细，供 clips/produce 使用）
 - `GetClipSettings`
 - `SaveClipSettings`
@@ -87,8 +87,12 @@
 - `GeneratePluginJSON` 支持可选参数 `record_victim_view`（开启后按片段生成“击杀者视角 -> 被害者视角”连续序列）
 - `GeneratePluginJSON` 支持可选参数 `victim_view_mode`：`batch`（先击杀者后逐个被害者）/`interleaved`（击杀者与被害者交替）
 - `GeneratePluginJSON` 支持可选参数 `record_material_movies`（开启后每段 pass 用 `mirv_startmovie <name>` / `mirv_endmovie` 包裹，按命名约定 `clip_<order>_<role>` 录出独立素材）
+- `GeneratePluginJSON` / `GeneratePluginJSONBatchAndLaunchHLAE` 支持可选参数 `full_round_pov.player_steam_id`（按指定玩家生成整局 POV 录制计划；每回合从 `RoundStart` 录到目标死亡 tick + 1 秒，或目标存活时录到下一回合 `RoundStart` 前 1 秒（无下一回合时回退到本回合结束 tick），每回合一个 take，输出顺序早于 victim clip takes；有效击杀/死亡仍以 `RoundFreezetimeEnd` 后为准）
+- `GeneratePluginJSON` / `GeneratePluginJSONBatchAndLaunchHLAE` 的 `selected_items[]` 支持可选 `include_killer`（缺省为 `true`；整局 POV 模式下 victim-only 片段传 `false`）
 - `GeneratePluginJSON` / `GeneratePluginJSONBatchAndLaunchHLAE` 的 `selected_items[]` 支持可选 `clip_overrides`：`killer_pre_seconds` `killer_post_seconds` `victim_pre_seconds` `victim_post_seconds` `enable_voice` `enable_spec_show_xray_zero`（字段缺省表示继承全局设置）
+- `GeneratePluginJSON` / `GeneratePluginJSONBatchAndLaunchHLAE` 返回的 `take_plans[]` 支持可选字段：`source_id` `round` `player_name` `player_steam_id` `start_tick` `end_tick` `end_reason`（整局 POV take 使用 `view=full_round_pov` 与稳定 `source_id` 区分每个回合）
 - `GeneratePluginJSONBatchAndLaunchHLAE` 支持可选参数 `debug.keep_intermediate_files`（`true` 时录制会话结束仅清理 `*.mux.tmp.mp4`，保留 take 视频/音频中间产物；默认 `false`）
+- `PreviewFullRoundPOV(demoPath, playerSteamID string)` 返回 `FullRoundPOVPlan`（前端 UI 预览用，提前获取完整回合录制计划包含每回合 start/end tick、死亡/存活状态，不生成任何文件；每个 segment 必然包含 tracked player 至少 1 个击杀，零击杀玩家返回 segments 为空，前端用空态阻止生成）
 - `GenerateMaterialPluginJSON`（等同 `GeneratePluginJSON` + `record_material_movies=true` + 默认 `mode=material`，供素材模式/剪辑模式阶段1 使用）
 - `GetClipMode` / `SaveClipMode`（持久化 `clip_mode`，取值 `material` / `edit`）
 - `SaveClipProject` / `LoadClipProject`（`<dataDir>/projects/<demo_basename>.clipproject.json` 读写）

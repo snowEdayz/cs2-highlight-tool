@@ -9,7 +9,11 @@ import {demo} from '../models';
 
 export function ApplySelfUpdate():Promise<envsetup.StartupState>;
 
+export function CancelStartupDownload(arg1:string):Promise<envsetup.StartupState>;
+
 export function CheckPlatformClients():Promise<Array<app.PlatformClientStatus>>;
+
+export function ClearDemoDirectory():Promise<app.DemoStorageStats>;
 
 export function ClearOutputsDirectory():Promise<app.OutputsStorageStats>;
 
@@ -33,7 +37,11 @@ export function GetClipActionSettings():Promise<app.ClipActionSettings>;
 
 export function GetClipSettings():Promise<app.ClipSettings>;
 
+export function GetDemoStorageStats():Promise<app.DemoStorageStats>;
+
 export function GetFiveEPlayerName():Promise<string>;
+
+export function GetGameInfoHealth():Promise<app.GameInfoHealth>;
 
 export function GetOutputsStorageStats():Promise<app.OutputsStorageStats>;
 
@@ -61,6 +69,8 @@ export function ListFiveERecentMatches(arg1:string,arg2:number):Promise<fivee.Fi
 
 export function ListWanmeiRecentMatches(arg1:number):Promise<wanmei.WanmeiMatchListResult>;
 
+export function OpenDemoDirectory():Promise<void>;
+
 export function OpenExternalURL(arg1:string):Promise<void>;
 
 export function OpenManualDownload(arg1:string):Promise<void>;
@@ -79,9 +89,13 @@ export function PickRecordOutputDir():Promise<string>;
 
 export function PickWorkspaceDir():Promise<string>;
 
+export function PreviewFullRoundPOV(arg1:string,arg2:string):Promise<demo.FullRoundPOVPlan>;
+
 export function ProbeClipDuration(arg1:string):Promise<number>;
 
 export function ReinstallStartupComponent(arg1:string):Promise<envsetup.StartupState>;
+
+export function RepairGameInfo():Promise<app.GameInfoHealth>;
 
 export function RequestClosePlatformClient(arg1:string):Promise<app.PlatformClientCloseResult>;
 
@@ -97,4 +111,4 @@ export function SaveClipSettings(arg1:app.ClipSettings):Promise<app.ClipSettings
 
 export function SetWorkspaceDir(arg1:string):Promise<void>;
 
-export function ValidateWorkspaceDir(arg1:string):Promise<boolean|string>;
+export function ValidateWorkspaceDir(arg1:string):Promise<app.WorkspaceValidateResult>;

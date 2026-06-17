@@ -42,6 +42,7 @@ type ClipActionSettings struct {
 
 type SelectedClipItem struct {
 	Kill           demo.ClipKill      `json:"kill"`
+	IncludeKiller  *bool              `json:"include_killer,omitempty"`
 	IncludeVictim  bool               `json:"include_victim"`
 	KillerSpecMode int                `json:"killer_spec_mode"`
 	VictimSpecMode int                `json:"victim_spec_mode"`

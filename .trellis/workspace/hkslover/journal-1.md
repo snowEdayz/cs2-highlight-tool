@@ -1188,3 +1188,38 @@ Implemented POV HUD recording end-to-end: PovHudEnabled toggle through Config/Cl
 ### Next Steps
 
 - None - task complete
+
+
+## Session 36: Full-round POV recording
+
+**Date**: 2026-06-17
+**Task**: Full-round POV recording
+**Branch**: `main`
+
+### Summary
+
+Implemented full-round POV recording with victim-only clip support, fixed preview error handling, corrected edit-page POV grouping, and updated fixed 1s POV end tick rules.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `db5db2c` | (see git log) |
+| `aa7c99c` | (see git log) |
+| `cce6d4f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

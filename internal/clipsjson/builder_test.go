@@ -112,6 +112,57 @@ func TestBuild_DrawOnlyDeathnoticesOnlyWhenHideAllUIEnabled(t *testing.T) {
 	assertNoPrefixAction(t, disabled.Sequences[0].Actions, "cl_draw_only_deathnotices")
 }
 
+func TestBuild_ShoulderCameraCommandBeforeBuildInfoOnlyWhenEnabled(t *testing.T) {
+	shoulderCameraCommand := "cam_command 1;cam_idealdist 30;cam_idealyaw 0;cam_idealpitch 0;c_thirdpersonshoulder 1;c_thirdpersonshoulderaimdist 300;c_thirdpersonshoulderdist 40;c_thirdpersonshoulderheight 2;c_thirdpersonshoulderoffset 20;"
+	enabled, err := Build([]Item{{
+		Kill:          demo.ClipKill{ID: "k1", Tick: 200, KillerSlot: 7},
+		IncludeVictim: false,
+	}}, BuildOptions{
+		TickRate:           64,
+		KillerPreSeconds:   1,
+		KillerPostSeconds:  1,
+		RecordFPS:          60,
+		VideoPreset:        "n1",
+		RecordOutputDir:    `D:/clips/output`,
+		UseShoulderCamera:  true,
+		KillFeedLifetime:   4,
+		EnableSpecShowXray: true,
+	})
+	if err != nil {
+		t.Fatalf("Build enabled use_shoulder_camera: %v", err)
+	}
+	bootstrap := enabled.Sequences[0].Actions
+	if len(bootstrap) < 2 {
+		t.Fatalf("bootstrap should contain at least two actions: %#v", bootstrap)
+	}
+	if bootstrap[0].Cmd != shoulderCameraCommand {
+		t.Fatalf("shoulder camera command should be first action, got %#v", bootstrap)
+	}
+	if bootstrap[1].Cmd != "r_show_build_info 0" {
+		t.Fatalf("r_show_build_info should follow shoulder camera command, got %#v", bootstrap[:2])
+	}
+
+	disabled, err := Build([]Item{{
+		Kill:          demo.ClipKill{ID: "k1", Tick: 200, KillerSlot: 7},
+		IncludeVictim: false,
+	}}, BuildOptions{
+		TickRate:           64,
+		KillerPreSeconds:   1,
+		KillerPostSeconds:  1,
+		RecordFPS:          60,
+		VideoPreset:        "n1",
+		RecordOutputDir:    `D:/clips/output`,
+		UseShoulderCamera:  false,
+		KillFeedLifetime:   4,
+		EnableSpecShowXray: true,
+	})
+	if err != nil {
+		t.Fatalf("Build disabled use_shoulder_camera: %v", err)
+	}
+	assertNoPrefixAction(t, disabled.Sequences[0].Actions, "cam_command")
+	assertNoPrefixAction(t, disabled.Sequences[0].Actions, "c_thirdpersonshoulder")
+}
+
 func TestBuild_SkyBlackoutEmitsTwoCommandsOnlyWhenEnabled(t *testing.T) {
 	enabled, err := Build([]Item{{
 		Kill:          demo.ClipKill{ID: "k1", Tick: 200, KillerSlot: 7},

@@ -38,6 +38,7 @@ type Config struct {
 	RecordOutputDir        string              `json:"record_output_dir"`
 	EnableSpecShowXray     bool                `json:"enable_spec_show_xray_zero"`
 	HideAllUI              bool                `json:"hide_all_ui"`
+	UseShoulderCamera      bool                `json:"use_shoulder_camera"`
 	PovHudEnabled          bool                `json:"pov_hud_enabled"`
 	SkyBlackout            bool                `json:"sky_blackout"`
 	KillFeedLifetime       int                 `json:"kill_feed_lifetime"`
@@ -94,6 +95,7 @@ func Default(dataDir string) *Config {
 		RecordOutputDir:    filepath.Join(dataDir, "outputs"),
 		EnableSpecShowXray: true,
 		HideAllUI:          false,
+		UseShoulderCamera:  false,
 		PovHudEnabled:      true,
 		SkyBlackout:        true,
 		KillFeedLifetime:   DefaultKillFeedLifetime,

@@ -20,6 +20,8 @@ const (
 	segmentRecordDelay     = 2
 )
 
+const shoulderCameraCommand = "cam_command 1;cam_idealdist 30;cam_idealyaw 0;cam_idealpitch 0;c_thirdpersonshoulder 1;c_thirdpersonshoulderaimdist 300;c_thirdpersonshoulderdist 40;c_thirdpersonshoulderheight 2;c_thirdpersonshoulderoffset 20;"
+
 type ActionMetadata struct {
 	TakeIndex   int    `json:"take_index,omitempty"`
 	TakeName    string `json:"take_name,omitempty"`
@@ -75,6 +77,7 @@ type BuildOptions struct {
 	RecordBatchName           string
 	EnableSpecShowXray        bool
 	HideAllUI                 bool
+	UseShoulderCamera         bool
 	SkyBlackout               bool
 	KillFeedLifetime          int
 	BlockKillFeed             bool
@@ -151,6 +154,7 @@ type bootstrapOptions struct {
 	ExtraCommands      []string
 	EnableSpecShowXray bool
 	HideAllUI          bool
+	UseShoulderCamera  bool
 	SkyBlackout        bool
 	KillFeedLifetime   int
 	BlockKillFeed      bool
@@ -235,6 +239,7 @@ func Build(items []Item, opts BuildOptions) (*BuildResult, error) {
 		ExtraCommands:      opts.ExtraCommands,
 		EnableSpecShowXray: opts.EnableSpecShowXray,
 		HideAllUI:          opts.HideAllUI,
+		UseShoulderCamera:  opts.UseShoulderCamera,
 		SkyBlackout:        opts.SkyBlackout,
 		KillFeedLifetime:   opts.KillFeedLifetime,
 		BlockKillFeed:      opts.BlockKillFeed,
@@ -577,6 +582,9 @@ func buildBootstrapSequence(opts bootstrapOptions) Sequence {
 	voiceEnabled := opts.ActionSettings.EnableVoiceIndices && opts.ActionSettings.EnableVoiceIndicesH
 	voiceValue := voiceIndicesValue(voiceEnabled)
 
+	if opts.UseShoulderCamera {
+		actions = append(actions, Action{Cmd: shoulderCameraCommand, Tick: actionTick})
+	}
 	actions = append(actions, Action{Cmd: "r_show_build_info 0", Tick: actionTick})
 	actions = append(actions, Action{Cmd: "cl_trueview_show_status 0", Tick: actionTick})
 	actions = append(actions, Action{Cmd: "engine_no_focus_sleep 0", Tick: actionTick})

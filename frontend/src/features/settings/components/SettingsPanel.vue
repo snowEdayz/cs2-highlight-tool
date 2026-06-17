@@ -39,6 +39,10 @@
           <n-switch v-model:value="settings.hide_all_ui" />
         </div>
         <div class="setting-row">
+          <span class="setting-label">{{ t("main.settings.use_shoulder_camera") }}</span>
+          <n-switch v-model:value="settings.use_shoulder_camera" />
+        </div>
+        <div class="setting-row">
           <span class="setting-label">{{ t("main.settings.pov_hud_enabled") }}</span>
           <n-switch v-model:value="settings.pov_hud_enabled" />
         </div>
@@ -205,6 +209,7 @@ const settings = reactive<ClipSettings>({
   record_output_dir: "",
   enable_spec_show_xray_zero: true,
   hide_all_ui: false,
+  use_shoulder_camera: false,
   pov_hud_enabled: true,
   sky_blackout: true,
   kill_feed_lifetime: 4,

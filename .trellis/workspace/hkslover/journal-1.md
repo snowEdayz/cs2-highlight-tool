@@ -1256,3 +1256,36 @@ Investigated whether the producews WS server retries on failure (it didn't — s
 ### Next Steps
 
 - None - task complete
+
+
+## Session 38: Post-update changelog modal with embedded bilingual notes
+
+**Date**: 2026-06-17
+**Task**: Post-update changelog modal with embedded bilingual notes
+**Branch**: `main`
+
+### Summary
+
+Added internal/changelog package (go:embed bilingual markdown), Config.LastChangelogVersion + EnsureFirstInstallChangelogSeed for silent first-install / show-once-after-upgrade semantics (VS Code postUpdateWidget style), GetPendingChangelog / AckChangelog Wails methods, and frontend ChangelogModal wired into AppShell on mode=main using marked + DOMPurify with locale-aware section pick. TestEmbeddedNotesCoverCurrentVersion guards CI against forgotten release notes.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `32f1071` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

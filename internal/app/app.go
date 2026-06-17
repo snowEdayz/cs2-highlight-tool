@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"cs2-highlight-tool-v2/internal/appdata"
+	"cs2-highlight-tool-v2/internal/config"
 	"cs2-highlight-tool-v2/internal/envsetup"
 	"cs2-highlight-tool-v2/internal/producews"
 	"cs2-highlight-tool-v2/internal/release"
@@ -67,6 +68,7 @@ func (a *App) initWorkspaceLocked() {
 			return
 		}
 		a.dataDir = stored
+		a.seedFirstInstallChangelog()
 		a.service = envsetup.NewWithDataDir(a.exeDir, stored, a.version)
 		return
 	}
@@ -76,8 +78,20 @@ func (a *App) initWorkspaceLocked() {
 	if fallback != "" {
 		_ = os.MkdirAll(fallback, 0o755)
 		a.dataDir = fallback
+		a.seedFirstInstallChangelog()
 		a.service = envsetup.NewWithDataDir(a.exeDir, fallback, a.version)
 	}
+}
+
+// seedFirstInstallChangelog 在首装时把 LastChangelogVersion 预设为当前版本，
+// 避免新用户首次进入主界面被弹出"更新日志"。仅在 config.json 不存在时生效。
+// 必须在 dataDir 已设置、任何 LoadOrCreate 之前调用。失败仅吞噬：下一次
+// LoadOrCreate 会以同等原因再次失败并自然把错误带回前端。
+func (a *App) seedFirstInstallChangelog() {
+	if a.dataDir == "" || a.version == "" {
+		return
+	}
+	_, _ = config.EnsureFirstInstallChangelogSeed(a.configPath(), a.dataDir, a.version)
 }
 
 // isUsableDataDir 用于"已初始化"分支：目录存在 + 字符白名单 + 非磁盘根 + 长度合规。

@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 39
+- **Total Sessions**: 40
 - **Last Active**: 2026-06-17
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1324 | Active |
+| `journal-1.md` | ~1357 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 40 | 2026-06-17 | Self-update button opens direct asset URL instead of release page | `777dcc5` | `main` |
 | 39 | 2026-06-17 | Replace in-app self-update with browser-based manual download | `d9884de` | `main` |
 | 38 | 2026-06-17 | Post-update changelog modal with embedded bilingual notes | `32f1071` | `main` |
 | 37 | 2026-06-17 | producews supervisor auto-retry | `457d3b4` | `main` |

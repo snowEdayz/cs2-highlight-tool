@@ -37,6 +37,8 @@ export type {
   DemoStorageStats,
   OutputsStorageStats,
   ClipParameterOverrides,
+  FullRoundPOVPlan,
+  FullRoundPOVSegment,
   GeneratePluginSelectedItem,
   GeneratePluginJSONRequest,
   GeneratePluginJSONResult,

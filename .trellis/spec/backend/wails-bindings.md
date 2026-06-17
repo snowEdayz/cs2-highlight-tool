@@ -892,3 +892,129 @@ if err := os.WriteFile(vpkPath, producegame.PovVPK, 0644); err != nil {
 }
 a.produceState.pov = povSessionState{vpkPath: vpkPath, vpkInstalled: true}
 ```
+
+## Scenario: Full-Round Player POV Recording Contract
+
+### 1. Scope / Trigger
+
+- Trigger: The clips/produce flow supports a separate full-round first-person POV recording mode for a selected demo/player, independent from the existing kill-window clip selection model.
+- Scope: `internal/demo` round/death parsing, `internal/app` Wails request/response structs, `internal/clipsjson` action generation, `internal/plugingen` history keys, and frontend clip/produce state.
+- Boundary: Clip selection UI -> `GeneratePluginJSONBatchAndLaunchHLAE` / `GeneratePluginJSONBatch` -> demo parser -> plugin JSON take plans -> produce history.
+
+### 2. Signatures
+
+```go
+type GeneratePluginJSONRequest struct {
+    DemoPath      string             `json:"demo_path"`
+    TickRate      float64            `json:"tick_rate"`
+    SelectedItems []SelectedClipItem `json:"selected_items,omitempty"`
+    FullRoundPOV  *FullRoundPOVItem  `json:"full_round_pov,omitempty"`
+}
+
+type FullRoundPOVItem struct {
+    PlayerSteamID string `json:"player_steam_id"`
+}
+
+// Wails method (no file generation, only returns plan for UI preview)
+func (a *App) PreviewFullRoundPOV(demoPath, playerSteamID string) (*demo.FullRoundPOVPlan, error)
+
+type SelectedClipItem struct {
+    Kill          demo.ClipKill      `json:"kill"`
+    IncludeKiller *bool             `json:"include_killer,omitempty"`
+    IncludeVictim bool              `json:"include_victim"`
+}
+
+type ProduceTakePlan struct {
+    View          string   `json:"view"` // killer | victim | full_round_pov
+    KillIDs       []string `json:"kill_ids"`
+    SourceID      string   `json:"source_id,omitempty"`
+    Round         int      `json:"round,omitempty"`
+    PlayerName    string   `json:"player_name,omitempty"`
+    PlayerSteamID string   `json:"player_steam_id,omitempty"`
+    StartTick     int      `json:"start_tick,omitempty"`
+    EndTick       int      `json:"end_tick,omitempty"`
+    EndReason     string   `json:"end_reason,omitempty"` // target_death | round_end
+}
+```
+
+Frontend request:
+
+```ts
+interface GeneratePluginJSONRequest {
+  demo_path: string;
+  tick_rate: number;
+  selected_items: GeneratePluginSelectedItem[];
+  full_round_pov?: { player_steam_id: string };
+}
+```
+
+### 3. Contracts
+
+- `full_round_pov.player_steam_id` is optional. When present, it identifies exactly one tracked player for that demo.
+- Full-round POV is demo/player-level state. It must not be represented as fake `selected_items[]` kills.
+- `selected_items[].include_killer` defaults to `true` when omitted. Full-round POV mode uses `include_killer=false` for victim-only kill rows.
+- Full-round POV take generation must run before victim clip take generation.
+- Full-round POV segment recording starts at `RoundStart`; fallback to `RoundFreezetimeEnd` only if round start is missing. Valid kill/death filtering still starts at `RoundFreezetimeEnd` when available, so freeze-time events do not create live-round segments.
+- Full-round POV segment end is the tracked player's in-round death tick plus the current `killer_post_seconds` converted with the request tick rate and clamped to `RoundEnd`; if the tracked player survives, use `RoundEnd`. Do not use `RoundEndOfficial` as the normal cutoff.
+- `take_plans[].view=full_round_pov` and a stable `source_id` distinguish full-round takes from kill-window takes and from each other.
+- `ParseDemoFile.players[]` includes `steam_id_text`; frontend must use that string for full-round requests to avoid JavaScript number precision loss.
+- Rounds where the tracked player did not get any kill are skipped — only kill-bearing rounds are turned into full-round POV takes.
+
+### 4. Validation & Error Matrix
+
+- Missing `demo_path` -> Go error `demo 路径为空`.
+- Invalid or empty `full_round_pov.player_steam_id` -> Go error explaining the tracked SteamID is invalid.
+- Demo parse failure -> wrapped Go error from `demo.ParseFullRoundPOVPlan`.
+- Full-round POV requested but no valid live-round segments are found -> Go error `没有可导出的整局 POV 回合片段`.
+- No full-round segments and no selected kill items -> Go error `没有可导出的录制片段`.
+- Player has no kill clips -> frontend shows empty kill-list state; this is not an error if full-round POV is enabled.
+- Tracked player has zero kills in all rounds -> backend returns empty segments; frontend prevents generation (start-produce disabled, empty-state warning shown).
+
+### 5. Good/Base/Bad Cases
+
+- Good: User enables full-round POV for one demo/player; selected old kill materials for that demo are cleared; produce generates one `full_round_pov` take per live round, followed by any newly selected victim takes.
+- Good: A zero-kill player can still be selected from `players[]`; right-side kill list shows an empty state and produce still sends `full_round_pov.player_steam_id`.
+- Base: Existing kill-window clip mode sends only `selected_items[]` and continues to generate killer/victim takes as before.
+- Bad: Encoding full-round POV as synthetic `demo.ClipKill` rows. This mixes two different selection semantics and breaks future maintenance.
+- Bad: Using numeric `players[].steam_id` in frontend request payloads. SteamID64 exceeds JavaScript safe integer range.
+- Bad: Building produce history keys for full-round takes from empty `kill_ids` only. Multiple rounds would collapse to the same key.
+
+### 6. Tests Required
+
+- `internal/demo`: pure plan tests for round-start recording, target death end, round-end survival end, and ignoring deaths outside the live `[RoundFreezetimeEnd, RoundEnd]` decision window.
+- `internal/clipsjson`: builder test proving full-round POV takes precede victim takes and carry `source_id` / round metadata.
+- `internal/plugingen`: history key tests proving distinct `source_id` values do not collide while legacy clip keys remain compatible.
+- `internal/app`: conversion tests for full-round plan -> plugin segment target/tick/player metadata.
+- Required checks: `go test ./...` and `cd frontend && npm run build`.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```ts
+// Loses precision and cannot represent zero-kill player selection cleanly.
+full_round_pov: { player_steam_id: String(player.steam_id) }
+```
+
+```go
+// All full-round rounds share empty kill_ids, so history dedup collides.
+key := plugingen.BuildProduceHistoryKey(plan.DemoPath, plan.View, plan.SpecMode, plan.KillIDs)
+```
+
+#### Correct
+
+```ts
+full_round_pov: { player_steam_id: player.steam_id_text }
+```
+
+```go
+key := plugingen.BuildProduceHistoryKeyWithSourceID(
+    plan.DemoPath,
+    plan.View,
+    plan.SpecMode,
+    plan.KillIDs,
+    plan.SourceID,
+)
+```
+
+The full-round path remains independent from kill-window selections while still reusing shared low-level action generation and produce session plumbing.

@@ -49,16 +49,25 @@
                   <n-tag
                     size="tiny"
                     :bordered="false"
-                    :type="viewTagType(item.view)"
+                    :type="viewTagType(item)"
                   >
-                    {{ viewLabel(item.view) }}
+                    {{ viewLabel(item) }}
                   </n-tag>
                   <span class="item-time">{{ formatTime(item.completed_at_ms) }}</span>
+                  <span
+                    v-if="historyItemView(item) === 'full_round_pov'"
+                    class="item-meta item-meta--inline"
+                  >
+                    {{ povRowStatusLabel(item) }}
+                  </span>
                 </div>
                 <div v-if="item.kills?.length" class="item-kills">
                   <div v-for="kill in item.kills" :key="kill.id" class="item-kill-row">
                     <DeathNoticeLine :kill="kill" compact />
                   </div>
+                </div>
+                <div v-else-if="historyItemView(item) === 'full_round_pov'" class="item-meta">
+                  -
                 </div>
                 <div v-else class="item-meta">
                   {{ t("topbar.history_kill_count", { count: item.kill_ids?.length || 0 }) }}
@@ -142,6 +151,20 @@ const roundGroupsByDemo = computed(() => {
   for (const group of historyGroups.value) {
     const groupedByRound = new Map<string, HistoryRoundGroup>();
     for (const item of group.items) {
+      if (historyItemView(item) === "full_round_pov") {
+        const name = "pov-group";
+        if (!groupedByRound.has(name)) {
+          groupedByRound.set(name, {
+            name,
+            round: 0,
+            kill_count: 0,
+            items: [],
+          });
+        }
+        groupedByRound.get(name)!.items.push(item);
+        groupedByRound.get(name)!.kill_count += (item.kills || []).length;
+        continue;
+      }
       const split = splitKillsByRound(
         (item.kills || []).filter((kill): kill is DemoClipKill => !!kill?.id),
       );
@@ -162,12 +185,27 @@ const roundGroupsByDemo = computed(() => {
         groupedByRound.get(name)!.kill_count += part.kills.length;
       }
     }
-    const sortedGroups = Array.from(groupedByRound.values()).sort((a, b) => {
-      if (a.round <= 0 && b.round <= 0) return 0;
-      if (a.round <= 0) return 1;
-      if (b.round <= 0) return -1;
-      return a.round - b.round;
-    });
+    const sortedGroups = Array.from(groupedByRound.values())
+      .map((g) => {
+        if (g.name === "pov-group") {
+          return {
+            ...g,
+            items: g.items
+              .slice()
+              .sort((a, b) => Number(a.round || 0) - Number(b.round || 0)),
+          };
+        }
+        return g;
+      })
+      .sort((a, b) => {
+        if (a.name === "pov-group" && b.name === "pov-group") return 0;
+        if (a.name === "pov-group") return -1;
+        if (b.name === "pov-group") return 1;
+        if (a.round <= 0 && b.round <= 0) return 0;
+        if (a.round <= 0) return 1;
+        if (b.round <= 0) return -1;
+        return a.round - b.round;
+      });
     next.set(group.demo_path, sortedGroups);
   }
   return next;
@@ -242,10 +280,13 @@ function splitKillsByRound(
 }
 
 function historyRowKey(item: ProduceHistoryItem): string {
-  return `${item.history_type || "produce_clip"}#${item.demo_path}#${item.view}#${item.spec_mode}#${item.completed_at_ms}#${item.video_path}#${(item.kill_ids || []).join("|")}`;
+  return `${item.history_type || "produce_clip"}#${item.demo_path}#${item.view}#${item.spec_mode}#${item.source_id || ""}#${item.round || 0}#${item.completed_at_ms}#${item.video_path}#${(item.kill_ids || []).join("|")}`;
 }
 
 function roundTitle(group: HistoryRoundGroup): string {
+  if (group.name === "pov-group") {
+    return t("topbar.history_full_round_pov_group_title", { count: group.items.length });
+  }
   if (group.round > 0) {
     return t("main.clips.round_title", {
       round: group.round,
@@ -255,14 +296,28 @@ function roundTitle(group: HistoryRoundGroup): string {
   return t("main.produce.round_unknown_title", { kills: group.kill_count });
 }
 
-function viewLabel(view: string): string {
-  return view === "victim"
-    ? t("main.clips.victim_view")
-    : t("main.clips.killer_view");
+function historyItemView(item: ProduceHistoryItem): "killer" | "victim" | "full_round_pov" {
+  const view = String(item.view || "").toLowerCase();
+  if (view === "victim") return "victim";
+  if (view === "full_round_pov") return "full_round_pov";
+  if (String(item.source_id || "").toLowerCase().startsWith("full_round_pov:")) {
+    return "full_round_pov";
+  }
+  return "killer";
 }
 
-function viewTagType(view: string): "success" | "warning" {
-  return view === "victim" ? "warning" : "success";
+function viewLabel(item: ProduceHistoryItem): string {
+  const view = historyItemView(item);
+  if (view === "victim") return t("main.clips.victim_view");
+  if (view === "full_round_pov") return t("main.clips.full_round_pov_tag");
+  return t("main.clips.killer_view");
+}
+
+function viewTagType(item: ProduceHistoryItem): "success" | "warning" | "info" {
+  const view = historyItemView(item);
+  if (view === "victim") return "warning";
+  if (view === "full_round_pov") return "info";
+  return "success";
 }
 
 function formatTime(tsMs: number): string {
@@ -276,6 +331,14 @@ function formatTime(tsMs: number): string {
     ":" +
     String(d.getSeconds()).padStart(2, "0")
   );
+}
+
+function povRowStatusLabel(item: ProduceHistoryItem): string {
+  const round = Number(item.round || 0);
+  const kills = item.kills?.length || 0;
+  const died = String(item.end_reason || "").toLowerCase() === "target_death";
+  const key = died ? "main.clips.full_round_pov_round_title_died" : "main.clips.full_round_pov_round_title_survived";
+  return t(key, { round, kills });
 }
 
 function basename(path: string): string {
@@ -359,5 +422,9 @@ function basename(path: string): string {
 .item-meta {
   color: #8d9890;
   font-size: 11px;
+}
+
+.item-meta--inline {
+  margin-left: 4px;
 }
 </style>

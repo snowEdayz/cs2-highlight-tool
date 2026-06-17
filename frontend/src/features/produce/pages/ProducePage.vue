@@ -41,12 +41,69 @@
             </template>
 
             <n-empty
-              v-if="displayCountForDemo(entry) === 0"
+              v-if="!getFullRoundPOVSelection(entry).enabled && displayCountForDemo(entry) === 0"
               :description="t('main.produce.no_materials_for_demo')"
               size="small"
             />
 
-            <n-space v-else vertical :size="8">
+            <n-space v-if="getFullRoundPOVSelection(entry).enabled || displayCountForDemo(entry) > 0" vertical :size="8">
+              <div
+                v-if="getFullRoundPOVSelection(entry).enabled && plannedRowsForDemo(entry).length === 0"
+                class="full-round-pending"
+              >
+                <template v-if="fullRoundPlanByDemo[entry.key]?.segments?.length">
+                  <n-collapse
+                    :expanded-names="getFullRoundPOVExpandedNames(entry)"
+                    @update:expanded-names="handleFullRoundPOVExpanded(entry, $event)"
+                  >
+                    <n-collapse-item
+                      :name="`${entry.key}-pov`"
+                      :title="t('main.clips.full_round_pov_group_title_count', { count: fullRoundPlanByDemo[entry.key].segments.length })"
+                    >
+                      <template #header-extra>
+                        <span class="full-round-player">{{
+                          t("main.clips.full_round_pov_indicator", {
+                            player: getFullRoundPOVTrackingLabel(entry),
+                          })
+                        }}</span>
+                      </template>
+
+                      <n-collapse
+                        :expanded-names="getPOVRoundExpanded(entry)"
+                        @update:expanded-names="handlePOVRoundExpanded(entry, $event)"
+                      >
+                        <n-collapse-item
+                          v-for="segment in fullRoundPlanByDemo[entry.key].segments"
+                          :key="`${entry.key}-pov-r${segment.round}`"
+                          :name="`r${segment.round}`"
+                          :title="povSegmentTitle(entry, segment)"
+                        >
+                          <div class="pov-round-kills">
+                            <template v-if="povRoundKills(entry, segment.round).length">
+                              <DeathNoticeLine
+                                v-for="kill in povRoundKills(entry, segment.round)"
+                                :key="kill.id"
+                                :kill="kill"
+                                compact
+                              />
+                            </template>
+                            <span v-else class="pov-round-empty">-</span>
+                          </div>
+                        </n-collapse-item>
+                      </n-collapse>
+                    </n-collapse-item>
+                  </n-collapse>
+                </template>
+
+                <div v-else-if="fullRoundPlanByDemo[entry.key]" class="full-round-loading">
+                  <span>{{ t("main.clips.full_round_pov_no_kills_empty") }}</span>
+                </div>
+
+                <div v-else class="full-round-loading">
+                  <span>{{ t("main.clips.full_round_pov_loading") }}</span>
+                </div>
+              </div>
+
               <template v-if="plannedRowsForDemo(entry).length > 0">
                 <n-collapse
                   :expanded-names="getPlannedRoundExpandedNames(entry)"
@@ -68,7 +125,7 @@
                           <div v-if="rowItem.kills.length" class="take-kill-list">
                             <DeathNoticeLine v-for="kill in rowItem.kills" :key="kill.id" :kill="kill" compact />
                           </div>
-                          <div v-else class="result-demo">{{ t("main.produce.kill_info_missing") }}</div>
+                          <div v-else class="result-demo">{{ rowSourceLabel(rowItem.row) }}</div>
                         </div>
 
                         <div class="planned-side">
@@ -106,7 +163,7 @@
                 </n-collapse>
               </template>
 
-              <template v-else>
+              <template v-if="pendingSelectionsForDemo(entry).length > 0">
                 <div
                   v-for="group in selectedRoundGroupsForDemo(entry)"
                   :key="`${entry.key}-selected-round-${group.round}`"
@@ -121,7 +178,7 @@
                         <DeathNoticeLine :kill="item.kill" compact />
                       </div>
                       <div class="selected-tags">
-                        <n-tag size="small" :bordered="false" type="success">
+                        <n-tag v-if="item.include_killer !== false" size="small" :bordered="false" type="success">
                           {{ t("main.clips.killer_view") }}
                         </n-tag>
                         <n-tag v-if="item.include_victim" size="small" :bordered="false" type="warning">
@@ -182,9 +239,12 @@
 <script setup lang="ts">
 import { useDebugSettings } from "@/shared/state/useDebugSettings";
 import { t } from "@/shared/i18n";
+import type { DemoClipKill, DemoListEntry, FullRoundPOVSegment } from "@/shared/types";
+import { getSelectedPlayerSteamID } from "@/features/import/composables/useDemoData";
 import DeathNoticeLine from "@/features/clips/components/DeathNoticeLine.vue";
 import PlatformClientCheckModal from "@/features/produce/components/PlatformClientCheckModal.vue";
 import { useProducePage } from "@/features/produce/composables/useProducePage";
+import { ref } from "vue";
 
 const { debugEnabled } = useDebugSettings();
 
@@ -210,6 +270,7 @@ const {
   statusTagType,
   viewLabel,
   viewTagType,
+  rowSourceLabel,
   takeFileByRow,
   canOpenClip,
   openProducedClip,
@@ -223,7 +284,77 @@ const {
   openHistoryDrawer,
   goToEdit,
   errorMessage,
+  getFullRoundPOVSelection,
+  getFullRoundPOVTrackingLabel,
+  fullRoundPlanByDemo,
+  pendingSelectionsForDemo,
 } = useProducePage();
+
+const fullRoundPOVExpandedByDemo = ref<Record<string, string[]>>({});
+const povRoundExpandedByDemo = ref<Record<string, string[]>>({});
+
+function getFullRoundPOVExpandedNames(entry: DemoListEntry | null): string[] {
+  if (!entry?.key) return [];
+  return fullRoundPOVExpandedByDemo.value[entry.key] || [];
+}
+
+function handleFullRoundPOVExpanded(
+  entry: DemoListEntry | null,
+  names: string | number | Array<string | number> | null,
+) {
+  if (!entry) return;
+  const list = (Array.isArray(names) ? names : names != null ? [names] : []).map((name) => String(name));
+  fullRoundPOVExpandedByDemo.value = {
+    ...fullRoundPOVExpandedByDemo.value,
+    [entry.key]: list,
+  };
+}
+
+function povSegmentTitle(entry: DemoListEntry | null, segment: FullRoundPOVSegment): string {
+  const playerSteamID = getSelectedPlayerSteamID(entry);
+  const kills = getPOVRoundKillCount(entry, playerSteamID, segment.round);
+  const died = String(segment.end_reason || "").toLowerCase() === "target_death";
+  const key = died ? "main.clips.full_round_pov_round_title_died" : "main.clips.full_round_pov_round_title_survived";
+  return t(key, { round: segment.round, kills });
+}
+
+function getPOVRoundKillCount(entry: DemoListEntry | null, playerSteamID: string, roundNum: number): number {
+  if (!entry?.meta?.clip_players) return 0;
+  const player = entry.meta.clip_players.find((p) => p.steam_id === playerSteamID);
+  if (!player) return 0;
+  const round = player.rounds.find((r) => r.round === roundNum);
+  return round?.kills?.length ?? 0;
+}
+
+function povRoundKills(entry: DemoListEntry | null, roundNum: number): DemoClipKill[] {
+  if (!entry?.meta?.clip_players) return [];
+  const playerSteamID = getSelectedPlayerSteamID(entry);
+  const player = entry.meta.clip_players.find((p) => p.steam_id === playerSteamID);
+  if (!player) return [];
+  const round = player.rounds.find((r) => r.round === roundNum);
+  if (!round?.kills?.length) return [];
+  return [...round.kills].sort((a, b) => {
+    if (a.tick === b.tick) return String(a.id).localeCompare(String(b.id));
+    return a.tick - b.tick;
+  });
+}
+
+function getPOVRoundExpanded(entry: DemoListEntry | null): string[] {
+  if (!entry?.key) return [];
+  return povRoundExpandedByDemo.value[entry.key] || [];
+}
+
+function handlePOVRoundExpanded(
+  entry: DemoListEntry | null,
+  names: string | number | Array<string | number> | null,
+) {
+  if (!entry) return;
+  const list = (Array.isArray(names) ? names : names != null ? [names] : []).map((name) => String(name));
+  povRoundExpandedByDemo.value = {
+    ...povRoundExpandedByDemo.value,
+    [entry.key]: list,
+  };
+}
 </script>
 
 <style scoped>
@@ -375,6 +506,33 @@ const {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.full-round-pending {
+  padding: 4px 0;
+}
+
+.pov-round-kills {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 0 2px;
+}
+
+.pov-round-empty {
+  font-size: 12px;
+  color: #8d9890;
+}
+
+.full-round-loading {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #8d9890;
+}
+
+.full-round-player {
+  font-size: 12px;
+  color: #edf1ee;
 }
 
 .result-error {

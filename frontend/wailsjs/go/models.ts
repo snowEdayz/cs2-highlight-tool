@@ -48,12 +48,18 @@ export namespace app {
 	    auto_add_victim_view: boolean;
 	    enable_voice: boolean;
 	    record_fps: number;
+	    record_quality: string;
 	    edit_fps: number;
 	    edit_quality: string;
 	    video_preset: string;
 	    launch_resolution: string;
 	    record_output_dir: string;
 	    enable_spec_show_xray_zero: boolean;
+	    hide_all_ui: boolean;
+	    pov_hud_enabled: boolean;
+	    sky_blackout: boolean;
+	    kill_feed_lifetime: number;
+	    block_kill_feed: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new ClipSettings(source);
@@ -68,12 +74,34 @@ export namespace app {
 	        this.auto_add_victim_view = source["auto_add_victim_view"];
 	        this.enable_voice = source["enable_voice"];
 	        this.record_fps = source["record_fps"];
+	        this.record_quality = source["record_quality"];
 	        this.edit_fps = source["edit_fps"];
 	        this.edit_quality = source["edit_quality"];
 	        this.video_preset = source["video_preset"];
 	        this.launch_resolution = source["launch_resolution"];
 	        this.record_output_dir = source["record_output_dir"];
 	        this.enable_spec_show_xray_zero = source["enable_spec_show_xray_zero"];
+	        this.hide_all_ui = source["hide_all_ui"];
+	        this.pov_hud_enabled = source["pov_hud_enabled"];
+	        this.sky_blackout = source["sky_blackout"];
+	        this.kill_feed_lifetime = source["kill_feed_lifetime"];
+	        this.block_kill_feed = source["block_kill_feed"];
+	    }
+	}
+	export class DemoStorageStats {
+	    demo_dir: string;
+	    demo_count: number;
+	    total_size_bytes: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new DemoStorageStats(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.demo_dir = source["demo_dir"];
+	        this.demo_count = source["demo_count"];
+	        this.total_size_bytes = source["total_size_bytes"];
 	    }
 	}
 	export class EditConcatClip {
@@ -161,6 +189,38 @@ export namespace app {
 	        this.errors = source["errors"];
 	    }
 	}
+	export class FullRoundPOVItem {
+	    player_steam_id: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FullRoundPOVItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.player_steam_id = source["player_steam_id"];
+	    }
+	}
+	export class GameInfoHealth {
+	    status: string;
+	    needs_repair: boolean;
+	    gameinfo_path: string;
+	    message: string;
+	    error: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new GameInfoHealth(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.status = source["status"];
+	        this.needs_repair = source["needs_repair"];
+	        this.gameinfo_path = source["gameinfo_path"];
+	        this.message = source["message"];
+	        this.error = source["error"];
+	    }
+	}
 	export class GeneratePluginJSONBatchDebug {
 	    keep_intermediate_files: boolean;
 	
@@ -180,6 +240,13 @@ export namespace app {
 	    view: string;
 	    spec_mode: number;
 	    kill_ids: string[];
+	    source_id?: string;
+	    round?: number;
+	    player_name?: string;
+	    player_steam_id?: string;
+	    start_tick?: number;
+	    end_tick?: number;
+	    end_reason?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ProduceTakePlan(source);
@@ -193,6 +260,13 @@ export namespace app {
 	        this.view = source["view"];
 	        this.spec_mode = source["spec_mode"];
 	        this.kill_ids = source["kill_ids"];
+	        this.source_id = source["source_id"];
+	        this.round = source["round"];
+	        this.player_name = source["player_name"];
+	        this.player_steam_id = source["player_steam_id"];
+	        this.start_tick = source["start_tick"];
+	        this.end_tick = source["end_tick"];
+	        this.end_reason = source["end_reason"];
 	    }
 	}
 	export class GeneratePluginJSONBatchItemResult {
@@ -245,6 +319,7 @@ export namespace app {
 	}
 	export class SelectedClipItem {
 	    kill: demo.ClipKill;
+	    include_killer?: boolean;
 	    include_victim: boolean;
 	    killer_spec_mode: number;
 	    victim_spec_mode: number;
@@ -257,6 +332,7 @@ export namespace app {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.kill = this.convertValues(source["kill"], demo.ClipKill);
+	        this.include_killer = source["include_killer"];
 	        this.include_victim = source["include_victim"];
 	        this.killer_spec_mode = source["killer_spec_mode"];
 	        this.victim_spec_mode = source["victim_spec_mode"];
@@ -285,6 +361,7 @@ export namespace app {
 	    demo_path: string;
 	    tick_rate: number;
 	    selected_items?: SelectedClipItem[];
+	    full_round_pov?: FullRoundPOVItem;
 	    extra_commands?: string[];
 	    batch_timestamp?: string;
 	    selected_kills?: demo.ClipKill[];
@@ -298,6 +375,7 @@ export namespace app {
 	        this.demo_path = source["demo_path"];
 	        this.tick_rate = source["tick_rate"];
 	        this.selected_items = this.convertValues(source["selected_items"], SelectedClipItem);
+	        this.full_round_pov = this.convertValues(source["full_round_pov"], FullRoundPOVItem);
 	        this.extra_commands = source["extra_commands"];
 	        this.batch_timestamp = source["batch_timestamp"];
 	        this.selected_kills = this.convertValues(source["selected_kills"], demo.ClipKill);
@@ -492,6 +570,13 @@ export namespace app {
 	    spec_mode: number;
 	    kill_ids: string[];
 	    kills?: demo.ClipKill[];
+	    source_id?: string;
+	    round?: number;
+	    player_name?: string;
+	    player_steam_id?: string;
+	    start_tick?: number;
+	    end_tick?: number;
+	    end_reason?: string;
 	    video_path: string;
 	    history_type?: string;
 	    source_label?: string;
@@ -510,6 +595,13 @@ export namespace app {
 	        this.spec_mode = source["spec_mode"];
 	        this.kill_ids = source["kill_ids"];
 	        this.kills = this.convertValues(source["kills"], demo.ClipKill);
+	        this.source_id = source["source_id"];
+	        this.round = source["round"];
+	        this.player_name = source["player_name"];
+	        this.player_steam_id = source["player_steam_id"];
+	        this.start_tick = source["start_tick"];
+	        this.end_tick = source["end_tick"];
+	        this.end_reason = source["end_reason"];
 	        this.video_path = source["video_path"];
 	        this.history_type = source["history_type"];
 	        this.source_label = source["source_label"];
@@ -644,6 +736,20 @@ export namespace app {
 	        this.error = source["error"];
 	    }
 	}
+	export class WorkspaceValidateResult {
+	    ok: boolean;
+	    errorMessage: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new WorkspaceValidateResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ok = source["ok"];
+	        this.errorMessage = source["errorMessage"];
+	    }
+	}
 
 }
 
@@ -683,6 +789,7 @@ export namespace config {
 	    victim_post_seconds: number;
 	    auto_add_victim_view: boolean;
 	    record_fps: number;
+	    record_quality: string;
 	    edit_fps: number;
 	    edit_quality: string;
 	    video_preset: string;
@@ -692,6 +799,11 @@ export namespace config {
 	    launch_resolution: string;
 	    record_output_dir: string;
 	    enable_spec_show_xray_zero: boolean;
+	    hide_all_ui: boolean;
+	    pov_hud_enabled: boolean;
+	    sky_blackout: boolean;
+	    kill_feed_lifetime: number;
+	    block_kill_feed: boolean;
 	    clip_action_settings?: ClipActionSettings;
 	
 	    static createFrom(source: any = {}) {
@@ -715,6 +827,7 @@ export namespace config {
 	        this.victim_post_seconds = source["victim_post_seconds"];
 	        this.auto_add_victim_view = source["auto_add_victim_view"];
 	        this.record_fps = source["record_fps"];
+	        this.record_quality = source["record_quality"];
 	        this.edit_fps = source["edit_fps"];
 	        this.edit_quality = source["edit_quality"];
 	        this.video_preset = source["video_preset"];
@@ -724,6 +837,11 @@ export namespace config {
 	        this.launch_resolution = source["launch_resolution"];
 	        this.record_output_dir = source["record_output_dir"];
 	        this.enable_spec_show_xray_zero = source["enable_spec_show_xray_zero"];
+	        this.hide_all_ui = source["hide_all_ui"];
+	        this.pov_hud_enabled = source["pov_hud_enabled"];
+	        this.sky_blackout = source["sky_blackout"];
+	        this.kill_feed_lifetime = source["kill_feed_lifetime"];
+	        this.block_kill_feed = source["block_kill_feed"];
 	        this.clip_action_settings = this.convertValues(source["clip_action_settings"], ClipActionSettings);
 	    }
 	
@@ -863,9 +981,75 @@ export namespace demo {
 		}
 	}
 	
+	export class FullRoundPOVSegment {
+	    round: number;
+	    start_tick: number;
+	    freeze_end_tick: number;
+	    round_end_tick: number;
+	    official_end_tick?: number;
+	    death_tick?: number;
+	    record_start_tick: number;
+	    record_end_tick: number;
+	    target_slot: number;
+	    end_reason: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FullRoundPOVSegment(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.round = source["round"];
+	        this.start_tick = source["start_tick"];
+	        this.freeze_end_tick = source["freeze_end_tick"];
+	        this.round_end_tick = source["round_end_tick"];
+	        this.official_end_tick = source["official_end_tick"];
+	        this.death_tick = source["death_tick"];
+	        this.record_start_tick = source["record_start_tick"];
+	        this.record_end_tick = source["record_end_tick"];
+	        this.target_slot = source["target_slot"];
+	        this.end_reason = source["end_reason"];
+	    }
+	}
+	export class FullRoundPOVPlan {
+	    player_name: string;
+	    player_steam_id: string;
+	    segments: FullRoundPOVSegment[];
+	
+	    static createFrom(source: any = {}) {
+	        return new FullRoundPOVPlan(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.player_name = source["player_name"];
+	        this.player_steam_id = source["player_steam_id"];
+	        this.segments = this.convertValues(source["segments"], FullRoundPOVSegment);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
 	export class PlayerInfo {
 	    name: string;
 	    steam_id: number;
+	    steam_id_text?: string;
 	    kills: number;
 	    deaths: number;
 	    assists: number;
@@ -878,6 +1062,7 @@ export namespace demo {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
 	        this.steam_id = source["steam_id"];
+	        this.steam_id_text = source["steam_id_text"];
 	        this.kills = source["kills"];
 	        this.deaths = source["deaths"];
 	        this.assists = source["assists"];

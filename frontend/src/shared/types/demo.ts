@@ -18,6 +18,7 @@ export interface DemoMetadata {
 export interface DemoPlayerInfo {
   name: string;
   steam_id: number;
+  steam_id_text?: string;
   kills: number;
   deaths: number;
   assists: number;
@@ -68,6 +69,7 @@ import type { ClipParameterOverrides } from "./clips";
 
 export interface DemoMaterialSelection {
   kill: DemoClipKill;
+  include_killer?: boolean;
   include_victim: boolean;
   killer_spec_mode: number;
   victim_spec_mode: number;

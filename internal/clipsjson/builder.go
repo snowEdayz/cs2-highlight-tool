@@ -65,6 +65,7 @@ type BuildOptions struct {
 	KillerPostSeconds         float64
 	VictimPreSeconds          float64
 	VictimPostSeconds         float64
+	FullRoundPOVSegments      []FullRoundPOVSegment
 	ExtraCommands             []string
 	ActionSettings            ActionSettings
 	RecordFPS                 int
@@ -89,11 +90,18 @@ type BuildResult struct {
 }
 
 type TakePlan struct {
-	TakeIndex int      `json:"take_index"`
-	TakeName  string   `json:"take_name"`
-	View      string   `json:"view"`
-	SpecMode  int      `json:"spec_mode"`
-	KillIDs   []string `json:"kill_ids"`
+	TakeIndex     int      `json:"take_index"`
+	TakeName      string   `json:"take_name"`
+	View          string   `json:"view"`
+	SpecMode      int      `json:"spec_mode"`
+	KillIDs       []string `json:"kill_ids"`
+	SourceID      string   `json:"source_id,omitempty"`
+	Round         int      `json:"round,omitempty"`
+	PlayerName    string   `json:"player_name,omitempty"`
+	PlayerSteamID string   `json:"player_steam_id,omitempty"`
+	StartTick     int      `json:"start_tick,omitempty"`
+	EndTick       int      `json:"end_tick,omitempty"`
+	EndReason     string   `json:"end_reason,omitempty"`
 }
 
 type killSegment struct {
@@ -115,6 +123,25 @@ type clipPass struct {
 	SpecMode           int
 	View               string
 	KillIDs            []string
+	SourceID           string
+	Round              int
+	PlayerName         string
+	PlayerSteamID      string
+	EndReason          string
+	EnableVoice        bool
+	EnableSpecShowXray bool
+}
+
+type FullRoundPOVSegment struct {
+	Round              int
+	StartTick          int
+	EndTick            int
+	Target             string
+	SpecMode           int
+	SourceID           string
+	PlayerName         string
+	PlayerSteamID      string
+	EndReason          string
 	EnableVoice        bool
 	EnableSpecShowXray bool
 }
@@ -154,8 +181,8 @@ func Build(items []Item, opts BuildOptions) (*BuildResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(normalized) == 0 {
-		return nil, fmt.Errorf("没有可导出的击杀片段")
+	if len(normalized) == 0 && len(opts.FullRoundPOVSegments) == 0 {
+		return nil, fmt.Errorf("没有可导出的录制片段")
 	}
 
 	tickRate := opts.TickRate
@@ -198,7 +225,7 @@ func Build(items []Item, opts BuildOptions) (*BuildResult, error) {
 
 	killerSegments := buildKillerSegments(normalized, tickRate, preTicks, postTicks)
 	victimSegments := buildVictimSegments(normalized, tickRate, victimPreTicks, victimPostTicks)
-	sequences, takePlans := buildMaterialSequences(killerSegments, victimSegments, "disconnect", buildPassCommandOptions{
+	sequences, takePlans := buildMaterialSequences(opts.FullRoundPOVSegments, killerSegments, victimSegments, "disconnect", buildPassCommandOptions{
 		ForceVoice: opts.ForcePerPassVoiceCommands,
 		ForceXray:  opts.ForcePerPassXrayCommands,
 	})
@@ -225,7 +252,7 @@ func Build(items []Item, opts BuildOptions) (*BuildResult, error) {
 
 	return &BuildResult{
 		Sequences:    sequences,
-		SegmentCount: len(killerSegments) + len(victimSegments),
+		SegmentCount: len(opts.FullRoundPOVSegments) + len(killerSegments) + len(victimSegments),
 		TakePlans:    takePlans,
 	}, nil
 }
@@ -435,17 +462,56 @@ type buildPassCommandOptions struct {
 }
 
 func buildMaterialSequences(
+	fullRoundSegments []FullRoundPOVSegment,
 	killerSegments []killSegment,
 	victimSegments []killSegment,
 	terminalCommand string,
 	passCommandOptions buildPassCommandOptions,
 ) ([]Sequence, []TakePlan) {
-	sequences := make([]Sequence, 0, 1+len(victimSegments))
-	takePlans := make([]TakePlan, 0, len(killerSegments)+len(victimSegments))
+	sequences := make([]Sequence, 0, 2+len(victimSegments))
+	takePlans := make([]TakePlan, 0, len(fullRoundSegments)+len(killerSegments)+len(victimSegments))
 	takeCounter := 0
 	terminalAction := strings.TrimSpace(terminalCommand)
 	if terminalAction == "" {
 		terminalAction = "disconnect"
+	}
+
+	fullRoundPasses := make([]clipPass, 0, len(fullRoundSegments))
+	for _, seg := range fullRoundSegments {
+		target := strings.TrimSpace(seg.Target)
+		if target == "" || target == "0" || seg.StartTick < 0 || seg.EndTick < seg.StartTick {
+			continue
+		}
+		specMode := normalizeSpecMode(seg.SpecMode)
+		sourceID := strings.TrimSpace(seg.SourceID)
+		if sourceID == "" {
+			sourceID = strings.TrimSpace(segSourceID(seg))
+		}
+		fullRoundPasses = append(fullRoundPasses, clipPass{
+			StartTick:          seg.StartTick,
+			EndTick:            seg.EndTick,
+			Target:             target,
+			SpecMode:           specMode,
+			View:               "full_round_pov",
+			SourceID:           sourceID,
+			Round:              seg.Round,
+			PlayerName:         strings.TrimSpace(seg.PlayerName),
+			PlayerSteamID:      strings.TrimSpace(seg.PlayerSteamID),
+			EndReason:          strings.TrimSpace(seg.EndReason),
+			EnableVoice:        seg.EnableVoice,
+			EnableSpecShowXray: seg.EnableSpecShowXray,
+		})
+	}
+	if len(fullRoundPasses) > 0 {
+		command := terminalAction
+		if len(killerSegments) > 0 || len(victimSegments) > 0 {
+			command = "go_to_next_sequence"
+		}
+		actions, plans := buildActionsFromPasses(fullRoundPasses, command, &takeCounter, passCommandOptions)
+		if len(actions) > 0 {
+			sequences = append(sequences, Sequence{Actions: actions})
+			takePlans = append(takePlans, plans...)
+		}
 	}
 
 	killerPasses := make([]clipPass, 0, len(killerSegments))
@@ -495,6 +561,14 @@ func buildMaterialSequences(
 	}
 
 	return sequences, takePlans
+}
+
+func segSourceID(seg FullRoundPOVSegment) string {
+	steamID := strings.TrimSpace(seg.PlayerSteamID)
+	if steamID == "" {
+		steamID = "unknown"
+	}
+	return fmt.Sprintf("full_round_pov:r%d:p%s", seg.Round, steamID)
 }
 
 func buildBootstrapSequence(opts bootstrapOptions) Sequence {
@@ -616,11 +690,18 @@ func buildActionsFromPasses(
 			*takeCounter = *takeCounter + 1
 			takeName := fmt.Sprintf("take%04d", *takeCounter-1)
 			takePlans = append(takePlans, TakePlan{
-				TakeIndex: *takeCounter,
-				TakeName:  takeName,
-				View:      strings.TrimSpace(pass.View),
-				SpecMode:  normalizeSpecMode(pass.SpecMode),
-				KillIDs:   append([]string(nil), pass.KillIDs...),
+				TakeIndex:     *takeCounter,
+				TakeName:      takeName,
+				View:          strings.TrimSpace(pass.View),
+				SpecMode:      normalizeSpecMode(pass.SpecMode),
+				KillIDs:       append([]string(nil), pass.KillIDs...),
+				SourceID:      strings.TrimSpace(pass.SourceID),
+				Round:         pass.Round,
+				PlayerName:    strings.TrimSpace(pass.PlayerName),
+				PlayerSteamID: strings.TrimSpace(pass.PlayerSteamID),
+				StartTick:     pass.StartTick,
+				EndTick:       pass.EndTick,
+				EndReason:     strings.TrimSpace(pass.EndReason),
 			})
 			actions = append(actions, Action{
 				Cmd:  "mirv_streams record start",

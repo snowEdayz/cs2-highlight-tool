@@ -12,6 +12,10 @@ import (
 
 // BuildProduceHistoryKey constructs a stable, order-independent key for a produce take plan.
 func BuildProduceHistoryKey(demoPath string, view string, specMode int, killIDs []string) string {
+	return BuildProduceHistoryKeyWithSourceID(demoPath, view, specMode, killIDs, "")
+}
+
+func BuildProduceHistoryKeyWithSourceID(demoPath string, view string, specMode int, killIDs []string, sourceID string) string {
 	normalized := make([]string, 0, len(killIDs))
 	for _, killID := range killIDs {
 		id := strings.TrimSpace(killID)
@@ -20,10 +24,15 @@ func BuildProduceHistoryKey(demoPath string, view string, specMode int, killIDs 
 		}
 	}
 	sort.Strings(normalized)
-	return strings.TrimSpace(demoPath) + "#" +
+	key := strings.TrimSpace(demoPath) + "#" +
 		strings.ToLower(strings.TrimSpace(view)) + "#" +
 		fmt.Sprintf("%d", specMode) + "#" +
 		strings.Join(normalized, "|")
+	source := strings.ToLower(strings.TrimSpace(sourceID))
+	if source != "" {
+		key += "#" + source
+	}
+	return key
 }
 
 // SanitizeDemoSubDirName converts a demo file path into a safe subdirectory name.

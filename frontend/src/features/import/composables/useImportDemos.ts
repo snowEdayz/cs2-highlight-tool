@@ -10,13 +10,23 @@ import type {
 import {
   selectedPlayerByDemo,
   materialByDemo,
+  fullRoundPovByDemo,
+  fullRoundPlanByDemo,
   getClipPlayers,
+  getFullRoundPlayers,
   getSelectedPlayerSteamID,
   setSelectedPlayerSteamID,
+  getFullRoundPlayerSteamID,
   getClipRounds,
+  getFullRoundPOVSelection,
+  setFullRoundPOVEnabled,
+  syncFullRoundPOVPlayer,
   getDemoMaterials,
   setDemoMaterials,
   syncDefaultPlayer,
+  syncDefaultFullRoundPlayer,
+  fetchFullRoundPOVPlan,
+  getFullRoundPOVTrackingLabel,
   formatDuration,
   callBackend,
 } from "./useDemoData";
@@ -41,7 +51,9 @@ const canSelectNext = computed(
   () => selectedIndex.value != null && selectedIndex.value < demoList.value.length - 1,
 );
 const clipReadyDemos = computed(() =>
-  demoList.value.filter((entry) => (entry.meta?.clip_players?.length ?? 0) > 0),
+  demoList.value.filter(
+    (entry) => (entry.meta?.clip_players?.length ?? 0) > 0 || (entry.meta?.players?.length ?? 0) > 0,
+  ),
 );
 
 function onDemosSelected(paths: string[]) {
@@ -97,6 +109,14 @@ function removeDemoAt(index: number) {
     const nextMaterials = { ...materialByDemo.value };
     delete nextMaterials[removed.key];
     materialByDemo.value = nextMaterials;
+
+    const nextFullRound = { ...fullRoundPovByDemo.value };
+    delete nextFullRound[removed.key];
+    fullRoundPovByDemo.value = nextFullRound;
+
+    const nextFullRoundPlan = { ...fullRoundPlanByDemo.value };
+    delete nextFullRoundPlan[removed.key];
+    fullRoundPlanByDemo.value = nextFullRoundPlan;
   }
 
   if (selectedIndex.value === index) {
@@ -134,14 +154,22 @@ function selectDemoByKey(key: string) {
 
 function ensureClipDemoSelected(): DemoListEntry | null {
   const current = selectedEntry.value;
-  if (current && (current.meta?.clip_players?.length ?? 0) > 0) {
-    syncDefaultPlayer(current);
+  if (current && ((current.meta?.clip_players?.length ?? 0) > 0 || (current.meta?.players?.length ?? 0) > 0)) {
+    if ((current.meta?.clip_players?.length ?? 0) > 0) {
+      syncDefaultPlayer(current);
+    } else {
+      syncDefaultFullRoundPlayer(current);
+    }
     return current;
   }
   const fallback = clipReadyDemos.value[0] ?? null;
   if (!fallback) return null;
   selectDemoByKey(fallback.key);
-  syncDefaultPlayer(fallback);
+  if ((fallback.meta?.clip_players?.length ?? 0) > 0) {
+    syncDefaultPlayer(fallback);
+  } else {
+    syncDefaultFullRoundPlayer(fallback);
+  }
   return fallback;
 }
 
@@ -149,6 +177,7 @@ function addMaterialSelection(
   entry: DemoListEntry | null,
   kill: DemoClipKill,
   includeVictim: boolean,
+  includeKiller = true,
 ) {
   if (!entry || !kill?.id) return;
   const current = getDemoMaterials(entry);
@@ -158,6 +187,7 @@ function addMaterialSelection(
     next[existingIndex] = {
       ...next[existingIndex],
       include_victim: next[existingIndex].include_victim || includeVictim,
+      include_killer: next[existingIndex].include_killer !== false || includeKiller,
       killer_spec_mode: 1,
       victim_spec_mode: 1,
     };
@@ -166,6 +196,7 @@ function addMaterialSelection(
   }
   const next = current.concat({
     kill,
+    include_killer: includeKiller,
     include_victim: includeVictim,
     killer_spec_mode: 1,
     victim_spec_mode: 1,
@@ -256,17 +287,33 @@ function clearMaterialSelections(entry: DemoListEntry | null) {
 }
 
 function buildBatchJobs(): GeneratePluginJSONRequest[] {
-  return clipReadyDemos.value.map((entry) => ({
-    demo_path: entry.file_path,
-    tick_rate: entry.meta?.tick_rate ?? 64,
-    selected_items: getDemoMaterials(entry).map((item) => ({
-      kill: item.kill,
-      include_victim: item.include_victim,
-      killer_spec_mode: 1,
-      victim_spec_mode: 1,
-      clip_overrides: item.clip_overrides,
-    })),
-  }));
+  return clipReadyDemos.value
+    .map((entry) => {
+      const fullRound = getFullRoundPOVSelection(entry);
+      const plan = fullRoundPlanByDemo.value[entry.key];
+      const hasPOVSegments = !!(
+        fullRound.enabled &&
+        fullRound.player_steam_id &&
+        plan &&
+        (plan.segments?.length ?? 0) > 0
+      );
+      return {
+        demo_path: entry.file_path,
+        tick_rate: entry.meta?.tick_rate ?? 64,
+        selected_items: getDemoMaterials(entry).map((item) => ({
+          kill: item.kill,
+          include_killer: item.include_killer,
+          include_victim: item.include_victim,
+          killer_spec_mode: 1,
+          victim_spec_mode: 1,
+          clip_overrides: item.clip_overrides,
+        })),
+        full_round_pov: hasPOVSegments
+          ? { player_steam_id: fullRound.player_steam_id }
+          : undefined,
+      };
+    })
+    .filter((job) => job.selected_items.length > 0 || !!job.full_round_pov);
 }
 
 export function useImportDemos() {
@@ -290,9 +337,17 @@ export function useImportDemos() {
     selectDemoByKey,
     ensureClipDemoSelected,
     getClipPlayers,
+    getFullRoundPlayers,
     getSelectedPlayerSteamID,
     setSelectedPlayerSteamID,
+    getFullRoundPlayerSteamID,
     getClipRounds,
+    getFullRoundPOVSelection,
+    setFullRoundPOVEnabled,
+    syncFullRoundPOVPlayer,
+    fullRoundPlanByDemo,
+    fetchFullRoundPOVPlan,
+    getFullRoundPOVTrackingLabel,
     getMaterialSelections,
     getMaterialSelectionCount,
     addMaterialSelection,
@@ -303,5 +358,6 @@ export function useImportDemos() {
     isKillSelectedInDemo,
     clearMaterialSelections,
     buildBatchJobs,
+    syncDefaultFullRoundPlayer,
   };
 }

@@ -11,10 +11,11 @@ import (
 // This mirrors the app-layer ProduceTakePlan but is defined here so that
 // pure filtering logic has no dependency on the Wails binding layer.
 type TakePlan struct {
-	DemoPath  string
-	View      string
-	SpecMode  int
-	KillIDs   []string
+	DemoPath string
+	View     string
+	SpecMode int
+	KillIDs  []string
+	SourceID string
 }
 
 // FilterItemsByHistory returns the subset of items whose corresponding take
@@ -33,7 +34,7 @@ func FilterItemsByHistory(
 	killerKeepByKillID := make(map[string]bool)
 	victimKeepByKillID := make(map[string]bool)
 	for _, plan := range plans {
-		if _, exists := historyKeys[BuildProduceHistoryKey(plan.DemoPath, plan.View, plan.SpecMode, plan.KillIDs)]; exists {
+		if _, exists := historyKeys[BuildProduceHistoryKeyWithSourceID(plan.DemoPath, plan.View, plan.SpecMode, plan.KillIDs, plan.SourceID)]; exists {
 			continue
 		}
 		view := strings.ToLower(strings.TrimSpace(plan.View))

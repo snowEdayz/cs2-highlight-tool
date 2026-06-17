@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"cs2-highlight-tool-v2/internal/clipsjson"
 	"cs2-highlight-tool-v2/internal/config"
 )
 
@@ -16,7 +15,7 @@ var launchHLAECommand = exec.Command
 type launchJobContext struct {
 	job      GeneratePluginJSONRequest
 	baseItem GeneratePluginJSONBatchItemResult
-	allItems []clipsjson.Item
+	allItems *normalizedSelectedItems
 	plans    []ProduceTakePlan
 }
 

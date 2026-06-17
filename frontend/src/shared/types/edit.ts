@@ -14,6 +14,13 @@ export interface ProduceHistoryItem {
   spec_mode: number;
   kill_ids: string[];
   kills?: DemoClipKill[];
+  source_id?: string;
+  round?: number;
+  player_name?: string;
+  player_steam_id?: string;
+  start_tick?: number;
+  end_tick?: number;
+  end_reason?: string;
   video_path: string;
   history_type?: "produce_clip" | "edited_video";
   source_label?: string;

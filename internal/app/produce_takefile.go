@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	goruntime "runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -49,6 +50,13 @@ type ProduceHistoryItem struct {
 	SpecMode      int             `json:"spec_mode"`
 	KillIDs       []string        `json:"kill_ids"`
 	Kills         []demo.ClipKill `json:"kills,omitempty"`
+	SourceID      string          `json:"source_id,omitempty"`
+	Round         int             `json:"round,omitempty"`
+	PlayerName    string          `json:"player_name,omitempty"`
+	PlayerSteamID string          `json:"player_steam_id,omitempty"`
+	StartTick     int             `json:"start_tick,omitempty"`
+	EndTick       int             `json:"end_tick,omitempty"`
+	EndReason     string          `json:"end_reason,omitempty"`
 	VideoPath     string          `json:"video_path"`
 	HistoryType   string          `json:"history_type,omitempty"`
 	SourceLabel   string          `json:"source_label,omitempty"`
@@ -255,7 +263,7 @@ func (a *App) addProduceHistoryEntry(state *produceSessionRuntime, plan ProduceT
 	if strings.TrimSpace(videoPath) == "" {
 		return
 	}
-	key := plugingen.BuildProduceHistoryKey(plan.DemoPath, plan.View, plan.SpecMode, plan.KillIDs)
+	key := plugingen.BuildProduceHistoryKeyWithSourceID(plan.DemoPath, plan.View, plan.SpecMode, plan.KillIDs, plan.SourceID)
 	kills := resolveHistoryKills(state, plan)
 	item := ProduceHistoryItem{
 		DemoPath:      strings.TrimSpace(plan.DemoPath),
@@ -265,6 +273,13 @@ func (a *App) addProduceHistoryEntry(state *produceSessionRuntime, plan ProduceT
 		SpecMode:      plan.SpecMode,
 		KillIDs:       append([]string(nil), plan.KillIDs...),
 		Kills:         append([]demo.ClipKill(nil), kills...),
+		SourceID:      strings.TrimSpace(plan.SourceID),
+		Round:         plan.Round,
+		PlayerName:    strings.TrimSpace(plan.PlayerName),
+		PlayerSteamID: strings.TrimSpace(plan.PlayerSteamID),
+		StartTick:     plan.StartTick,
+		EndTick:       plan.EndTick,
+		EndReason:     strings.TrimSpace(plan.EndReason),
 		VideoPath:     strings.TrimSpace(videoPath),
 		HistoryType:   produceHistoryTypeProduce,
 		SourceLabel:   "record_take",
@@ -330,7 +345,7 @@ func (a *App) appendProduceHistoryItem(key string, item ProduceHistoryItem) {
 }
 
 func resolveHistoryKills(state *produceSessionRuntime, plan ProduceTakePlan) []demo.ClipKill {
-	if state == nil || len(plan.KillIDs) == 0 {
+	if state == nil {
 		return nil
 	}
 	demoPath := strings.TrimSpace(plan.DemoPath)
@@ -339,6 +354,32 @@ func resolveHistoryKills(state *produceSessionRuntime, plan ProduceTakePlan) []d
 	}
 	killByID := state.killsByDemo[demoPath]
 	if len(killByID) == 0 {
+		return nil
+	}
+	if strings.ToLower(strings.TrimSpace(plan.View)) == "full_round_pov" {
+		playerSteamID := strings.TrimSpace(plan.PlayerSteamID)
+		if playerSteamID == "" || plan.Round <= 0 {
+			return nil
+		}
+		kills := make([]demo.ClipKill, 0, 4)
+		for _, kill := range killByID {
+			if kill.Round != plan.Round {
+				continue
+			}
+			if strings.TrimSpace(kill.KillerSteamID) != playerSteamID {
+				continue
+			}
+			kills = append(kills, kill)
+		}
+		sort.Slice(kills, func(i, j int) bool {
+			if kills[i].Tick == kills[j].Tick {
+				return kills[i].ID < kills[j].ID
+			}
+			return kills[i].Tick < kills[j].Tick
+		})
+		return kills
+	}
+	if len(plan.KillIDs) == 0 {
 		return nil
 	}
 	kills := make([]demo.ClipKill, 0, len(plan.KillIDs))
@@ -396,12 +437,19 @@ func collectTakePlans(results []GeneratePluginJSONBatchItemResult, onlySuccess b
 		}
 		for _, plan := range item.TakePlans {
 			plans = append(plans, ProduceTakePlan{
-				DemoPath:  strings.TrimSpace(plan.DemoPath),
-				TakeIndex: plan.TakeIndex,
-				TakeName:  strings.TrimSpace(plan.TakeName),
-				View:      strings.TrimSpace(plan.View),
-				SpecMode:  plan.SpecMode,
-				KillIDs:   append([]string(nil), plan.KillIDs...),
+				DemoPath:      strings.TrimSpace(plan.DemoPath),
+				TakeIndex:     plan.TakeIndex,
+				TakeName:      strings.TrimSpace(plan.TakeName),
+				View:          strings.TrimSpace(plan.View),
+				SpecMode:      plan.SpecMode,
+				KillIDs:       append([]string(nil), plan.KillIDs...),
+				SourceID:      strings.TrimSpace(plan.SourceID),
+				Round:         plan.Round,
+				PlayerName:    strings.TrimSpace(plan.PlayerName),
+				PlayerSteamID: strings.TrimSpace(plan.PlayerSteamID),
+				StartTick:     plan.StartTick,
+				EndTick:       plan.EndTick,
+				EndReason:     strings.TrimSpace(plan.EndReason),
 			})
 		}
 	}

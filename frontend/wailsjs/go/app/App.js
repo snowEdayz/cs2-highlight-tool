@@ -6,8 +6,16 @@ export function ApplySelfUpdate() {
   return window['go']['app']['App']['ApplySelfUpdate']();
 }
 
+export function CancelStartupDownload(arg1) {
+  return window['go']['app']['App']['CancelStartupDownload'](arg1);
+}
+
 export function CheckPlatformClients() {
   return window['go']['app']['App']['CheckPlatformClients']();
+}
+
+export function ClearDemoDirectory() {
+  return window['go']['app']['App']['ClearDemoDirectory']();
 }
 
 export function ClearOutputsDirectory() {
@@ -54,8 +62,16 @@ export function GetClipSettings() {
   return window['go']['app']['App']['GetClipSettings']();
 }
 
+export function GetDemoStorageStats() {
+  return window['go']['app']['App']['GetDemoStorageStats']();
+}
+
 export function GetFiveEPlayerName() {
   return window['go']['app']['App']['GetFiveEPlayerName']();
+}
+
+export function GetGameInfoHealth() {
+  return window['go']['app']['App']['GetGameInfoHealth']();
 }
 
 export function GetOutputsStorageStats() {
@@ -110,6 +126,10 @@ export function ListWanmeiRecentMatches(arg1) {
   return window['go']['app']['App']['ListWanmeiRecentMatches'](arg1);
 }
 
+export function OpenDemoDirectory() {
+  return window['go']['app']['App']['OpenDemoDirectory']();
+}
+
 export function OpenExternalURL(arg1) {
   return window['go']['app']['App']['OpenExternalURL'](arg1);
 }
@@ -146,12 +166,20 @@ export function PickWorkspaceDir() {
   return window['go']['app']['App']['PickWorkspaceDir']();
 }
 
+export function PreviewFullRoundPOV(arg1, arg2) {
+  return window['go']['app']['App']['PreviewFullRoundPOV'](arg1, arg2);
+}
+
 export function ProbeClipDuration(arg1) {
   return window['go']['app']['App']['ProbeClipDuration'](arg1);
 }
 
 export function ReinstallStartupComponent(arg1) {
   return window['go']['app']['App']['ReinstallStartupComponent'](arg1);
+}
+
+export function RepairGameInfo() {
+  return window['go']['app']['App']['RepairGameInfo']();
 }
 
 export function RequestClosePlatformClient(arg1) {

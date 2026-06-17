@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,11 +22,16 @@ type GeneratePluginJSONRequest struct {
 	DemoPath       string             `json:"demo_path"`
 	TickRate       float64            `json:"tick_rate"`
 	SelectedItems  []SelectedClipItem `json:"selected_items,omitempty"`
+	FullRoundPOV   *FullRoundPOVItem  `json:"full_round_pov,omitempty"`
 	ExtraCommands  []string           `json:"extra_commands,omitempty"`
 	BatchTimestamp string             `json:"batch_timestamp,omitempty"`
 
 	// Deprecated compatibility input. New callers should use SelectedItems.
 	SelectedKills []demo.ClipKill `json:"selected_kills,omitempty"`
+}
+
+type FullRoundPOVItem struct {
+	PlayerSteamID string `json:"player_steam_id"`
 }
 
 type GeneratePluginJSONResult struct {
@@ -69,25 +75,35 @@ type GeneratePluginJSONBatchResult struct {
 }
 
 type ProduceTakePlan struct {
-	DemoPath  string   `json:"demo_path"`
-	TakeIndex int      `json:"take_index"`
-	TakeName  string   `json:"take_name,omitempty"`
-	View      string   `json:"view"`
-	SpecMode  int      `json:"spec_mode"`
-	KillIDs   []string `json:"kill_ids"`
+	DemoPath      string   `json:"demo_path"`
+	TakeIndex     int      `json:"take_index"`
+	TakeName      string   `json:"take_name,omitempty"`
+	View          string   `json:"view"`
+	SpecMode      int      `json:"spec_mode"`
+	KillIDs       []string `json:"kill_ids"`
+	SourceID      string   `json:"source_id,omitempty"`
+	Round         int      `json:"round,omitempty"`
+	PlayerName    string   `json:"player_name,omitempty"`
+	PlayerSteamID string   `json:"player_steam_id,omitempty"`
+	StartTick     int      `json:"start_tick,omitempty"`
+	EndTick       int      `json:"end_tick,omitempty"`
+	EndReason     string   `json:"end_reason,omitempty"`
 }
 
 type pluginAction = clipsjson.Action
 type pluginSequence = clipsjson.Sequence
 
 type generatePluginJSONInternalOptions struct {
-	ItemsOverride []clipsjson.Item
-	WriteJSON     bool
-	RecordSubDir  string
+	ItemsOverride                   []clipsjson.Item
+	FullRoundPOVSegmentsOverride    []clipsjson.FullRoundPOVSegment
+	UseFullRoundPOVSegmentsOverride bool
+	WriteJSON                       bool
+	RecordSubDir                    string
 }
 
 type normalizedSelectedItems struct {
 	Items                   []clipsjson.Item
+	FullRoundPOVSegments    []clipsjson.FullRoundPOVSegment
 	HasVoiceOverride        bool
 	HasSpecShowXrayOverride bool
 }
@@ -201,18 +217,25 @@ func (a *App) GeneratePluginJSONBatchAndLaunchHLAE(req GeneratePluginJSONBatchRe
 
 	historyKeys := a.getProduceHistoryKeySet()
 	type runnableJob struct {
-		index        int
-		job          GeneratePluginJSONRequest
-		items        []clipsjson.Item
-		recordSubDir string
+		index                int
+		job                  GeneratePluginJSONRequest
+		items                []clipsjson.Item
+		fullRoundPOVSegments []clipsjson.FullRoundPOVSegment
+		recordSubDir         string
 	}
 	runnables := make([]runnableJob, 0, len(req.Jobs))
 	for idx, ctx := range contexts {
 		if ctx == nil {
 			continue
 		}
-		filteredItems := filterItemsByHistory(ctx.allItems, ctx.plans, historyKeys)
-		if len(filteredItems) == 0 {
+		filteredItems := filterItemsByHistory(ctx.allItems.Items, ctx.plans, historyKeys)
+		filteredFullRoundSegments := filterFullRoundPOVSegmentsByHistory(
+			ctx.allItems.FullRoundPOVSegments,
+			ctx.plans,
+			historyKeys,
+			ctx.job.DemoPath,
+		)
+		if len(filteredItems) == 0 && len(filteredFullRoundSegments) == 0 {
 			item := ctx.baseItem
 			item.TakePlans = nil
 			item.GeneratedTakeCnt = 0
@@ -222,9 +245,11 @@ func (a *App) GeneratePluginJSONBatchAndLaunchHLAE(req GeneratePluginJSONBatchRe
 			continue
 		}
 		filteredPreview, _, err := a.generatePluginJSONInternal(ctx.job, generatePluginJSONInternalOptions{
-			ItemsOverride: filteredItems,
-			WriteJSON:     false,
-			RecordSubDir:  recordSubDirs[idx],
+			ItemsOverride:                   filteredItems,
+			FullRoundPOVSegmentsOverride:    filteredFullRoundSegments,
+			UseFullRoundPOVSegmentsOverride: true,
+			WriteJSON:                       false,
+			RecordSubDir:                    recordSubDirs[idx],
 		})
 		if err != nil {
 			item := ctx.baseItem
@@ -245,10 +270,11 @@ func (a *App) GeneratePluginJSONBatchAndLaunchHLAE(req GeneratePluginJSONBatchRe
 			continue
 		}
 		runnables = append(runnables, runnableJob{
-			index:        idx,
-			job:          ctx.job,
-			items:        filteredItems,
-			recordSubDir: recordSubDirs[idx],
+			index:                idx,
+			job:                  ctx.job,
+			items:                filteredItems,
+			fullRoundPOVSegments: filteredFullRoundSegments,
+			recordSubDir:         recordSubDirs[idx],
 		})
 	}
 
@@ -259,9 +285,11 @@ func (a *App) GeneratePluginJSONBatchAndLaunchHLAE(req GeneratePluginJSONBatchRe
 	for _, run := range runnables {
 		item := results[run.index]
 		generated, _, err := a.generatePluginJSONInternal(run.job, generatePluginJSONInternalOptions{
-			ItemsOverride: run.items,
-			WriteJSON:     true,
-			RecordSubDir:  run.recordSubDir,
+			ItemsOverride:                   run.items,
+			FullRoundPOVSegmentsOverride:    run.fullRoundPOVSegments,
+			UseFullRoundPOVSegmentsOverride: true,
+			WriteJSON:                       true,
+			RecordSubDir:                    run.recordSubDir,
 		})
 		if err != nil {
 			item.Error = err.Error()
@@ -407,7 +435,7 @@ func (a *App) GeneratePluginJSON(req GeneratePluginJSONRequest) (*GeneratePlugin
 func (a *App) generatePluginJSONInternal(
 	req GeneratePluginJSONRequest,
 	opts generatePluginJSONInternalOptions,
-) (*GeneratePluginJSONResult, []clipsjson.Item, error) {
+) (*GeneratePluginJSONResult, *normalizedSelectedItems, error) {
 	demoPath := strings.TrimSpace(req.DemoPath)
 	if demoPath == "" {
 		return nil, nil, fmt.Errorf("demo 路径为空")
@@ -444,6 +472,7 @@ func (a *App) generatePluginJSONInternal(
 	})
 
 	var items []clipsjson.Item
+	var fullRoundPOVSegments []clipsjson.FullRoundPOVSegment
 	hasVoiceOverride := false
 	hasSpecShowXrayOverride := false
 	if len(opts.ItemsOverride) > 0 {
@@ -462,11 +491,15 @@ func (a *App) generatePluginJSONInternal(
 			return nil, nil, normalizeErr
 		}
 		items = normalizedItems.Items
+		fullRoundPOVSegments = normalizedItems.FullRoundPOVSegments
 		hasVoiceOverride = normalizedItems.HasVoiceOverride
 		hasSpecShowXrayOverride = normalizedItems.HasSpecShowXrayOverride
 	}
-	if len(items) == 0 {
-		return nil, nil, fmt.Errorf("没有可导出的击杀片段")
+	if opts.UseFullRoundPOVSegmentsOverride {
+		fullRoundPOVSegments = append([]clipsjson.FullRoundPOVSegment(nil), opts.FullRoundPOVSegmentsOverride...)
+	}
+	if len(items) == 0 && len(fullRoundPOVSegments) == 0 {
+		return nil, nil, fmt.Errorf("没有可导出的录制片段")
 	}
 
 	batchTimestamp := strings.TrimSpace(req.BatchTimestamp)
@@ -483,12 +516,13 @@ func (a *App) generatePluginJSONInternal(
 		}
 	}
 	buildResult, err := clipsjson.Build(items, clipsjson.BuildOptions{
-		TickRate:          req.TickRate,
-		KillerPreSeconds:  clipSettings.KillerPreSeconds,
-		KillerPostSeconds: clipSettings.KillerPostSeconds,
-		VictimPreSeconds:  clipSettings.VictimPreSeconds,
-		VictimPostSeconds: clipSettings.VictimPostSeconds,
-		ExtraCommands:     req.ExtraCommands,
+		TickRate:             req.TickRate,
+		KillerPreSeconds:     clipSettings.KillerPreSeconds,
+		KillerPostSeconds:    clipSettings.KillerPostSeconds,
+		VictimPreSeconds:     clipSettings.VictimPreSeconds,
+		VictimPostSeconds:    clipSettings.VictimPostSeconds,
+		FullRoundPOVSegments: fullRoundPOVSegments,
+		ExtraCommands:        req.ExtraCommands,
 		ActionSettings: clipsjson.ActionSettings{
 			EnableVoiceIndices:  clipSettings.EnableVoice,
 			VoiceIndicesValue:   0,
@@ -532,22 +566,34 @@ func (a *App) generatePluginJSONInternal(
 	takePlans := make([]ProduceTakePlan, 0, len(buildResult.TakePlans))
 	for _, plan := range buildResult.TakePlans {
 		takePlans = append(takePlans, ProduceTakePlan{
-			DemoPath:  absDemoPath,
-			TakeIndex: plan.TakeIndex,
-			TakeName:  plan.TakeName,
-			View:      strings.TrimSpace(plan.View),
-			SpecMode:  plan.SpecMode,
-			KillIDs:   append([]string(nil), plan.KillIDs...),
+			DemoPath:      absDemoPath,
+			TakeIndex:     plan.TakeIndex,
+			TakeName:      plan.TakeName,
+			View:          strings.TrimSpace(plan.View),
+			SpecMode:      plan.SpecMode,
+			KillIDs:       append([]string(nil), plan.KillIDs...),
+			SourceID:      strings.TrimSpace(plan.SourceID),
+			Round:         plan.Round,
+			PlayerName:    strings.TrimSpace(plan.PlayerName),
+			PlayerSteamID: strings.TrimSpace(plan.PlayerSteamID),
+			StartTick:     plan.StartTick,
+			EndTick:       plan.EndTick,
+			EndReason:     strings.TrimSpace(plan.EndReason),
 		})
 	}
 
 	return &GeneratePluginJSONResult{
-		JSONPath:      jsonPath,
-		SequenceCount: len(buildResult.Sequences),
-		SegmentCount:  buildResult.SegmentCount,
-		ActionCount:   actionCount,
-		TakePlans:     takePlans,
-	}, append([]clipsjson.Item(nil), items...), nil
+			JSONPath:      jsonPath,
+			SequenceCount: len(buildResult.Sequences),
+			SegmentCount:  buildResult.SegmentCount,
+			ActionCount:   actionCount,
+			TakePlans:     takePlans,
+		}, &normalizedSelectedItems{
+			Items:                   append([]clipsjson.Item(nil), items...),
+			FullRoundPOVSegments:    append([]clipsjson.FullRoundPOVSegment(nil), fullRoundPOVSegments...),
+			HasVoiceOverride:        hasVoiceOverride,
+			HasSpecShowXrayOverride: hasSpecShowXrayOverride,
+		}, nil
 }
 
 func (a *App) getProduceHistoryKeySet() map[string]struct{} {
@@ -571,6 +617,48 @@ func filterItemsByHistory(
 	return plugingen.FilterItemsByHistory(items, toPlugingenTakePlans(plans), historyKeys)
 }
 
+func filterFullRoundPOVSegmentsByHistory(
+	segments []clipsjson.FullRoundPOVSegment,
+	plans []ProduceTakePlan,
+	historyKeys map[string]struct{},
+	fallbackDemoPath string,
+) []clipsjson.FullRoundPOVSegment {
+	if len(segments) == 0 {
+		return nil
+	}
+	keepBySourceID := make(map[string]bool, len(segments))
+	for _, plan := range plans {
+		if strings.ToLower(strings.TrimSpace(plan.View)) != "full_round_pov" {
+			continue
+		}
+		sourceID := strings.TrimSpace(plan.SourceID)
+		if sourceID == "" {
+			continue
+		}
+		demoPath := strings.TrimSpace(plan.DemoPath)
+		if demoPath == "" {
+			demoPath = strings.TrimSpace(fallbackDemoPath)
+		}
+		key := plugingen.BuildProduceHistoryKeyWithSourceID(demoPath, plan.View, plan.SpecMode, plan.KillIDs, sourceID)
+		if _, exists := historyKeys[key]; exists {
+			continue
+		}
+		keepBySourceID[sourceID] = true
+	}
+	filtered := make([]clipsjson.FullRoundPOVSegment, 0, len(segments))
+	for _, segment := range segments {
+		sourceID := strings.TrimSpace(segment.SourceID)
+		if sourceID == "" {
+			sourceID = buildFullRoundPOVSourceID(segment.Round, segment.PlayerSteamID)
+			segment.SourceID = sourceID
+		}
+		if keepBySourceID[sourceID] {
+			filtered = append(filtered, segment)
+		}
+	}
+	return filtered
+}
+
 // toPlugingenTakePlans converts app-layer ProduceTakePlan slice to plugingen.TakePlan.
 func toPlugingenTakePlans(plans []ProduceTakePlan) []plugingen.TakePlan {
 	out := make([]plugingen.TakePlan, len(plans))
@@ -580,6 +668,7 @@ func toPlugingenTakePlans(plans []ProduceTakePlan) []plugingen.TakePlan {
 			View:     p.View,
 			SpecMode: p.SpecMode,
 			KillIDs:  p.KillIDs,
+			SourceID: p.SourceID,
 		}
 	}
 	return out
@@ -591,10 +680,13 @@ func registerProduceKillSnapshot(
 	items []clipsjson.Item,
 	fallbackDemoPath string,
 ) {
-	if len(items) == 0 || store == nil {
+	if store == nil {
 		return
 	}
 
+	// Collect clip-kill based entries (killer / victim perspectives) from the
+	// user-selected items. These are always available because they originate
+	// from the clip selection UI.
 	killByID := make(map[string]demo.ClipKill, len(items))
 	for _, item := range items {
 		killID := strings.TrimSpace(item.Kill.ID)
@@ -607,6 +699,22 @@ func registerProduceKillSnapshot(
 			killByID[killID] = kill
 		}
 	}
+
+	// For full-round POV takes the tracked player may have kills in rounds
+	// that are NOT covered by any selected clip item. Resolve those kills by
+	// re-parsing the demo so the history entry can surface per-round kill
+	// detail for every POV segment (otherwise rounds 2..N render as "0 kills").
+	povKillsByDemo := collectFullRoundPOVKills(plans)
+	for demoPath, povKills := range povKillsByDemo {
+		for killID, kill := range povKills {
+			if _, exists := killByID[killID]; exists {
+				continue
+			}
+			killByID[killID] = kill
+		}
+		_ = demoPath
+	}
+
 	if len(killByID) == 0 {
 		return
 	}
@@ -640,7 +748,94 @@ func registerProduceKillSnapshot(
 	}
 }
 
+// collectFullRoundPOVKills resolves the tracked player's per-round kills for
+// every full_round_pov take plan by parsing the underlying demo. The result is
+// keyed by demo path so the caller can fold the kills into the kill snapshot.
+// Errors are non-fatal: a parse failure simply yields no extra kills.
+func collectFullRoundPOVKills(plans []ProduceTakePlan) map[string]map[string]demo.ClipKill {
+	byDemo := make(map[string]map[string]demo.ClipKill)
+	type povTracker struct {
+		playerSteamID string
+		rounds        map[int]struct{}
+	}
+	trackersByDemo := make(map[string][]povTracker)
+	for _, plan := range plans {
+		if strings.ToLower(strings.TrimSpace(plan.View)) != "full_round_pov" {
+			continue
+		}
+		playerSteamID := strings.TrimSpace(plan.PlayerSteamID)
+		demoPath := strings.TrimSpace(plan.DemoPath)
+		if playerSteamID == "" || demoPath == "" {
+			continue
+		}
+		round := plan.Round
+		if round <= 0 {
+			continue
+		}
+		list := trackersByDemo[demoPath]
+		var tracker *povTracker
+		for i := range list {
+			if list[i].playerSteamID == playerSteamID {
+				tracker = &list[i]
+				break
+			}
+		}
+		if tracker == nil {
+			list = append(list, povTracker{
+				playerSteamID: playerSteamID,
+				rounds:        make(map[int]struct{}),
+			})
+			tracker = &list[len(list)-1]
+		}
+		tracker.rounds[round] = struct{}{}
+		trackersByDemo[demoPath] = list
+	}
+
+	for demoPath, trackers := range trackersByDemo {
+		meta, err := demo.ParseMetadata(demoPath)
+		if err != nil || meta == nil {
+			continue
+		}
+		killByID := byDemo[demoPath]
+		if killByID == nil {
+			killByID = make(map[string]demo.ClipKill)
+			byDemo[demoPath] = killByID
+		}
+		for _, tracker := range trackers {
+			for _, player := range meta.ClipPlayers {
+				if strings.TrimSpace(player.SteamID) != tracker.playerSteamID {
+					continue
+				}
+				for _, round := range player.Rounds {
+					if _, wanted := tracker.rounds[round.Round]; !wanted {
+						continue
+					}
+					for _, kill := range round.Kills {
+						id := strings.TrimSpace(kill.ID)
+						if id == "" {
+							continue
+						}
+						if _, exists := killByID[id]; exists {
+							continue
+						}
+						clone := kill
+						clone.ID = id
+						killByID[id] = clone
+					}
+				}
+				break
+			}
+		}
+	}
+	return byDemo
+}
+
 func normalizeSelectedItems(req GeneratePluginJSONRequest, defaults ClipSettings) (*normalizedSelectedItems, error) {
+	fullRoundPOVSegments, err := normalizeFullRoundPOVSelection(req, defaults)
+	if err != nil {
+		return nil, err
+	}
+
 	items := make([]SelectedClipItem, 0, len(req.SelectedItems)+len(req.SelectedKills))
 	items = append(items, req.SelectedItems...)
 	if len(items) == 0 && len(req.SelectedKills) > 0 {
@@ -649,7 +844,7 @@ func normalizeSelectedItems(req GeneratePluginJSONRequest, defaults ClipSettings
 		}
 	}
 	if len(items) == 0 {
-		return &normalizedSelectedItems{}, nil
+		return &normalizedSelectedItems{FullRoundPOVSegments: fullRoundPOVSegments}, nil
 	}
 
 	normalized := make([]clipsjson.Item, 0, len(items))
@@ -697,6 +892,7 @@ func normalizeSelectedItems(req GeneratePluginJSONRequest, defaults ClipSettings
 
 		normalized = append(normalized, clipsjson.Item{
 			Kill:                    item.Kill,
+			IncludeKiller:           item.IncludeKiller,
 			IncludeVictim:           item.IncludeVictim,
 			KillerSpecMode:          1,
 			VictimSpecMode:          1,
@@ -712,7 +908,31 @@ func normalizeSelectedItems(req GeneratePluginJSONRequest, defaults ClipSettings
 	}
 	return &normalizedSelectedItems{
 		Items:                   normalized,
+		FullRoundPOVSegments:    fullRoundPOVSegments,
 		HasVoiceOverride:        hasVoiceOverride,
 		HasSpecShowXrayOverride: hasSpecShowXrayOverride,
 	}, nil
+}
+
+func normalizeFullRoundPOVSelection(req GeneratePluginJSONRequest, defaults ClipSettings) ([]clipsjson.FullRoundPOVSegment, error) {
+	if req.FullRoundPOV == nil {
+		return nil, nil
+	}
+	steamIDText := strings.TrimSpace(req.FullRoundPOV.PlayerSteamID)
+	if steamIDText == "" {
+		return nil, fmt.Errorf("整局 POV 跟踪玩家为空")
+	}
+	steamID, err := strconv.ParseUint(steamIDText, 10, 64)
+	if err != nil || steamID == 0 {
+		return nil, fmt.Errorf("整局 POV 跟踪玩家 SteamID 无效")
+	}
+	plan, err := demo.ParseFullRoundPOVPlan(req.DemoPath, steamID)
+	if err != nil {
+		return nil, err
+	}
+	segments := buildFullRoundPOVSegmentsForPlugin(plan, defaults, req.TickRate)
+	if len(segments) == 0 {
+		return nil, fmt.Errorf("没有可导出的整局 POV 回合片段")
+	}
+	return segments, nil
 }

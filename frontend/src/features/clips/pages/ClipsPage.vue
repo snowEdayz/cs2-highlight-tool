@@ -29,6 +29,14 @@
               <n-space align="center" size="small">
                 <n-tag size="small">{{ getMaterialSelectionCount(entry) }}</n-tag>
                 <n-tag
+                  v-if="getFullRoundPOVSelection(entry).enabled"
+                  size="small"
+                  type="info"
+                  :bordered="false"
+                >
+                  {{ t("main.clips.full_round_pov_tag") }}
+                </n-tag>
+                <n-tag
                   v-if="producedCountForDemo(entry) > 0"
                   size="small"
                   type="warning"
@@ -39,14 +47,70 @@
               </n-space>
             </template>
 
+            <template v-if="getFullRoundPOVSelection(entry).enabled">
+              <div class="full-round-pov-section">
+                <template v-if="fullRoundPlanByDemo[entry.key]?.segments?.length">
+                  <n-collapse
+                    :expanded-names="getFullRoundPOVExpanded(entry)"
+                    @update:expanded-names="handleFullRoundPOVExpanded(entry, $event)"
+                  >
+                    <n-collapse-item
+                      :name="`${entry.key}-pov`"
+                      :title="t('main.clips.full_round_pov_group_title_count', { count: fullRoundPlanByDemo[entry.key].segments.length })"
+                    >
+                      <template #header-extra>
+                        <span class="full-round-player">{{
+                          t("main.clips.full_round_pov_indicator", {
+                            player: getFullRoundPOVTrackingLabel(entry),
+                          })
+                        }}</span>
+                      </template>
+
+                      <n-collapse
+                        :expanded-names="getPOVRoundExpanded(entry)"
+                        @update:expanded-names="handlePOVRoundExpanded(entry, $event)"
+                      >
+                        <n-collapse-item
+                          v-for="segment in fullRoundPlanByDemo[entry.key].segments"
+                          :key="`${entry.key}-pov-r${segment.round}`"
+                          :name="`r${segment.round}`"
+                          :title="povSegmentTitle(entry, segment)"
+                        >
+                          <div class="pov-round-kills">
+                            <template v-if="povRoundKills(entry, segment.round).length">
+                              <DeathNoticeLine
+                                v-for="kill in povRoundKills(entry, segment.round)"
+                                :key="kill.id"
+                                :kill="kill"
+                                compact
+                              />
+                            </template>
+                            <span v-else class="pov-round-empty">-</span>
+                          </div>
+                        </n-collapse-item>
+                      </n-collapse>
+                    </n-collapse-item>
+                  </n-collapse>
+                </template>
+
+                <div v-else-if="fullRoundPlanByDemo[entry.key]" class="full-round-loading">
+                  <span>{{ t("main.clips.full_round_pov_no_kills_empty") }}</span>
+                </div>
+
+                <div v-else class="full-round-loading">
+                  <span>{{ t("main.clips.full_round_pov_loading") }}</span>
+                </div>
+              </div>
+            </template>
+
             <n-empty
-              v-if="!getMaterialSelections(entry).length"
+              v-if="!getFullRoundPOVSelection(entry).enabled && !getMaterialSelections(entry).length"
               :description="t('main.clips.no_materials_for_demo')"
               size="small"
             />
 
             <n-collapse
-              v-else
+              v-if="getMaterialSelections(entry).length"
               :expanded-names="getMaterialRoundExpandedNames(entry)"
               @update:expanded-names="handleMaterialRoundExpandedChange(entry, $event)"
             >
@@ -66,7 +130,7 @@
                     <div class="material-head">
                       <div class="material-tags-row">
                         <n-space align="center" size="small" class="view-tags">
-                          <n-tag size="small" type="success" :bordered="false">
+                          <n-tag v-if="item.include_killer !== false" size="small" type="success" :bordered="false">
                             {{ t("main.clips.killer_view") }}
                           </n-tag>
                           <n-tag v-if="item.include_victim" size="small" type="warning" :bordered="false">
@@ -109,7 +173,7 @@
                           {{ t("main.clips.victim_enabled") }}
                         </n-checkbox>
                       </div>
-                      <div class="setting-row">
+                      <div v-if="item.include_killer !== false" class="setting-row">
                         <span class="setting-label">{{ t("main.settings.killer_pre_seconds") }}</span>
                         <n-input-number
                           :value="effectiveNumberValue(item, 'killer_pre_seconds')"
@@ -120,7 +184,7 @@
                           @update:value="handleKillerPreValueChange(entry, item.kill.id, $event)"
                         />
                       </div>
-                      <div class="setting-row">
+                      <div v-if="item.include_killer !== false" class="setting-row">
                         <span class="setting-label">{{ t("main.settings.killer_post_seconds") }}</span>
                         <n-input-number
                           :value="effectiveNumberValue(item, 'killer_post_seconds')"
@@ -187,6 +251,14 @@
       >
         <div class="panel-head">
           <span class="panel-title">{{ t("main.clips.select_title") }}</span>
+          <div class="panel-actions">
+            <span class="switch-label">{{ t("main.clips.full_round_pov_switch") }}</span>
+            <n-switch
+              size="small"
+              :value="fullRoundPOVEnabled"
+              @update:value="handleFullRoundPOVSwitch"
+            />
+          </div>
         </div>
         <div class="right-card-body">
           <n-empty v-if="!activeDemoEntry" class="right-empty" :description="t('main.clips.no_demo')" />
@@ -213,7 +285,7 @@
             </div>
 
             <n-scrollbar class="select-scroll" trigger="none">
-              <n-empty v-if="!currentRounds.length" :description="t('main.clips.no_round_kills')" />
+              <n-empty v-if="!currentRounds.length" :description="emptyKillDescription" />
 
               <n-collapse v-else v-model:expanded-names="expandedRounds">
                 <n-collapse-item
@@ -275,7 +347,7 @@ import {
 } from "naive-ui";
 import { t } from "@/shared/i18n";
 import { CLIP_SETTINGS_SAVED_EVENT } from "@/shared/events";
-import type { ClipSettings, DemoClipKill, DemoListEntry, DemoMaterialSelection } from "@/shared/types";
+import type { ClipSettings, DemoClipKill, DemoListEntry, DemoMaterialSelection, DemoPlayerInfo, FullRoundPOVSegment } from "@/shared/types";
 import { useImportDemos } from "@/features/import/composables/useImportDemos";
 import DeathNoticeLine from "@/features/clips/components/DeathNoticeLine.vue";
 import { ensureProduceHistoryInitialized, useProduceHistory } from "@/features/produce/composables/useProduceHistory";
@@ -287,9 +359,17 @@ const {
   ensureClipDemoSelected,
   autoAddVictimView,
   getClipPlayers,
+  getFullRoundPlayers,
   getSelectedPlayerSteamID,
   setSelectedPlayerSteamID,
+  getFullRoundPlayerSteamID,
   getClipRounds,
+  getFullRoundPOVSelection,
+  setFullRoundPOVEnabled,
+  syncFullRoundPOVPlayer,
+  fullRoundPlanByDemo,
+  fetchFullRoundPOVPlan,
+  getFullRoundPOVTrackingLabel,
   getMaterialSelections,
   getMaterialSelectionCount,
   addMaterialSelection,
@@ -304,6 +384,8 @@ const expandedRounds = ref<string[]>([]);
 const expandedDemoNames = ref<string[]>([]);
 const materialExpandedRoundsByDemo = ref<Record<string, string[]>>({});
 const materialSettingsExpandedByDemo = ref<Record<string, string[]>>({});
+const fullRoundPOVExpandedByDemo = ref<Record<string, string[]>>({});
+const povRoundExpandedByDemo = ref<Record<string, string[]>>({});
 const clipSettings = ref<ClipSettings>({
   killer_pre_seconds: 5,
   killer_post_seconds: 5,
@@ -335,23 +417,34 @@ type ClipOverrideBooleanKey = "enable_voice" | "enable_spec_show_xray_zero";
 
 const activeDemoEntry = computed<DemoListEntry | null>(() => {
   const current = selectedEntry.value;
-  if (current && (current.meta?.clip_players?.length ?? 0) > 0) {
+  if (current && ((current.meta?.clip_players?.length ?? 0) > 0 || (current.meta?.players?.length ?? 0) > 0)) {
     return current;
   }
   return clipReadyDemos.value[0] ?? null;
 });
 
+const fullRoundPOVSelection = computed(() => getFullRoundPOVSelection(activeDemoEntry.value));
+const fullRoundPOVEnabled = computed(() => fullRoundPOVSelection.value.enabled);
 const selectedPlayerSteamID = computed(() => getSelectedPlayerSteamID(activeDemoEntry.value));
-const players = computed(() => getClipPlayers(activeDemoEntry.value));
-
-const playerOptions = computed<SelectOption[]>(() =>
-  players.value.map((player) => ({
+const clipPlayers = computed(() => getClipPlayers(activeDemoEntry.value));
+const fullRoundPlayers = computed(() => getFullRoundPlayers(activeDemoEntry.value));
+const playerOptions = computed<SelectOption[]>(() => {
+  if (fullRoundPOVEnabled.value) {
+    return fullRoundPlayers.value.map((player) => ({
+      label: fullRoundPlayerLabel(player),
+      value: getFullRoundPlayerSteamID(player),
+    }));
+  }
+  return clipPlayers.value.map((player) => ({
     label: `${player.name} (${player.total_kills})`,
     value: player.steam_id,
-  })),
-);
+  }));
+});
 
 const currentRounds = computed(() => getClipRounds(activeDemoEntry.value, selectedPlayerSteamID.value));
+const emptyKillDescription = computed(() =>
+  fullRoundPOVEnabled.value ? t("main.clips.no_full_round_player_kills") : t("main.clips.no_round_kills"),
+);
 
 watch(
   () => [activeDemoEntry.value?.key, selectedPlayerSteamID.value, currentRounds.value.length],
@@ -391,6 +484,7 @@ const producedKillIDsByDemo = computed(() => {
   for (const item of historySnapshot.value.items || []) {
     const demoPath = item.demo_path || "";
     if (!demoPath) continue;
+    if ((item.history_type || "produce_clip") === "edited_video") continue;
     if (!byDemo.has(demoPath)) {
       byDemo.set(demoPath, new Set<string>());
     }
@@ -400,6 +494,20 @@ const producedKillIDsByDemo = computed(() => {
         set.add(killID);
       }
     }
+  }
+  return byDemo;
+});
+
+// producedTakeCountByDemo counts ALL produce_clip history takes for a demo,
+// including full_round_pov takes (which carry no kill_ids). This drives the
+// "已生成 N" badge so POV recordings are reflected alongside clip kills.
+const producedTakeCountByDemo = computed(() => {
+  const byDemo = new Map<string, number>();
+  for (const item of historySnapshot.value.items || []) {
+    const demoPath = item.demo_path || "";
+    if (!demoPath) continue;
+    if ((item.history_type || "produce_clip") === "edited_video") continue;
+    byDemo.set(demoPath, (byDemo.get(demoPath) || 0) + 1);
   }
   return byDemo;
 });
@@ -434,15 +542,26 @@ function handleExpandedChange(names: string | number | Array<string | number> | 
   }
 }
 
-function handlePlayerChange(next: string | number | null) {
+async function handlePlayerChange(next: string | number | null) {
   if (next == null) {
     return;
   }
-  setSelectedPlayerSteamID(activeDemoEntry.value, String(next));
+  const playerSteamID = String(next);
+  const entry = activeDemoEntry.value;
+  setSelectedPlayerSteamID(entry, playerSteamID);
+  syncFullRoundPOVPlayer(entry, playerSteamID);
+  if (fullRoundPOVEnabled.value && playerSteamID) {
+    await fetchFullRoundPOVPlan(entry, playerSteamID);
+  }
 }
 
 function addKill(kill: DemoClipKill) {
-  addMaterialSelection(activeDemoEntry.value, kill, autoAddVictimView.value);
+  addMaterialSelection(
+    activeDemoEntry.value,
+    kill,
+    fullRoundPOVEnabled.value ? true : autoAddVictimView.value,
+    !fullRoundPOVEnabled.value,
+  );
 }
 
 function toggleKillSelection(kill: DemoClipKill) {
@@ -453,6 +572,22 @@ function toggleKillSelection(kill: DemoClipKill) {
   addKill(kill);
 }
 
+async function handleFullRoundPOVSwitch(value: boolean) {
+  const entry = activeDemoEntry.value;
+  if (!entry) return;
+  setFullRoundPOVEnabled(entry, value);
+  if (value) {
+    const playerSteamID = getSelectedPlayerSteamID(entry);
+    if (playerSteamID) {
+      await fetchFullRoundPOVPlan(entry, playerSteamID);
+    }
+  }
+}
+
+function fullRoundPlayerLabel(player: DemoPlayerInfo): string {
+  return player.name || getFullRoundPlayerSteamID(player);
+}
+
 function isKillAlreadyProduced(demoPath: string, killID: string): boolean {
   if (!demoPath || !killID) return false;
   const set = producedKillIDsByDemo.value.get(demoPath);
@@ -460,7 +595,7 @@ function isKillAlreadyProduced(demoPath: string, killID: string): boolean {
 }
 
 function producedCountForDemo(entry: DemoListEntry): number {
-  return producedKillIDsByDemo.value.get(entry.file_path)?.size || 0;
+  return producedTakeCountByDemo.value.get(entry.file_path) || 0;
 }
 
 function getMaterialRoundGroups(entry: DemoListEntry): Array<{ round: number; items: DemoMaterialSelection[] }> {
@@ -569,6 +704,69 @@ function handleXrayEnabledChange(entry: DemoListEntry, killID: string, checked: 
   updateMaterialClipOverrides(entry, killID, { enable_spec_show_xray_zero: checked });
 }
 
+function getFullRoundPOVExpanded(entry: DemoListEntry | null): string[] {
+  if (!entry?.key) return [];
+  return fullRoundPOVExpandedByDemo.value[entry.key] || [];
+}
+
+function handleFullRoundPOVExpanded(
+  entry: DemoListEntry | null,
+  names: string | number | Array<string | number> | null,
+) {
+  if (!entry) return;
+  const list = (Array.isArray(names) ? names : names != null ? [names] : []).map((name) => String(name));
+  fullRoundPOVExpandedByDemo.value = {
+    ...fullRoundPOVExpandedByDemo.value,
+    [entry.key]: list,
+  };
+}
+
+function getPOVRoundKillCount(entry: DemoListEntry | null, playerSteamID: string, roundNum: number): number {
+  if (!entry?.meta?.clip_players) return 0;
+  const player = entry.meta.clip_players.find((p) => p.steam_id === playerSteamID);
+  if (!player) return 0;
+  const round = player.rounds.find((r) => r.round === roundNum);
+  return round?.kills?.length ?? 0;
+}
+
+function povRoundKills(entry: DemoListEntry | null, roundNum: number): DemoClipKill[] {
+  if (!entry?.meta?.clip_players) return [];
+  const playerSteamID = getSelectedPlayerSteamID(entry);
+  const player = entry.meta.clip_players.find((p) => p.steam_id === playerSteamID);
+  if (!player) return [];
+  const round = player.rounds.find((r) => r.round === roundNum);
+  if (!round?.kills?.length) return [];
+  return [...round.kills].sort((a, b) => {
+    if (a.tick === b.tick) return String(a.id).localeCompare(String(b.id));
+    return a.tick - b.tick;
+  });
+}
+
+function povSegmentTitle(entry: DemoListEntry | null, segment: FullRoundPOVSegment): string {
+  const playerSteamID = getSelectedPlayerSteamID(entry);
+  const kills = getPOVRoundKillCount(entry, playerSteamID, segment.round);
+  const died = String(segment.end_reason || "").toLowerCase() === "target_death";
+  const key = died ? "main.clips.full_round_pov_round_title_died" : "main.clips.full_round_pov_round_title_survived";
+  return t(key, { round: segment.round, kills });
+}
+
+function getPOVRoundExpanded(entry: DemoListEntry | null): string[] {
+  if (!entry?.key) return [];
+  return povRoundExpandedByDemo.value[entry.key] || [];
+}
+
+function handlePOVRoundExpanded(
+  entry: DemoListEntry | null,
+  names: string | number | Array<string | number> | null,
+) {
+  if (!entry) return;
+  const list = (Array.isArray(names) ? names : names != null ? [names] : []).map((name) => String(name));
+  povRoundExpandedByDemo.value = {
+    ...povRoundExpandedByDemo.value,
+    [entry.key]: list,
+  };
+}
+
 </script>
 
 <style scoped>
@@ -616,6 +814,8 @@ function handleXrayEnabledChange(entry: DemoListEntry, killID: string, checked: 
   border-bottom: 1px solid #303732;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .card-body {
@@ -638,6 +838,19 @@ function handleXrayEnabledChange(entry: DemoListEntry, killID: string, checked: 
 .panel-title {
   font-size: 13px;
   font-weight: 600;
+}
+
+.panel-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.switch-label {
+  color: #aab4ad;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .right-empty {
@@ -737,6 +950,33 @@ function handleXrayEnabledChange(entry: DemoListEntry, killID: string, checked: 
 .kill-row.selected {
   border-color: #2f9462;
   background: rgba(47, 148, 98, 0.15);
+}
+
+.full-round-pov-section {
+  margin-bottom: 10px;
+}
+
+.pov-round-kills {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 0 2px;
+}
+
+.pov-round-empty {
+  font-size: 12px;
+  color: #8d9890;
+}
+
+.full-round-loading {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #8d9890;
+}
+
+.full-round-player {
+  font-size: 12px;
+  color: #edf1ee;
 }
 
 .kill-line {

@@ -80,6 +80,7 @@ import type {
   EditTimelineClip,
   EditTimelineTransition,
 } from "@/features/edit/composables/useEditState";
+import type { ProduceHistoryItem } from "@/shared/types";
 
 const props = defineProps<{
   clips: EditTimelineClip[];
@@ -149,11 +150,24 @@ function transitionLeftPx(trans: EditTimelineTransition): number {
   return endOfClip - trans.duration * PX_PER_SECOND;
 }
 
+function historyItemView(item: ProduceHistoryItem): "killer" | "victim" | "full_round_pov" {
+  const view = String(item.view || "").toLowerCase();
+  if (view === "victim") return "victim";
+  if (view === "full_round_pov") return "full_round_pov";
+  if (String(item.source_id || "").toLowerCase().startsWith("full_round_pov:")) {
+    return "full_round_pov";
+  }
+  return "killer";
+}
+
 function clipLabel(clip: EditTimelineClip): string {
   const item = clip.historyItem;
-  const viewLabel = item.view === "victim"
+  const view = historyItemView(item);
+  const viewLabel = view === "victim"
     ? t("main.clips.victim_view")
-    : t("main.clips.killer_view");
+    : view === "full_round_pov"
+      ? t("main.clips.full_round_pov_tag")
+      : t("main.clips.killer_view");
   const kills = item.kills?.length
     ? `R${item.kills[0].round || "?"}`
     : `${item.kill_ids?.length || 0}k`;
@@ -161,9 +175,10 @@ function clipLabel(clip: EditTimelineClip): string {
 }
 
 function clipColorClass(clip: EditTimelineClip): string {
-  return clip.historyItem.view === "victim"
-    ? "timeline-clip--victim"
-    : "timeline-clip--killer";
+  const view = historyItemView(clip.historyItem);
+  if (view === "victim") return "timeline-clip--victim";
+  if (view === "full_round_pov") return "timeline-clip--pov";
+  return "timeline-clip--killer";
 }
 
 function pxToInsertIndex(px: number): number {
@@ -353,6 +368,11 @@ defineExpose({
 .timeline-clip--victim {
   background: rgba(230, 162, 60, 0.25);
   border: 1px solid rgba(230, 162, 60, 0.45);
+}
+
+.timeline-clip--pov {
+  background: rgba(34, 128, 166, 0.28);
+  border: 1px solid rgba(61, 174, 212, 0.5);
 }
 
 .clip-label {

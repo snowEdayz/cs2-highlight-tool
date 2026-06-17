@@ -1289,3 +1289,36 @@ Added internal/changelog package (go:embed bilingual markdown), Config.LastChang
 ### Next Steps
 
 - None - task complete
+
+
+## Session 39: Replace in-app self-update with browser-based manual download
+
+**Date**: 2026-06-17
+**Task**: Replace in-app self-update with browser-based manual download
+**Branch**: `main`
+
+### Summary
+
+Removed the broken in-app self-updater (Wails Job Object killed the child process on Windows before exe rename could complete). Deleted internal/updater package, --apply-update entry, ApplySelfUpdate (Service + App), downloadAndApplySelfUpdate, and SelfUpdateState.AssetURL. Version detection and startup gate remain; the 立即更新 button now opens the GitHub release page via the existing OpenManualDownload('self_update'). Component auto-downloads (HLAE/plugin/ffmpeg) unchanged. v2.0.3 changelog appended; spec/CLAUDE/AGENTS docs updated.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d9884de` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

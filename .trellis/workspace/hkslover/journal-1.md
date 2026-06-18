@@ -1388,3 +1388,36 @@ Added a persisted shoulder-camera clip setting, settings UI toggle, plugin boots
 ### Next Steps
 
 - None - task complete
+
+
+## Session 42: Update v2.0.3 changelog notes
+
+**Date**: 2026-06-18
+**Task**: Update v2.0.3 changelog notes
+**Branch**: `codex/write-v203-changelog`
+
+### Summary
+
+Added v2.0.3 release-note coverage for the shoulder camera setting and included user-maintained English translation updates.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d2bbbe9` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

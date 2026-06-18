@@ -18,6 +18,7 @@
     "history_group_edited": "Edited Videos",
     "history_group_edited_empty": "No edited videos in this session yet",
     "history_edited_tag": "Edited Video",
+    "history_full_round_pov_group_title": "Full Round POV ({count} rounds)",
     "gameinfo_health": "gameinfo.gi File Repair",
     "gameinfo_status_ok": "OK",
     "gameinfo_status_needs_repair": "Needs Repair",
@@ -167,11 +168,24 @@
       "add_material": "Add",
       "added": "Added",
       "already_produced": "Produced",
-      "produced_count": "Produced {count}",
-      "no_materials_for_demo": "No selected materials for this DEM",
-      "no_demo": "Please import and parse a demo first",
-      "no_round_kills": "This player has no kill clips",
-      "round_title": "Round {round} ({kills} kills)"
+    "produced_count": "Produced {count}",
+    "full_round_pov_switch": "Full Round POV",
+    "full_round_pov_tag": "Full Round POV",
+    "full_round_pov_group_title": "Full Round POV",
+    "full_round_pov_group_title_count": "Full Round POV ({count} rounds)",
+    "full_round_pov_indicator": "Tracking {player}",
+    "full_round_pov_round_title_survived": "Round {round} · {kills} kills · Survived",
+    "full_round_pov_round_title_died": "Round {round} · {kills} kills · Died",
+    "full_round_pov_no_kills_empty": "This player has no kills in the entire match, no recordable rounds",
+    "full_round_pov_loading": "Parsing full round info...",
+    "full_round_pov_load_failed": "Failed to parse full round POV: {error}",
+    "full_round_pov_load_failed_unknown": "Unknown error",
+    "full_round_player_option": "{name} ({kills}K / {deaths}D)",
+    "no_materials_for_demo": "No selected materials for this DEM",
+    "no_demo": "Please import and parse a demo first",
+    "no_round_kills": "This player has no kill clips",
+    "no_full_round_player_kills": "This player has no kill info yet. Full round POV can still be recorded.",
+    "round_title": "Round {round} ({kills} kills)"
     },
     "produce": {
       "title": "Produce",
@@ -224,6 +238,7 @@
       "round_unknown_title": "Unknown Round ({kills} kills)",
       "open_clip_folder": "Open File Location",
       "kill_info_missing": "Kill info not found (possibly generated from old JSON)",
+      "full_round_pov_row": "Full Round POV · Round {round} · {player}",
       "platform_client": {
         "modal_title": "Detect Gaming Platform Client",
         "modal_hint": "HLAE launches the game via DLL injection. Please manually close the following gaming platform clients to avoid triggering anti-cheat and causing a BSOD. Click [Refresh] to confirm status. All must be closed before proceeding.",
@@ -306,6 +321,11 @@
       "record_output_dir_placeholder": "e.g. D:/cs2/outputs",
       "enable_spec_show_xray_zero": "Inject spec_show_xray 0 in bootstrap",
       "hide_all_ui": "Hide All UI",
+      "use_shoulder_camera": "Use shoulder camera",
+      "pov_hud_enabled": "Enable POV HUD",
+      "sky_blackout": "Black out sky",
+      "kill_feed_lifetime": "Kill feed lifetime (seconds)",
+      "block_kill_feed": "Hide all kill feed messages",
       "outputs_video_count": "Video Count",
       "demo_count": "Demo Count",
       "outputs_total_size": "Total Size",
@@ -344,6 +364,7 @@
     },
     "actions": {
       "update_now": "Update Now",
+      "download_self_update": "Go to Download",
       "reinstall": "Reinstall",
       "pick_cs2": "Select CS2 Directory",
       "reset_cs2": "Reset CS2 Directory",
@@ -407,5 +428,9 @@
       "success": "Installation directory has been reset",
       "failure": "Reset failed: {error}"
     }
+  },
+  "changelog": {
+    "title": "Updated to v{version}",
+    "close": "Got it"
   }
 }

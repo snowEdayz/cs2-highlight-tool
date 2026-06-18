@@ -1355,3 +1355,69 @@ Switched checkSelfUpdate to store candidates[0].AssetURL (country-aware: mirror_
 ### Next Steps
 
 - None - task complete
+
+
+## Session 41: Add shoulder camera setting
+
+**Date**: 2026-06-18
+**Task**: Add shoulder camera setting
+**Branch**: `main`
+
+### Summary
+
+Added a persisted shoulder-camera clip setting, settings UI toggle, plugin bootstrap command insertion before r_show_build_info, tests, and contract docs.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `842620d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 42: Update v2.0.3 changelog notes
+
+**Date**: 2026-06-18
+**Task**: Update v2.0.3 changelog notes
+**Branch**: `codex/write-v203-changelog`
+
+### Summary
+
+Added v2.0.3 release-note coverage for the shoulder camera setting and included user-maintained English translation updates.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d2bbbe9` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

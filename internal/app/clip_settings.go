@@ -27,6 +27,7 @@ type ClipSettings struct {
 	RecordOutputDir    string  `json:"record_output_dir"`
 	EnableSpecShowXray bool    `json:"enable_spec_show_xray_zero"`
 	HideAllUI          bool    `json:"hide_all_ui"`
+	UseShoulderCamera  bool    `json:"use_shoulder_camera"`
 	PovHudEnabled      bool    `json:"pov_hud_enabled"`
 	SkyBlackout        bool    `json:"sky_blackout"`
 	KillFeedLifetime   int     `json:"kill_feed_lifetime"`
@@ -78,6 +79,7 @@ func (a *App) GetClipSettings() (*ClipSettings, error) {
 		RecordOutputDir:    a.fixedRecordOutputDir(),
 		EnableSpecShowXray: cfg.EnableSpecShowXray,
 		HideAllUI:          cfg.HideAllUI,
+		UseShoulderCamera:  cfg.UseShoulderCamera,
 		PovHudEnabled:      cfg.PovHudEnabled,
 		SkyBlackout:        cfg.SkyBlackout,
 		KillFeedLifetime:   cfg.KillFeedLifetime,
@@ -110,6 +112,7 @@ func (a *App) SaveClipSettings(input ClipSettings) (*ClipSettings, error) {
 	cfg.RecordOutputDir = settings.RecordOutputDir
 	cfg.EnableSpecShowXray = settings.EnableSpecShowXray
 	cfg.HideAllUI = settings.HideAllUI
+	cfg.UseShoulderCamera = settings.UseShoulderCamera
 	cfg.PovHudEnabled = settings.PovHudEnabled
 	cfg.SkyBlackout = settings.SkyBlackout
 	cfg.KillFeedLifetime = settings.KillFeedLifetime

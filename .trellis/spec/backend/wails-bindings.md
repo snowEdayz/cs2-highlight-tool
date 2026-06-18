@@ -502,6 +502,66 @@ if opts.HideAllUI {
 
 The generated command appears only for the opt-in behavior.
 
+## Scenario: Clip Settings Shoulder Camera Contract
+
+### 1. Scope / Trigger
+
+- Trigger: Settings UI exposes a shoulder-camera switch through `GetClipSettings` / `SaveClipSettings`, and plugin JSON generation consumes the persisted value.
+- Scope: `internal/config` persistence, `internal/app` Wails binding, `internal/clipsjson` bootstrap generation, frontend `ClipSettings` type, and Settings UI.
+- Boundary: Settings UI toggle -> Wails `SaveClipSettings` -> `config.json` -> plugin JSON bootstrap command list.
+
+### 2. Signatures
+
+```go
+func (a *App) GetClipSettings() (*ClipSettings, error)
+func (a *App) SaveClipSettings(input ClipSettings) (*ClipSettings, error)
+
+type ClipSettings struct {
+    UseShoulderCamera bool `json:"use_shoulder_camera"`
+}
+
+type Config struct {
+    UseShoulderCamera bool `json:"use_shoulder_camera"`
+}
+
+type BuildOptions struct {
+    UseShoulderCamera bool
+}
+```
+
+Frontend shared type:
+
+```ts
+use_shoulder_camera: boolean;
+```
+
+### 3. Contracts
+
+- `use_shoulder_camera` default is `false`.
+- `use_shoulder_camera=true` writes the shoulder-camera command into the plugin JSON bootstrap sequence before `r_show_build_info 0`.
+- `use_shoulder_camera=false` must not write any `cam_command` or `c_thirdpersonshoulder` command.
+- This is a global clip setting only; it is not part of per-clip `clip_overrides`.
+- Frontend option labels are i18n keys under `main.settings.*`; per frontend rules, add new labels to `zh-CN.json` only.
+
+### 4. Validation & Error Matrix
+
+- Missing `use_shoulder_camera` in an existing config -> load as `false` and save back with `use_shoulder_camera:false`.
+- Unsupported JSON type for `use_shoulder_camera` -> standard JSON unmarshal failure, surfaced from `config.LoadOrCreate`.
+- Disabled setting -> no reset command is emitted; do not emit shoulder-camera commands with zero values.
+
+### 5. Good/Base/Bad Cases
+
+- Good: user enables the switch, saves settings, and generated bootstrap starts with the shoulder-camera command followed by `r_show_build_info 0`.
+- Base: legacy config without `use_shoulder_camera` loads with the switch off and generated bootstrap contains no shoulder-camera command.
+- Bad: appending the shoulder-camera command after `r_show_build_info 0`, because the UI contract requires it before that bootstrap command.
+
+### 6. Tests Required
+
+- `internal/config`: legacy config loads with `UseShoulderCamera=false` and saved config contains `use_shoulder_camera`.
+- `internal/app`: `GetClipSettings` default is false; `SaveClipSettings` round-trips true.
+- `internal/clipsjson`: bootstrap contains the shoulder-camera command only when `BuildOptions.UseShoulderCamera=true`, and the command precedes `r_show_build_info 0`.
+- Frontend: `cd frontend && npm run build` must pass so the shared TypeScript type and settings UI stay aligned.
+
 ## Scenario: Settings Outputs Storage Management
 
 ### 1. Scope / Trigger

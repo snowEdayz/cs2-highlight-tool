@@ -407,6 +407,7 @@ const clipSettings = ref<ClipSettings>({
   record_output_dir: "",
   enable_spec_show_xray_zero: true,
   hide_all_ui: false,
+  use_shoulder_camera: false,
   pov_hud_enabled: true,
   sky_blackout: true,
   kill_feed_lifetime: 4,
